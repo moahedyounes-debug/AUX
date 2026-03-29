@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Spare Parts Request Tracking</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f5f7fa;
+        margin: 0;
+        padding: 20px;
+    }
+    h1 {
+        color: #0b3c6f;
+        text-align: center;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 25px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    th, td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+    }
+    th {
+        background: #0b3c6f;
+        color: #fff;
+        cursor: pointer;
+    }
+    tr:hover {
+        background: #f1f5ff;
+    }
+    .status {
+        padding: 5px 10px;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 0.85rem;
+    }
+    .new { background: #007bff; }
+    .review { background: #ffc107; color: #222; }
+    .approved { background: #28a745; }
+    .rejected { background: #dc3545; }
+    .details-btn {
+        padding: 6px 12px;
+        background: #145da0;
+        color: #fff;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 0.85rem;
+    }
+    #searchBox {
+        width: 250px;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    }
+</style>
+
+<script>
+// Search Filter
+function searchTable() {
+    let input = document.getElementById("searchBox").value.toLowerCase();
+    let rows = document.querySelectorAll("tbody tr");
+
+    rows.forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(input) ? "" : "none";
+    });
+}
+
+// Sort Columns
+function sortTable(n) {
+    let table = document.getElementById("partsTable");
+    let switching = true;
+    let dir = "asc";
+    let switchcount = 0;
+
+    while (switching) {
+        switching = false;
+        let rows = table.rows;
+
+        for (let i = 1; i < rows.length - 1; i++) {
+            let shouldSwitch = false;
+            let x = rows[i].getElementsByTagName("TD")[n];
+            let y = rows[i + 1].getElementsByTagName("TD")[n];
+
+            if (dir === "asc" && x.innerText.toLowerCase() > y.innerText.toLowerCase()) {
+                shouldSwitch = true;
+                break;
+            }
+            if (dir === "desc" && x.innerText.toLowerCase() < y.innerText.toLowerCase()) {
+                shouldSwitch = true;
+                break;
+            }
+        }
+
+        if (shouldSwitch) {
+            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+            switching = true;
+            switchcount++;
+        } else {
+            if (switchcount === 0 && dir === "asc") {
+                dir = "desc";
+                switching = true;
+            }
+        }
+    }
+}
+</script>
+</head>
+
+<body>
+
+<h1>Spare Parts Request Tracking</h1>
+
+<input type="text" id="searchBox" onkeyup="searchTable()" placeholder="Search requests...">
+
+<table id="partsTable">
+    <thead>
+        <tr>
+            <th onclick="sortTable(0)">PO Number</th>
+            <th onclick="sortTable(1)">Part Name</th>
+            <th onclick="sortTable(2)">Status</th>
+            <th onclick="sortTable(3)">Request Date</th>
+            <th onclick="sortTable(4)">Requester</th>
+            <th onclick="sortTable(5)">Reviewer Approval Status</th>
+            <th>Details</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        <tr>
+            <td>PO-2026-001</td>
+            <td>Oil Filter</td>
+            <td><span class="status new">New</span></td>
+            <td>2026-03-29</td>
+            <td>Moahed</td>
+            <td>Pending Review</td>
+            <td><a href="#" class="details-btn">View</a></td>
+        </tr>
+
+        <tr>
+            <td>PO-2026-002</td>
+            <td>Spark Plugs</td>
+            <td><span class="status review">Under Review</span></td>
+            <td>2026-03-28</td>
+            <td>Omar</td>
+            <td>Reviewer Checking</td>
+            <td><a href="#" class="details-btn">View</a></td>
+        </tr>
+
+        <tr>
+            <td>PO-2026-003</td>
+            <td>Air Filter</td>
+            <td><span class="status approved">Approved</span></td>
+            <td>2026-03-27</td>
+            <td>Ali</td>
+            <td>Approved by Manager</td>
+            <td><a href="#" class="details-btn">View</a></td>
+        </tr>
+
+        <tr>
+            <td>PO-2026-004</td>
+            <td>Brake Pads</td>
+            <td><span class="status rejected">Rejected</span></td>
+            <td>2026-03-26</td>
+            <td>Fahad</td>
+            <td>Rejected by Reviewer</td>
+            <td><a href="#" class="details-btn">View</a></td>
+        </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
