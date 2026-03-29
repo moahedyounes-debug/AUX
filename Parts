@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spare Parts Request and Tracking System</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background-color: #f5f7fa;
+      color: #222;
+      margin: 0;
+      padding: 0;
+      line-height: 1.7;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 30px 35px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      border-radius: 8px;
+    }
+    h1, h2, h3 {
+      color: #0b3c6f;
+      margin-top: 0;
+    }
+    h1 {
+      border-bottom: 2px solid #0b3c6f;
+      padding-bottom: 10px;
+      margin-bottom: 25px;
+    }
+    h2 {
+      margin-top: 30px;
+      border-left: 4px solid #0b3c6f;
+      padding-left: 10px;
+    }
+    h3 {
+      margin-top: 20px;
+      color: #145da0;
+    }
+    p {
+      margin: 8px 0;
+    }
+    ul {
+      padding-left: 20px;
+      margin: 5px 0 15px;
+    }
+    li {
+      margin-bottom: 4px;
+    }
+    .tag {
+      display: inline-block;
+      background: #e6f0ff;
+      color: #0b3c6f;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      margin-left: 5px;
+    }
+    .section-divider {
+      border: 0;
+      border-top: 1px solid #ddd;
+      margin: 25px 0;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      margin-left: 5px;
+      color: #fff;
+    }
+    .status-new { background: #007bff; }
+    .status-review { background: #ffc107; color: #222; }
+    .status-approved { background: #28a745; }
+    .status-rejected { background: #dc3545; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 20px;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px 10px;
+      text-align: left;
+    }
+    th {
+      background: #f0f4ff;
+      color: #0b3c6f;
+    }
+    code {
+      background: #f1f3f5;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+      font-size: 0.85rem;
+    }
+    .note {
+      background: #fff8e1;
+      border-left: 4px solid #ffc107;
+      padding: 10px 12px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      margin: 10px 0 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Spare Parts Request and Tracking System</h1>
+
+    <h2>1. Overview</h2>
+    <p>
+      This page represents an official template for managing spare parts requests within the organization,
+      with full tracking of request status, attaching <code>PO Order</code> Excel files, and defining user
+      permissions (who can submit a request and who can approve it).
+    </p>
+
+    <hr class="section-divider" />
+
+    <h2>2. Request Stages</h2>
+
+    <h3>🔹 1. Create New Request <span class="tag">New Request</span></h3>
+    <ul>
+      <li>The responsible employee submits a spare parts request.</li>
+      <li>The following basic data is filled in:
+        <ul>
+          <li>Part name</li>
+          <li>Part number</li>
+          <li>Requested quantity</li>
+          <li>Reason for request</li>
+          <li>Department</li>
+          <li>Request date</li>
+          <li>Supplier (if applicable)</li>
+        </ul>
+      </li>
+      <li>A <code>PO Order</code> file in Excel format is attached.</li>
+      <li>After submission, the request automatically moves to the <strong>Under Review</strong> stage.</li>
+    </ul>
+
+    <h3>🔹 2. Under Review <span class="tag">Under Review</span></h3>
+    <ul>
+      <li>The request appears on the reviewers’ dashboard.</li>
+      <li>The reviewer can:
+        <ul>
+          <li>Approve the request.</li>
+          <li>Reject the request with a reason.</li>
+          <li>Request additional information from the requester.</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>🔹 3. Final Approval <span class="tag">Approved</span></h3>
+    <ul>
+      <li>After approval, a notification is sent to the requester.</li>
+      <li>The request is recorded in the approved requests log.</li>
+      <li>Approved requests can be exported to Excel or PDF for archiving or reporting.</li>
+    </ul>
+
+    <hr class="section-divider" />
+
+    <h2>3. User Roles and Permissions</h2>
+
+    <h3>👤 Requester (Request Creator)</h3>
+    <ul>
+      <li>Submits spare parts requests.</li>
+      <li>Attaches the <code>PO</code> file.</li>
+      <li>Can edit the request before it enters the review stage.</li>
+      <li>Can view the status of their requests (no editing after review starts).</li>
+    </ul>
+
+    <h3>👤 Reviewer</h3>
+    <ul>
+      <li>Receives new requests in <span class="status-badge status-review">Under Review</span> status.</li>
+      <li>Can request additional information from the requester if needed.</li>
+      <li>Can reject the request with a clear reason.</li>
+    </ul>
+
+    <h3>👤 Approver (Authorized Manager)</h3>
+    <ul>
+      <li>Approves or rejects the request.</li>
+      <li>Can view all requests in all statuses.</li>
+      <li>Can close the request after actual execution.</li>
+    </ul>
+
+    <hr class="section-divider" />
+
+    <h2>4. Notification System (Access by Emails)</h2>
+
+    <p>Automatic email notifications are sent in the following cases:</p>
+    <ul>
+      <li>When a new request is submitted → notification to the <strong>Reviewer</strong>.</li>
+      <li>When a request is approved or rejected → notification to the <strong>Requester</strong>.</li>
+      <li>When additional information is requested → notification to the <strong>Requester</strong>.</li>
+      <li>When the request is completed and executed → notification to <strong>all relevant parties</strong>.</li>
+    </ul>
+
+    <p>Example email addresses (to be adapted to your environment):</p>
+    <ul>
+      <li><code>requester@company.com</code> – Requester</li>
+      <li><code>reviewer@company.com</code> – Reviewer</li>
+      <li><code>approver@company.com</code> – Approver / Manager</li>
+    </ul>
+
+    <div class="note">
+      Later, the system can be integrated with Microsoft 365 or any internal mail system
+      to automate notifications using Power Automate or similar tools.
+    </div>
+
+    <hr class="section-divider" />
+
+    <h2>5. Suggested System Interface</h2>
+
+    <h3>🔹 Request Submission Section</h3>
+    <ul>
+      <li>Form to enter request data (part name, number, quantity, reason, department, supplier, etc.).</li>
+      <li>Field to upload the <code>PO Order</code> Excel file.</li>
+      <li><strong>Submit Request</strong> button to move the request to
+        <span class="status-badge status-review">Under Review</span> status.</li>
+    </ul>
+
+    <h3>🔹 Request Tracking Section</h3>
+    <p>Table showing a summary of requests:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Request ID</th>
+          <th>Part Name</th>
+          <th>Status</th>
+          <th>Request Date</th>
+          <th>Assigned Reviewer</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>REQ-2026-001</td>
+          <td>Oil Filter</td>
+          <td><span class="status-badge status-new">New</span></td>
+          <td>2026-03-29</td>
+          <td>Ahmed</td>
+          <td>View</td>
+        </tr>
+        <tr>
+          <td>REQ-2026-002</td>
+          <td>Spark Plugs</td>
+          <td><span class="status-badge status-review">Under Review</span></td>
+          <td>2026-03-28</td>
+          <td>Omar</td>
+          <td>View</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>🔹 Review and Approval Section</h3>
+    <ul>
+      <li>Request details page (all request data + attached PO file).</li>
+      <li><strong>Approve</strong> button to send the request to the Approver.</li>
+      <li><strong>Reject</strong> button with a mandatory field to enter the rejection reason.</li>
+      <li>Optional internal comments field between Reviewer and Approver.</li>
+    </ul>
+
+    <hr class="section-divider" />
+
+    <h2>6. Workflow</h2>
+    <ol>
+      <li><strong>Requester</strong> submits the request and attaches the <code>PO</code> file.</li>
+      <li><strong>The system</strong> sends a notification to the <strong>Reviewer</strong>.</li>
+      <li><strong>Reviewer</strong> reviews the request and decides:
+        <ul>
+          <li>Approve → the request moves to the <strong>Approver</strong>.</li>
+          <li>Reject → the request is returned to the requester with the reason.</li>
+          <li>Request more info → the request goes back to the requester to complete data.</li>
+        </ul>
+      </li>
+      <li><strong>Approver</strong> approves or rejects the request.</li>
+      <li><strong>The system</strong> records the request in the final log and updates its status to
+        <span class="status-badge status-approved">Approved</span> or
+        <span class="status-badge status-rejected">Rejected</span>.
+      </li>
+    </ol>
+
+    <hr class="section-divider" />
+
+    <h2>7. Additional Notes</h2>
+    <ul>
+      <li>The system can be integrated with <strong>Active Directory</strong> to automatically assign permissions based on email or job role.</li>
+      <li>A dashboard can be added to show statistics such as:
+        <ul>
+          <li>Number of new requests.</li>
+          <li>Number of requests under review.</li>
+          <li>Number of approved and rejected requests.</li>
+          <li>Average approval time.</li>
+        </ul>
+      </li>
+      <li>It can later be integrated with ERP or inventory systems to update stock quantities automatically after approval and execution.</li>
+    </ul>
+
+    <hr class="section-divider" />
+
+    <h2>8. Summary</h2>
+    <p>
+      This file is a ready-made, official design to be placed on GitHub as a
+      <strong>Spare Parts Request and Tracking</strong> page. It can be used as a foundation
+      to build a full electronic system with roles, stages, notifications, and PO file attachments.
+    </p>
+  </div>
+</body>
+</html>
