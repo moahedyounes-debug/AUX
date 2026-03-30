@@ -2,35 +2,119 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard - Spare Parts Requests</title>
+<title>Dashboard - Spare Parts Requests </title>
+
 <style>
     body { font-family: Arial, sans-serif; background:#f5f7fa; padding:20px; }
     h1 { color:#0b3c6f; }
-    .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
-    table { width:100%; border-collapse:collapse; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-    th, td { padding:10px 12px; border-bottom:1px solid #ddd; text-align:left; }
-    th { background:#0b3c6f; color:#fff; }
+
+    .top-bar {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:20px;
+    }
+
+    .stats {
+        display:flex;
+        gap:15px;
+        margin-bottom:20px;
+        flex-wrap:wrap;
+    }
+
+    .stat-box {
+        background:#fff;
+        padding:15px 20px;
+        border-radius:8px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.1);
+        min-width:150px;
+        text-align:center;
+    }
+
+    .stat-title { font-size:0.9rem; color:#555; }
+    .stat-value { font-size:1.4rem; font-weight:bold; color:#0b3c6f; }
+
+    table {
+        width:100%;
+        border-collapse:collapse;
+        background:#fff;
+        box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+        padding:10px 12px;
+        border-bottom:1px solid #ddd;
+        text-align:left;
+    }
+
+    th {
+        background:#0b3c6f;
+        color:#fff;
+        cursor:pointer;
+    }
+
     tr:hover { background:#f1f5ff; }
-    .status { padding:4px 8px; border-radius:6px; color:#fff; font-size:0.8rem; }
+
+    .status {
+        padding:4px 8px;
+        border-radius:6px;
+        color:#fff;
+        font-size:0.8rem;
+    }
+
     .New { background:#007bff; }
+    .UnderReview { background:#ffc107; color:#222; }
     .Approved { background:#28a745; }
     .Rejected { background:#dc3545; }
-    .UnderReview { background:#ffc107; color:#222; }
+    .UnderProcess { background:#6f42c1; }
+    .Shipped { background:#17a2b8; }
+    .Delivered { background:#20c997; }
+
     .link { color:#0b3c6f; text-decoration:none; font-size:0.9rem; }
-    #searchBox { padding:8px; width:250px; border-radius:6px; border:1px solid #ccc; }
+
+    #searchBox, #statusFilter {
+        padding:8px;
+        border-radius:6px;
+        border:1px solid #ccc;
+        margin-right:10px;
+    }
 </style>
 </head>
+
 <body>
 
 <div class="top-bar">
     <h1>Spare Parts Requests</h1>
     <div>
         <input type="text" id="searchBox" placeholder="Search..." onkeyup="filterTable()">
+        <select id="statusFilter" onchange="filterTable()">
+            <option value="">All Statuses</option>
+            <option>New</option>
+            <option>Under Review</option>
+            <option>Approved</option>
+            <option>Rejected</option>
+            <option>Under Process</option>
+            <option>Shipped</option>
+            <option>Delivered</option>
+        </select>
         |
         <a href="create-request.html" class="link">New Request</a> |
+        <a href="bulk-upload.html" class="link">Bulk Upload</a> |
         <span id="userInfo"></span> |
         <a href="#" class="link" onclick="logout()">Logout</a>
     </div>
+</div>
+
+<!-- STATISTICS -->
+<div class="stats">
+    <div class="stat-box"><div class="stat-title">Total</div><div class="stat-value" id="statTotal">0</div></div>
+    <div class="stat-box"><div class="stat-title">New</div><div class="stat-value" id="statNew">0</div></div>
+    <div class="stat-box"><div class="stat-title">Under Review</div><div class="stat-value" id="statReview">0</div></div>
+    <div class="stat-box"><div class="stat-title">Approved</div><div class="stat-value" id="statApproved">0</div></div>
+    <div class="stat-box"><div class="stat-title">Rejected</div><div class="stat-value" id="statRejected">0</div></div>
+    <div class="stat-box"><div class="stat-title">Under Process</div><div class="stat-value" id="statProcess">0</div></div>
+    <div class="stat-box"><div class="stat-title">Shipped</div><div class="stat-value" id="statShipped">0</div></div>
+    <div class="stat-box"><div class="stat-title">Delivered</div><div class="stat-value" id="statDelivered">0</div></div>
 </div>
 
 <table id="partsTable">
@@ -39,6 +123,7 @@
             <th>PO</th>
             <th>Part</th>
             <th>Qty</th>
+            <th>Part Number</th>
             <th>Status</th>
             <th>Date</th>
             <th>Requester</th>
@@ -48,49 +133,51 @@
     <tbody></tbody>
 </table>
 
-<!-- ربط ملف الإعدادات -->
 <script src="config.js"></script>
 
 <script>
 let currentUser = null;
 let allRows = [];
 
-// تحميل بيانات المستخدم
+// Load user
 function loadUser() {
     currentUser = getCurrentUser();
-    if (!currentUser) {
-        window.location.href = "login.html";
-        return;
-    }
+    if (!currentUser) window.location.href = "login.html";
 
     document.getElementById("userInfo").textContent =
         currentUser.name + " (" + currentUser.role + ")";
 }
 
-// تحميل الطلبات من Google Sheets
+// Load requests
 function loadRequests() {
     fetch(API_URL + "?action=getRequests")
         .then(res => res.json())
         .then(data => {
             allRows = data;
+            updateStats(data);
             renderTable(data);
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Error loading requests.");
         });
 }
 
-// عرض البيانات في الجدول
+// Update statistics
+function updateStats(data) {
+    document.getElementById("statTotal").textContent = data.length;
+    document.getElementById("statNew").textContent = data.filter(r => r.status === "New").length;
+    document.getElementById("statReview").textContent = data.filter(r => r.status === "Under Review").length;
+    document.getElementById("statApproved").textContent = data.filter(r => r.status === "Approved").length;
+    document.getElementById("statRejected").textContent = data.filter(r => r.status === "Rejected").length;
+    document.getElementById("statProcess").textContent = data.filter(r => r.status === "Under Process").length;
+    document.getElementById("statShipped").textContent = data.filter(r => r.status === "Shipped").length;
+    document.getElementById("statDelivered").textContent = data.filter(r => r.status === "Delivered").length;
+}
+
+// Render table
 function renderTable(data) {
     const tbody = document.querySelector("#partsTable tbody");
     tbody.innerHTML = "";
 
     data.forEach(r => {
-        // requester يشوف فقط طلباته
-        if (currentUser.role === "requester" && r.requesterEmail !== currentUser.email) {
-            return;
-        }
+        if (currentUser.role === "requester" && r.requesterEmail !== currentUser.email) return;
 
         const tr = document.createElement("tr");
 
@@ -98,25 +185,30 @@ function renderTable(data) {
             <td>${r.po}</td>
             <td>${r.part}</td>
             <td>${r.qty}</td>
+            <td>${r.partNumber || "-"}</td>
             <td><span class="status ${r.status.replace(' ', '')}">${r.status}</span></td>
             <td>${r.date}</td>
             <td>${r.requesterName}</td>
-            <td><a href="request-details.html?id=${encodeURIComponent(r.id)}" class="link">View</a></td>
+            <td><a href="request-details.html?id=${r.id}" class="link">View</a></td>
         `;
 
         tbody.appendChild(tr);
     });
 }
 
-// البحث داخل الجدول
+// Search + Filter
 function filterTable() {
     const q = document.getElementById("searchBox").value.toLowerCase();
+    const statusFilter = document.getElementById("statusFilter").value;
+
     const filtered = allRows.filter(r =>
-        (r.po || "").toLowerCase().includes(q) ||
-        (r.part || "").toLowerCase().includes(q) ||
-        (r.requesterName || "").toLowerCase().includes(q) ||
-        (r.status || "").toLowerCase().includes(q)
+        (r.po.toLowerCase().includes(q) ||
+         r.part.toLowerCase().includes(q) ||
+         r.requesterName.toLowerCase().includes(q) ||
+         r.status.toLowerCase().includes(q)) &&
+        (statusFilter === "" || r.status === statusFilter)
     );
+
     renderTable(filtered);
 }
 
