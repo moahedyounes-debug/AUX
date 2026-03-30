@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family:Arial;padding:40px">
+
+<h2>API Connectivity Test</h2>
+
+<input id="email" type="email" placeholder="Enter email" style="padding:8px;width:260px">
+<br><br>
+
+<button onclick="testAPI()" style="padding:10px 20px">Test API</button>
+
+<pre id="output" style="margin-top:20px;background:#eee;padding:20px"></pre>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbzoFzNnpkp0Nzm_d23w8p5kcQX1B9R-Hnt2Cy5VLSpinglDD-IysCPgMWVSBFKOjPf7/exec";
+
+function testAPI() {
+    const email = document.getElementById("email").value;
+    const out = document.getElementById("output");
+
+    out.textContent = "Loading...";
+
+    fetch(API_URL + "?action=getUser&email=" + encodeURIComponent(email))
+        .then(r => r.text())
+        .then(t => out.textContent = t)
+        .catch(err => out.textContent = "ERROR:\n" + err);
+}
+</script>
+
+</body>
+</html>
