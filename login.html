@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Login - Spare Parts System</title>
+<style>
+    body { font-family: Arial, sans-serif; background:#f5f7fa; padding:40px; }
+    .card { max-width:400px; margin:60px auto; background:#fff; padding:25px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+    h1 { text-align:center; color:#0b3c6f; }
+    label { display:block; margin-top:15px; }
+    input { width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #ccc; }
+    button { margin-top:20px; width:100%; padding:10px; background:#0b3c6f; color:#fff; border:none; border-radius:6px; cursor:pointer; }
+    button:hover { background:#09406f; }
+    .error { color:#c00; margin-top:10px; text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Spare Parts System</h1>
+    <label>Email</label>
+    <input type="email" id="email" placeholder="your@email.com">
+    <button onclick="login()">Login</button>
+    <div id="error" class="error"></div>
+</div>
+
+<script>
+const API_URL = "YOUR_WEB_APP_URL"; // ضع رابط الويب آب هنا
+
+function login() {
+    const email = document.getElementById("email").value.trim();
+    const errorDiv = document.getElementById("error");
+    errorDiv.textContent = "";
+
+    if (!email) {
+        errorDiv.textContent = "Please enter your email.";
+        return;
+    }
+
+    fetch(API_URL + "?action=getUser&email=" + encodeURIComponent(email))
+        .then(res => res.json())
+        .then(user => {
+            if (!user.exists) {
+                errorDiv.textContent = "Access denied. Email not registered.";
+                return;
+            }
+
+            // حفظ بيانات المستخدم في localStorage
+            localStorage.setItem("sp_user", JSON.stringify(user));
+
+            // توجيه حسب الدور
+            if (user.role === "requester") {
+                window.location.href = "create-request.html";
+            } else {
+                window.location.href = "dashboard.html";
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            errorDiv.textContent = "Error connecting to server.";
+        });
+}
+</script>
+
+</body>
+</html>
