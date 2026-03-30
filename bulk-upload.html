@@ -2,18 +2,64 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Bulk Upload - Spare Parts</title>
+<title>Bulk Upload - Spare Parts </title>
+
 <style>
     body { font-family: Arial, sans-serif; background:#f5f7fa; padding:20px; }
     h1 { color:#0b3c6f; }
-    .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
-    .card { max-width:600px; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-    input[type="file"] { margin-top:10px; }
-    button { margin-top:20px; padding:10px 20px; background:#0b3c6f; color:#fff; border:none; border-radius:6px; cursor:pointer; }
+
+    .top-bar {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:20px;
+    }
+
+    .card {
+        max-width:800px;
+        background:#fff;
+        padding:20px;
+        border-radius:8px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.1);
+        margin:auto;
+    }
+
+    table {
+        width:100%;
+        border-collapse:collapse;
+        margin-top:20px;
+        background:#fff;
+    }
+
+    th, td {
+        padding:10px;
+        border-bottom:1px solid #ddd;
+        text-align:left;
+    }
+
+    th {
+        background:#0b3c6f;
+        color:#fff;
+    }
+
+    button {
+        margin-top:20px;
+        padding:10px 20px;
+        background:#0b3c6f;
+        color:#fff;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
+    }
+
     button:hover { background:#09406f; }
+
     .link { color:#0b3c6f; text-decoration:none; font-size:0.9rem; }
+
+    #excelFile { margin-top:10px; }
 </style>
 </head>
+
 <body>
 
 <div class="top-bar">
@@ -30,7 +76,26 @@
     <p>File must contain columns: <b>part_number, part_name, quantity</b></p>
 
     <input type="file" id="excelFile" accept=".xlsx, .xls">
-    <button onclick="processExcel()">Upload & Submit</button>
+
+    <button onclick="processExcel()">Preview File</button>
+
+    <div id="previewSection" style="display:none;">
+        <h3>Preview</h3>
+        <p><b>Total Rows:</b> <span id="rowCount"></span></p>
+
+        <table id="previewTable">
+            <thead>
+                <tr>
+                    <th>Part Number</th>
+                    <th>Part Name</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <button onclick="uploadRequests()">Upload to System</button>
+    </div>
 </div>
 
 <!-- مكتبة قراءة Excel -->
@@ -41,13 +106,12 @@
 
 <script>
 let currentUser = null;
+let parsedRows = [];
 
+// Load user
 function loadUser() {
     currentUser = getCurrentUser();
-    if (!currentUser) {
-        window.location.href = "login.html";
-        return;
-    }
+    if (!currentUser) window.location.href = "login.html";
 
     document.getElementById("userInfo").textContent =
         currentUser.name + " (" + currentUser.role + ")";
@@ -61,6 +125,7 @@ function processExcel() {
     }
 
     const reader = new FileReader();
+
     reader.onload = function(e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: "array" });
@@ -72,26 +137,54 @@ function processExcel() {
             return;
         }
 
-        // تجهيز الطلبات
-        const requests = rows.map(r => ({
-            po: "PO-" + Date.now() + "-" + Math.floor(Math.random() * 9999),
-            part: r.part_name,
-            qty: r.quantity,
-            reason: "Bulk Upload",
-            date: new Date().toISOString().split("T")[0],
-            requesterEmail: currentUser.email,
-            requesterName: currentUser.name,
-            partNumber: r.part_number
-        }));
+        // Validate columns
+        if (!("part_number" in rows[0]) ||
+            !("part_name" in rows[0]) ||
+            !("quantity" in rows[0])) {
+            alert("Excel must contain: part_number, part_name, quantity");
+            return;
+        }
 
-        // إرسال الطلبات دفعة واحدة
-        uploadRequests(requests);
+        parsedRows = rows;
+
+        // Show preview
+        document.getElementById("previewSection").style.display = "block";
+        document.getElementById("rowCount").textContent = rows.length;
+
+        const tbody = document.querySelector("#previewTable tbody");
+        tbody.innerHTML = "";
+
+        rows.forEach(r => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${r.part_number}</td>
+                <td>${r.part_name}</td>
+                <td>${r.quantity}</td>
+            `;
+            tbody.appendChild(tr);
+        });
     };
 
     reader.readAsArrayBuffer(file);
 }
 
-function uploadRequests(requests) {
+function uploadRequests() {
+    if (parsedRows.length === 0) {
+        alert("No data to upload.");
+        return;
+    }
+
+    const requests = parsedRows.map(r => ({
+        po: "PO-" + Date.now() + "-" + Math.floor(Math.random() * 9999),
+        part: r.part_name,
+        qty: r.quantity,
+        reason: "Bulk Upload",
+        date: new Date().toISOString().split("T")[0],
+        requesterEmail: currentUser.email,
+        requesterName: currentUser.name,
+        partNumber: r.part_number
+    }));
+
     fetch(API_URL + "?action=bulkAdd", {
         method: "POST",
         body: JSON.stringify({ requests })
