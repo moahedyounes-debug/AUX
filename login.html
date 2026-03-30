@@ -24,9 +24,10 @@
     <div id="error" class="error"></div>
 </div>
 
-<script>
-const API_URL = "YOUR_WEB_APP_URL"; // ضع رابط الويب آب هنا
+<!-- ربط ملف الإعدادات -->
+<script src="config.js"></script>
 
+<script>
 function login() {
     const email = document.getElementById("email").value.trim();
     const errorDiv = document.getElementById("error");
@@ -45,7 +46,7 @@ function login() {
                 return;
             }
 
-            // حفظ بيانات المستخدم في localStorage
+            // حفظ بيانات المستخدم
             localStorage.setItem("sp_user", JSON.stringify(user));
 
             // توجيه حسب الدور
@@ -64,4 +65,3 @@ function login() {
 
 </body>
 </html>
-
