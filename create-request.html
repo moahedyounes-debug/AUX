@@ -22,7 +22,7 @@
     <div>
         <span id="userInfo"></span> |
         <a href="dashboard.html" class="link">Dashboard</a> |
-        <a href="login.html" class="link" onclick="logout()">Logout</a>
+        <a href="#" class="link" onclick="logout()">Logout</a>
     </div>
 </div>
 
@@ -39,27 +39,31 @@
     <button onclick="submitRequest()">Submit Request</button>
 </div>
 
-<script>
-const API_URL = "YOUR_WEB_APP_URL";
+<!-- ربط ملف الإعدادات -->
+<script src="config.js"></script>
 
+<script>
 let currentUser = null;
 
+// تحميل بيانات المستخدم
 function loadUser() {
-    const u = localStorage.getItem("sp_user");
-    if (!u) {
+    currentUser = getCurrentUser();
+    if (!currentUser) {
         window.location.href = "login.html";
         return;
     }
-    currentUser = JSON.parse(u);
+
     document.getElementById("userInfo").textContent =
         currentUser.name + " (" + currentUser.role + ")";
+
+    // السماح فقط لـ requester و manager
     if (currentUser.role !== "requester" && currentUser.role !== "manager") {
-        // حتى لو كان reviewer يقدر يرفع؟ هنا خليه فقط requester/manager
         alert("You are not allowed to create requests.");
         window.location.href = "dashboard.html";
     }
 }
 
+// إرسال الطلب إلى Google Sheets
 function submitRequest() {
     const part = document.getElementById("part").value.trim();
     const qty = document.getElementById("qty").value.trim();
@@ -99,13 +103,8 @@ function submitRequest() {
     });
 }
 
-function logout() {
-    localStorage.removeItem("sp_user");
-}
-
 loadUser();
 </script>
 
 </body>
 </html>
-
