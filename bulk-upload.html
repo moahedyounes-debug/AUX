@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bulk Upload - Spare Parts</title>
+<style>
+    body { font-family: Arial, sans-serif; background:#f5f7fa; padding:20px; }
+    h1 { color:#0b3c6f; }
+    .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+    .card { max-width:600px; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+    input[type="file"] { margin-top:10px; }
+    button { margin-top:20px; padding:10px 20px; background:#0b3c6f; color:#fff; border:none; border-radius:6px; cursor:pointer; }
+    button:hover { background:#09406f; }
+    .link { color:#0b3c6f; text-decoration:none; font-size:0.9rem; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+    <h1>Bulk Upload Spare Parts</h1>
+    <div>
+        <span id="userInfo"></span> |
+        <a href="dashboard.html" class="link">Dashboard</a> |
+        <a href="#" class="link" onclick="logout()">Logout</a>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Upload Excel File</h3>
+    <p>File must contain columns: <b>part_number, part_name, quantity</b></p>
+
+    <input type="file" id="excelFile" accept=".xlsx, .xls">
+    <button onclick="processExcel()">Upload & Submit</button>
+</div>
+
+<!-- مكتبة قراءة Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- ربط ملف الإعدادات -->
+<script src="config.js"></script>
+
+<script>
+let currentUser = null;
+
+function loadUser() {
+    currentUser = getCurrentUser();
+    if (!currentUser) {
+        window.location.href = "login.html";
+        return;
+    }
+
+    document.getElementById("userInfo").textContent =
+        currentUser.name + " (" + currentUser.role + ")";
+}
+
+function processExcel() {
+    const file = document.getElementById("excelFile").files[0];
+    if (!file) {
+        alert("Please select an Excel file.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+
+        if (rows.length === 0) {
+            alert("Excel file is empty.");
+            return;
+        }
+
+        // تجهيز الطلبات
+        const requests = rows.map(r => ({
+            po: "PO-" + Date.now() + "-" + Math.floor(Math.random() * 9999),
+            part: r.part_name,
+            qty: r.quantity,
+            reason: "Bulk Upload",
+            date: new Date().toISOString().split("T")[0],
+            requesterEmail: currentUser.email,
+            requesterName: currentUser.name,
+            partNumber: r.part_number
+        }));
+
+        // إرسال الطلبات دفعة واحدة
+        uploadRequests(requests);
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+function uploadRequests(requests) {
+    fetch(API_URL + "?action=bulkAdd", {
+        method: "POST",
+        body: JSON.stringify({ requests })
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.success) {
+            alert("Bulk upload completed successfully.");
+            window.location.href = "dashboard.html";
+        } else {
+            alert("Error uploading requests.");
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Error connecting to server.");
+    });
+}
+
+loadUser();
+</script>
+
+</body>
+</html>
