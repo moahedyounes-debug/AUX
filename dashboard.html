@@ -29,7 +29,7 @@
         |
         <a href="create-request.html" class="link">New Request</a> |
         <span id="userInfo"></span> |
-        <a href="login.html" class="link" onclick="logout()">Logout</a>
+        <a href="#" class="link" onclick="logout()">Logout</a>
     </div>
 </div>
 
@@ -48,22 +48,26 @@
     <tbody></tbody>
 </table>
 
+<!-- ربط ملف الإعدادات -->
+<script src="config.js"></script>
+
 <script>
-const API_URL = "YOUR_WEB_APP_URL";
 let currentUser = null;
 let allRows = [];
 
+// تحميل بيانات المستخدم
 function loadUser() {
-    const u = localStorage.getItem("sp_user");
-    if (!u) {
+    currentUser = getCurrentUser();
+    if (!currentUser) {
         window.location.href = "login.html";
         return;
     }
-    currentUser = JSON.parse(u);
+
     document.getElementById("userInfo").textContent =
         currentUser.name + " (" + currentUser.role + ")";
 }
 
+// تحميل الطلبات من Google Sheets
 function loadRequests() {
     fetch(API_URL + "?action=getRequests")
         .then(res => res.json())
@@ -77,12 +81,13 @@ function loadRequests() {
         });
 }
 
+// عرض البيانات في الجدول
 function renderTable(data) {
     const tbody = document.querySelector("#partsTable tbody");
     tbody.innerHTML = "";
 
     data.forEach(r => {
-        // لو حابب requester يشوف فقط طلباته:
+        // requester يشوف فقط طلباته
         if (currentUser.role === "requester" && r.requesterEmail !== currentUser.email) {
             return;
         }
@@ -103,6 +108,7 @@ function renderTable(data) {
     });
 }
 
+// البحث داخل الجدول
 function filterTable() {
     const q = document.getElementById("searchBox").value.toLowerCase();
     const filtered = allRows.filter(r =>
@@ -112,10 +118,6 @@ function filterTable() {
         (r.status || "").toLowerCase().includes(q)
     );
     renderTable(filtered);
-}
-
-function logout() {
-    localStorage.removeItem("sp_user");
 }
 
 loadUser();
