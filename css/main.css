@@ -184,7 +184,7 @@ body { font-family: var(--font); background: var(--gray-50); color: var(--gray-9
 .filter-group    { margin-bottom: 9px; }
 .filter-label    { display: block; font-size: 9px; font-weight: 600; color: rgba(255,255,255,.3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
 .filter-input    { width: 100%; padding: 7px 10px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1); border-radius: var(--r-sm); color: rgba(255,255,255,.8); font-size: 12px; font-family: var(--font); outline: none; cursor: pointer; }
-.filter-input:focus { border-color: var(--aux-blue-soft); }
+.filter-input:focus { border-color: #000; }
 .filter-input option { background: var(--aux-blue-dark); color: white; }
 .filter-reset-btn { width: 100%; padding: 7px; background: transparent; border: 1px solid rgba(255,255,255,.15); border-radius: var(--r-sm); color: rgba(255,255,255,.5); font-size: 11px; font-family: var(--font); cursor: pointer; transition: all .15s; margin-top: 4px; }
 .filter-reset-btn:hover { background: rgba(255,255,255,.08); color: rgba(255,255,255,.8); }
