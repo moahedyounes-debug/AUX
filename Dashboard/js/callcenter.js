@@ -6,8 +6,9 @@
 //    Evaluation     → agent scores by category/month
 //
 //  SLA calculation:
+//    Filter: only Answered IB calls (Status=ANSWERED, Call Type=IB)
 //    Within SLA column = 1 → within SLA, 0 → not
-//    SLA Rate = Σ(Within SLA=1) / total rows × 100
+//    SLA Rate = Σ(Within SLA=1) / total Answered IB rows × 100
 //
 //  Abandon calculation:
 //    Event column contains "ABANDON" (case-insensitive)
@@ -142,6 +143,7 @@ function enrichCall(row) {
 
   r._qty      = parseFloat(r[C.QTY])  || 1;
   r._agent    = (r[C.AGENT_NAME] || r[C.AGENT] || '').trim();
+  r._status   = (r[C.STATUS]    || '').trim().toUpperCase();
   r._callType = (r[C.CALL_TYPE] || '').trim().toUpperCase();
   r._event    = (r[C.EVENT]     || '').trim().toUpperCase();
 
@@ -284,7 +286,7 @@ function groupByMonthCC(rows) {
   const m = {};
   rows.forEach(r => {
     const k = r._monthKey || '—';
-    if (!m[k]) m[k] = {mk:k, total:0, sla:0, abandon:0, inbound:0, outbound:0, totalAHT:0, ahtN:0, totalTHT:0, thtN:0};
+    if (!m[k]) m[k] = {mk:k, total:0, sla:0, abandon:0, inbound:0, outbound:0, totalAHT:0, ahtN:0, totalTHT:0, thtN:0, answeredIB:0, slaAnsweredIB:0};
     m[k].total++;
     if (r._withinSLA)   m[k].sla++;
     if (r._isAbandoned) m[k].abandon++;
@@ -292,12 +294,18 @@ function groupByMonthCC(rows) {
     if (r._isOutbound)  m[k].outbound++;
     if (r._aht > 0)   { m[k].totalAHT += r._aht; m[k].ahtN++; }
     if (r._tht > 0)   { m[k].totalTHT += r._tht; m[k].thtN++; }
+
+    // SLA Rate: only count Answered IB calls per user requirement
+    if (r._isInbound && r._status === 'ANSWERED') {
+      m[k].answeredIB++;
+      if (r._withinSLA) m[k].slaAnsweredIB++;
+    }
   });
   return Object.values(m)
     .sort((a,b) => String(a.mk).localeCompare(String(b.mk)))
     .map(m => ({
       ...m,
-      slaRate:     m.total ? +(m.sla / m.total * 100).toFixed(1) : null,
+      slaRate:     m.answeredIB > 0 ? +(m.slaAnsweredIB / m.answeredIB * 100).toFixed(1) : null,
       abandonRate: m.total ? +(m.abandon / m.total * 100).toFixed(1) : null,
       avgAHT:      m.ahtN  ? +(m.totalAHT / m.ahtN).toFixed(0) : null,
       avgTHT:      m.thtN  ? +(m.totalTHT / m.thtN).toFixed(0) : null,
@@ -412,11 +420,15 @@ async function renderCallCenter() {
 
   // ── Overall KPIs ──────────────────────────────────────────
   const total       = calls.length;
-  const slaCount    = calls.filter(r => r._withinSLA).length;
-  const abandonCount= calls.filter(r => r._isAbandoned).length;
   const inbound     = calls.filter(r => r._isInbound).length;
   const outbound    = calls.filter(r => r._isOutbound).length;
-  const slaRate     = total ? +(slaCount    / total * 100).toFixed(1) : null;
+
+  // SLA Rate: only count Answered IB calls per user requirement
+  const answeredIBCalls = calls.filter(r => r._isInbound && r._status === 'ANSWERED');
+  const slaCount    = answeredIBCalls.filter(r => r._withinSLA).length;
+  const slaRate     = answeredIBCalls.length ? +(slaCount / answeredIBCalls.length * 100).toFixed(1) : null;
+
+  const abandonCount= calls.filter(r => r._isAbandoned).length;
   const abandonRate = total ? +(abandonCount/ total * 100).toFixed(1) : null;
   const avgAHT      = avg(calls.filter(r=>r._aht>0), r=>r._aht);
   const avgTHT      = avg(calls.filter(r=>r._tht>0), r=>r._tht);
