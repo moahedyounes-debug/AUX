@@ -64,12 +64,13 @@ function enrichCall(row) {
   const hourVal = r[C.HOUR] ? String(r[C.HOUR]).trim() : '';
   r._hour = parseInt(slap2Val || hourVal) || 0;
 
-  // AHT/THT: Format is HH:MM:SS.mmm (e.g., "00:00:09.000")
-  // Convert to seconds (ignoring milliseconds)
+  // AHT/THT: Could be time string (H:MM:SS or HH:MM:SS.mmm) or decimal (fraction of day)
+  // Google Sheets exports: "0:00:09" or as decimal 0.000104... (9 seconds / 86400)
   const parseTime = (val) => {
     if (!val) return 0;
     const str = String(val).trim();
-    // Match HH:MM:SS or HH:MM:SS.mmm
+
+    // Try parsing as time string: HH:MM:SS or H:MM:SS or HH:MM:SS.mmm
     const timeMatch = str.match(/(\d+):(\d+):(\d+)(?:\.(\d+))?/);
     if (timeMatch) {
       const hours = parseInt(timeMatch[1]);
@@ -77,7 +78,19 @@ function enrichCall(row) {
       const seconds = parseInt(timeMatch[3]);
       return hours * 3600 + minutes * 60 + seconds;
     }
-    return parseFloat(str) || 0;
+
+    // Try parsing as decimal number
+    const num = parseFloat(str);
+    if (!isNaN(num) && num > 0) {
+      // If very small number (< 1), likely fraction of day: convert to seconds
+      if (num < 1) {
+        return Math.round(num * 86400);  // seconds in a day
+      }
+      // If larger number, assume it's already in seconds
+      return num;
+    }
+
+    return 0;
   };
   r._aht = parseTime(r[C.AHT]);
   r._tht = parseTime(r[C.THT]);
