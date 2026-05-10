@@ -48,7 +48,7 @@ function enrichCall(row) {
   const C = CONFIG.CC_COLS;
   const r = {...row};
   r._monthKey = (r[C.MONTH]    || '').trim();
-  r._hour     = parseInt(r[C.SLAP2] || r[C.HOUR] || 0) || 0;
+  r._hour     = parseInt(r[C.HOUR]) || 0;
   r._aht      = parseFloat(r[C.AHT])  || 0;
   r._tht      = parseFloat(r[C.THT])  || 0;
   r._qty      = parseFloat(r[C.QTY])  || 1;
@@ -75,7 +75,7 @@ function enrichCall(row) {
 function enrichWA(row) {
   const r = {...row};
   r._monthKey = (r['Month'] || r['month'] || '').trim();
-  r._hour     = parseInt(r['SLAP 2'] || r['Slap 2'] || r['Hour'] || r['hour']) || 0;
+  r._hour     = parseInt(r['Hour'] || r['hour']) || 0;
   r._agent    = (r['Agent Name'] || r['Agent'] || r['agent'] || '').trim();
   return r;
 }

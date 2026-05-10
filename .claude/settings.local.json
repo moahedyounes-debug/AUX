@@ -33,7 +33,10 @@
       "Bash(cp -r Dashboard/. temp_clean/)",
       "Bash(rm -rf *)",
       "Bash(rm -rf .*)",
-      "Bash(git commit -m 'Clean Dashboard repository - remove duplicates and test files *)"
+      "Bash(git commit -m 'Clean Dashboard repository - remove duplicates and test files *)",
+      "Bash(git mv *)",
+      "Bash(cd \"C:/Users/moahe/OneDrive/Desktop/Dashboard\" && rm -rf '{css,js}' && git status)",
+      "Bash(git commit -m 'Revert SLAP2 changes - use HOUR column for peak hours *)"
     ]
   }
 }
