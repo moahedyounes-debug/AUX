@@ -64,36 +64,42 @@ function enrichCall(row) {
   const hourVal = r[C.HOUR] ? String(r[C.HOUR]).trim() : '';
   r._hour = parseInt(slap2Val || hourVal) || 0;
 
-  // AHT/THT: Could be time string (H:MM:SS or HH:MM:SS.mmm) or decimal (fraction of day)
-  // Google Sheets exports: "0:00:09" or as decimal 0.000104... (9 seconds / 86400)
+  // AHT/THT: Time value in various formats from Google Sheets export
+  // Could be: "0:00:09" | "00:00:09.000" | decimal 0.000104166 (9 secs / 86400)
   const parseTime = (val) => {
     if (!val) return 0;
     const str = String(val).trim();
+    if (!str) return 0;
 
-    // Try parsing as time string: HH:MM:SS or H:MM:SS or HH:MM:SS.mmm
+    // Try 1: Time string format (H:MM:SS or HH:MM:SS or HH:MM:SS.mmm or H:MM:SS.mmm)
     const timeMatch = str.match(/(\d+):(\d+):(\d+)(?:\.(\d+))?/);
     if (timeMatch) {
-      const hours = parseInt(timeMatch[1]);
-      const minutes = parseInt(timeMatch[2]);
-      const seconds = parseInt(timeMatch[3]);
-      return hours * 3600 + minutes * 60 + seconds;
+      const h = parseInt(timeMatch[1]);
+      const m = parseInt(timeMatch[2]);
+      const s = parseInt(timeMatch[3]);
+      return h * 3600 + m * 60 + s;
     }
 
-    // Try parsing as decimal number
+    // Try 2: Decimal number (might be fraction of day or seconds)
     const num = parseFloat(str);
-    if (!isNaN(num) && num > 0) {
-      // If very small number (< 1), likely fraction of day: convert to seconds
+    if (!isNaN(num) && num !== 0) {
+      // If very small (< 1), assume fraction of day
       if (num < 1) {
-        return Math.round(num * 86400);  // seconds in a day
+        return Math.round(num * 86400);
       }
-      // If larger number, assume it's already in seconds
-      return num;
+      // If between 1-3600, assume seconds
+      if (num >= 1 && num < 3600) {
+        return Math.round(num);
+      }
+      // If >= 3600, assume already seconds
+      return Math.round(num);
     }
 
     return 0;
   };
-  r._aht = parseTime(r[C.AHT]);
-  r._tht = parseTime(r[C.THT]);
+  // Try exact column name, then fallback to variations
+  r._aht = parseTime(r[C.AHT] || r['Average Handle Time'] || r['handle time'] || r['AHT']);
+  r._tht = parseTime(r[C.THT] || r['Total Handle Time'] || r['talk time'] || r['THT']);
 
   r._qty      = parseFloat(r[C.QTY])  || 1;
   r._agent    = (r[C.AGENT_NAME] || r[C.AGENT] || '').trim();
@@ -132,9 +138,10 @@ function enrichWA(row) {
     r._monthKey = (r['Month'] || r['month'] || '').trim();
   }
 
-  // Hour: Use SLAP 2 if available, else Hour
-  const slap2Val = r['SLAP 2'] ? String(r['SLAP 2']).trim() : '';
-  const hourVal = r['Hour'] ? String(r['Hour']).trim() : '';
+  // Hour: Use Slap2 if available, else Hours or Hour
+  const slap2Val = r['Slap2'] ? String(r['Slap2']).trim() : '';
+  const hourVal = r['Hours'] ? String(r['Hours']).trim() :
+                  r['Hour'] ? String(r['Hour']).trim() : '';
   r._hour = parseInt(slap2Val || hourVal) || 0;
 
   r._agent = (r['Agent Name'] || r['Agent'] || r['agent'] || '').trim();
