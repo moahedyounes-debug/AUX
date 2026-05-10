@@ -109,13 +109,29 @@ function enrichCall(row) {
   let thtVal = r[C.THT] || r['Total Handle Time'] || r['talk time'] || r['THT'] || r[''];
 
   // If still not found, search all columns for time-formatted values
+  // Look for patterns like "H:MM:SS" or "HH:MM:SS" or decimal seconds
   if (!ahtVal || !thtVal) {
-    const timeValues = Object.values(row).filter(v => {
-      const s = String(v || '').trim();
-      return /^\d+:\d+:\d+/.test(s) || (parseFloat(s) > 0 && parseFloat(s) < 1);
-    }).sort();
-    if (timeValues.length >= 2 && !ahtVal) ahtVal = timeValues[0];
+    const timeValues = Object.entries(row)
+      .map(([k, v]) => {
+        const s = String(v || '').trim();
+        const isTimeFormat = /^\d{1,2}:\d{2}:\d{2}/.test(s);
+        const isDecimal = !isNaN(parseFloat(s)) && parseFloat(s) > 0 && parseFloat(s) < 1;
+        return { key: k, val: s, isTime: isTimeFormat || isDecimal };
+      })
+      .filter(x => x.isTime)
+      .map(x => x.val);
+
+    // Sort by converting to seconds to get correct order (AHT typically < THT)
+    timeValues.sort((a, b) => {
+      const aSeconds = parseTime(a);
+      const bSeconds = parseTime(b);
+      return aSeconds - bSeconds;
+    });
+
+    // Assign first two time values if not already found
+    if (timeValues.length >= 1 && !ahtVal) ahtVal = timeValues[0];
     if (timeValues.length >= 2 && !thtVal) thtVal = timeValues[1];
+    if (timeValues.length === 1 && ahtVal && !thtVal) thtVal = timeValues[0];
   }
 
   r._aht = parseTime(ahtVal);
@@ -126,9 +142,19 @@ function enrichCall(row) {
   r._callType = (r[C.CALL_TYPE] || '').trim().toUpperCase();
   r._event    = (r[C.EVENT]     || '').trim().toUpperCase();
 
-  // SLA: Within SLA = 1 (or "yes") → true
+  // SLA: Within SLA = 1 (or "yes" or "true") → true
   // Try exact column name, then fallback to variations
-  const withinSlaVal = r[C.WITHIN_SLA] || r['Within SLA'] || r['within_sla'] || r['SLA'] || '';
+  let withinSlaVal = r[C.WITHIN_SLA] || r['Within SLA'] || r['within_sla'] || r['SLA'] || '';
+
+  // If not found by name, search for numeric 1/0 or yes/no pattern
+  if (!withinSlaVal) {
+    const foundKey = Object.keys(r).find(k => {
+      const kLower = k.toLowerCase();
+      return kLower.includes('sla') || kLower.includes('within') || kLower.includes('compliance');
+    });
+    if (foundKey) withinSlaVal = r[foundKey];
+  }
+
   const w = String(withinSlaVal || '').trim().toLowerCase();
   r._withinSLA = (w === '1' || w === 'yes' || w === 'true');
 
