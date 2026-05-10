@@ -51,6 +51,24 @@
 | 15 | Week | 14 | - |
 | 16 | Day Name | 15 | - |
 
+## Evaluation Form Sheet (CC_EVAL_SHEET_ID)
+
+| Column # | Config Key | Column Name | JS Index | Used For |
+|----------|-----------|------------|----------|----------|
+| **1** | **AGENT** | **Agent** | **0** | **Extract _agent name** ✓ |
+| **2** | **M_YEAR** | **M-Year** | **1** | **Extract year/period** |
+| **3** | **MONTH** | **Month** | **2** | **Extract _month for filtering** ✓ |
+| 4 | CATEGORY | Criteria Category | 3 | Extract _category |
+| 5 | CRITERIA | Criteria | 4 | Extract _criteria |
+| 6 | DESC | Description | 5 | - |
+| **7** | **SCORE_15** | **Score (1-5)** | **6** | **Primary score column** ✓ |
+| **8** | **MGR_EVAL** | **Manager Evaluation** | **7** | **Fallback score column** ✓ |
+| 9 | MAX | Max | 8 | Maximum score value |
+| **10** | **SCORE** | **Score** | **9** | **Final score (aggregated)** ✓ |
+| 11 | SORT | Sort | 10 | Sorting order |
+| 12 | REMARK | Remark | 11 | Comments/remarks |
+| 13 | PHONE | Phone | 12 | Agent phone |
+
 ## Key Formulas
 
 ### SLA Rate (Answered IB Calls Only)

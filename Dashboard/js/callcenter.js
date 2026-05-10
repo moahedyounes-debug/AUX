@@ -215,33 +215,58 @@ function enrichEval(row) {
   r._category = (r[C.CATEGORY] || '').trim();
   r._criteria = (r[C.CRITERIA] || '').trim();
 
-  // Score comes from multiple possible columns: "Manager Evaluation", "Score (1-5)", or "Score"
-  // Try in order of preference: Manager Evaluation > Score (1-5) > Score
-  let mgrEvalVal = r[C.MGR_EVAL] || r['Manager Evaluation'] || r['Manager_Evaluation'] || r['manager evaluation'] ||
-                   r['Score (1-5)'] || r['Score (1-5)'.toLowerCase()] ||
-                   r['Score'] || r['score'] || r['__col_6'] || '';  // Try unnamed column 6 as fallback
+  // Extract Max value first to validate we have the right row structure
+  let maxVal = (r[C.MAX] || r['Max'] || r['max'] || r['__col_8'] || '5').trim();
+  r._max = parseInt(maxVal) || 5;
 
-  // If not found, search all keys for columns containing "score" or "evaluation"
-  if (!mgrEvalVal) {
+  // Try to find numeric score from multiple columns in order of preference:
+  // 1. Manager Evaluation (named column or variations)
+  // 2. Score (1-5) (named column or variations)
+  // 3. Score (named column or variations)
+  // 4. Unnamed columns by expected index
+
+  let scoreVal = '';
+
+  // Try Manager Evaluation first
+  scoreVal = r[C.MGR_EVAL] || r['Manager Evaluation'] || r['Manager_Evaluation'] || r['manager evaluation'] || '';
+
+  // Try Score (1-5)
+  if (!scoreVal) {
+    scoreVal = r[C.SCORE_15] || r['Score (1-5)'] || r['Score (1-5)'.toLowerCase()] || '';
+  }
+
+  // Try Score column
+  if (!scoreVal) {
+    scoreVal = r[C.SCORE] || r['Score'] || r['score'] || '';
+  }
+
+  // Try unnamed columns by expected index (7, 6, 9 based on mapping)
+  if (!scoreVal) {
+    scoreVal = r['__col_7'] || r['__col_6'] || r['__col_9'] || '';
+  }
+
+  // If still not found, search all keys for columns containing "score" or "evaluation"
+  if (!scoreVal) {
     const foundKey = Object.keys(row).find(k => {
       const kLower = k.toLowerCase().replace(/\s+/g, '');
       return (kLower.includes('evaluation') || (kLower.includes('score') && !kLower.includes('sort')));
     });
-    if (foundKey) mgrEvalVal = row[foundKey];
+    if (foundKey) scoreVal = row[foundKey];
   }
 
-  // Trim whitespace and remove % if present
-  mgrEvalVal = String(mgrEvalVal || '').trim().replace(/%\s*$/, '').replace(/^\s*/, '');
+  // Clean up the value: trim, remove % symbol, and parse
+  scoreVal = String(scoreVal || '').trim().replace(/%\s*$/, '').trim();
 
-  // Parse the score - handle both numeric and percentage values
-  let scoreNum = parseFloat(mgrEvalVal) || 0;
-  // If the value was a percentage (0-100), convert to 0-5 scale
+  // Parse as number
+  let scoreNum = parseFloat(scoreVal) || 0;
+
+  // If the value was a percentage (> 5 and <= 100), convert to 0-5 scale
+  // If value is 0-5, it's already on the right scale
   if (scoreNum > 5 && scoreNum <= 100) {
     scoreNum = scoreNum / 20; // Convert 0-100 to 0-5
   }
 
   r._score = Math.max(0, Math.min(5, scoreNum)); // Clamp to 0-5 range
-  r._max = 5;
   r._mgrEval = r._score;
   r._pct = r._max > 0 ? Math.round(r._score / r._max * 100) : 0;
 
