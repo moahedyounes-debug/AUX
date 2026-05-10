@@ -149,8 +149,9 @@ function enrichCall(row) {
   r._event    = (r[C.EVENT]     || '').trim().toUpperCase();
 
   // SLA: Within SLA = 1 (or "yes" or "true") → true
-  // Try exact column name, then fallback to variations
-  let withinSlaVal = r[C.WITHIN_SLA] || r['Within SLA'] || r['within_sla'] || r['SLA'] || r['__col_7'] || '';
+  // Google Sheets export has unnamed columns, try both named and unnamed variants
+  let withinSlaVal = r[C.WITHIN_SLA] || r['Within SLA'] || r['within_sla'] || r['SLA'] ||
+                     r['__col_23'] || r['__col_24'] || r['__col_7'] || '';
 
   // If not found by name, search for numeric 1/0 or yes/no pattern
   if (!withinSlaVal) {
