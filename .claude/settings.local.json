@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Rename-Item -Path \"C:\\\\Users\\\\moahe\\\\OneDrive\\\\Desktop\\\\Dashboard_GitHub\" -NewName \"Dashboard\")",
+      "Bash(dir \"C:\\\\Users\\\\moahe\\\\OneDrive\")",
+      "Bash(findstr Dashboard)",
+      "Bash(if.*page)",
+      "Bash(render\" | head -20)",
+      "Bash(git init *)",
+      "Bash(git config *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git fetch *)",
+      "Bash(git reset *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(python sync.py)",
+      "Bash(tee sync_run.log)",
+      "Bash(pip install *)",
+      "Bash(git ls-tree *)",
+      "Bash(rm -rf Dashboard \"{css,js}\")",
+      "Bash(mkdir -p Dashboard)",
+      "Bash(mv css *)",
+      "Bash(mv js *)",
+      "Bash(mv *.html Dashboard/)",
+      "Bash(rm -rf css js Dashboard \"{css,js}\")",
+      "Bash(cp -r \"C:\\\\Users\\\\moahe\\\\OneDrive\\\\Cluade\\\\Own Files\\\\Dashboard/.\" .)",
+      "Bash(rm -rf .git .claude \"{css,js}\")",
+      "Bash(echo \"Total files: $\\(git ls-tree -r HEAD)",
+      "Bash(rm -rf .git)",
+      "Bash(mkdir -p temp_clean)",
+      "Bash(cp -r Dashboard/. temp_clean/)",
+      "Bash(rm -rf *)",
+      "Bash(rm -rf .*)",
+      "Bash(git commit -m 'Clean Dashboard repository - remove duplicates and test files *)"
+    ]
+  }
+}

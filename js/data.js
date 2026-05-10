@@ -1,0 +1,445 @@
+// ═══════════════════════════════
+//  AUX ASC DASHBOARD · DATA
+// ═══════════════════════════════
+const DB = {
+  raw: [], filtered: [], allRaw: [],
+  accessMap: {}, userASC: null, isAdmin: false, loadedAt: null,
+};
+
+// ── CSV parser that handles multi-line quoted fields ──────────
+// The Google Sheets export contains rows where Maintenance Instructions
+// span multiple lines inside quotes — standard line-by-line split breaks these.
+function parseCSV(text) {
+  // Remove BOM
+  const raw = text.replace(/^\uFEFF/, '');
+
+  // ── Tokenise the whole file character-by-character ──
+  // This correctly handles \n inside quoted fields.
+  const rows = [];
+  let fields = [], cur = '', inQ = false;
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch  = raw[i];
+    const nxt = raw[i+1];
+
+    if (ch === '"') {
+      if (inQ && nxt === '"') { cur += '"'; i++; }   // escaped quote
+      else inQ = !inQ;
+    } else if (ch === ',' && !inQ) {
+      fields.push(cur.trim()); cur = '';
+    } else if ((ch === '\n' || ch === '\r') && !inQ) {
+      if (ch === '\r' && nxt === '\n') i++;           // CRLF
+      fields.push(cur.trim());
+      rows.push(fields);
+      fields = []; cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  // last field / row
+  if (cur !== '' || fields.length) { fields.push(cur.trim()); rows.push(fields); }
+
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+
+  return rows.slice(1).map(vals => {
+    const o = {};
+    headers.forEach((h, i) => { o[h] = (vals[i] || '').trim(); });
+    return o;
+  }).filter(r => {
+    // Remove completely empty rows
+    return Object.values(r).some(v => v !== '');
+  });
+}
+
+// ── Parse CSV but ONLY keep rows where Ticket Number starts with "GD" ──
+// Used for the main data sheet (Sheet1) only — not for Access sheet
+function parseCSV_GD(text) {
+  const all = parseCSV(text);
+  const ticketCol = Object.keys(all[0] || {})[0] || 'Ticket Number';
+  return all.filter(r => {
+    const val = r[ticketCol] || '';
+    return val.startsWith('GD');
+  });
+}
+
+async function fetchSheet(name) {
+  const r = await fetch(sheetUrl(name));
+  if (!r.ok) throw new Error(`Cannot load sheet: ${name}`);
+  return parseCSV(await r.text());
+}
+
+// ── Fetch main data sheet with GD filter ──
+async function fetchDataSheet() {
+  const r = await fetch(sheetUrl(CONFIG.DATA_SHEET));
+  if (!r.ok) throw new Error(`Cannot load data sheet`);
+  return parseCSV_GD(await r.text());
+}
+
+// ── Company: normalise to ZAM / wiFEX / Classic / DOZN / ABL ─
+function extractCompany(n) {
+  if (!n) return '';
+  const lower = n.toLowerCase();
+  if (lower.includes('zam'))                         return 'ZAM';
+  if (lower.includes('wifex') || lower.includes('authorized maintenance and operations')) return 'wiFEX';
+  if (lower.includes('classic'))                     return 'Classic';
+  if (lower.includes('dozn'))                        return 'DOZN';
+  if (lower.includes('abl'))                         return 'ABL';
+  return '';  // unknown — will be filtered out
+}
+
+// ── Branch: extract city from the provider name and format as "City - Company"
+// Examples:
+//   "ZAM - Jeddah Branch"                          → "Jeddah - ZAM"
+//   "Classic Pvt. Ltd. Company-Riyadh Branch"       → "Riyadh - Classic"
+//   "wiFEX ... - Makkah Al Mukarramah Branch"       → "Makkah Al Mukarramah - wiFEX"
+function extractBranch(n) {
+  if (!n) return null;
+
+  const company = extractCompany(n);
+  if (!company) return null;   // no valid company → discard
+
+  // Find the city part: text after the last '-', strip " Branch" suffix
+  const dashIdx = n.lastIndexOf('-');
+  if (dashIdx === -1) return null;
+
+  let city = n.substring(dashIdx + 1).trim();
+  city = city.replace(/\s*branch\s*/i, '').trim();
+
+  if (!city) return null;
+
+  return `${city} - ${company}`;
+}
+function parseDate(s) {
+  if (!s) return null;
+  const str = s.trim();
+  if (!str || str === '—' || str === '-') return null;
+
+  // ── ISO / Google Sheets default: "2026-04-28 14:30:00" or "2026-04-28 0:00:00"
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const iso = str.replace(' ', 'T');
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // ── "28 Apr, 13:17" or "28 Apr 2026 13:17"
+  const mo = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  const m1 = str.match(/^(\d{1,2})\s+([A-Za-z]{3})[,\s]+(\d{4})?\s*(\d{1,2}):(\d{2})/);
+  if (m1) {
+    const [,day,mon,yr,hr,min] = m1;
+    const month = mo[mon] ?? mo[mon.slice(0,3)];
+    if (month !== undefined) {
+      const year = yr ? parseInt(yr) : new Date().getFullYear();
+      return new Date(year, month, +day, +hr, +min);
+    }
+  }
+
+  // ── "28 Apr, 2026" (date only)
+  const m2 = str.match(/^(\d{1,2})\s+([A-Za-z]{3})[,\s]+(\d{4})$/);
+  if (m2) {
+    const month = mo[m2[2]];
+    if (month !== undefined) return new Date(+m2[3], month, +m2[1]);
+  }
+
+  // ── DD/MM/YYYY or MM/DD/YYYY
+  const m3 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(?:(\d{1,2}):(\d{2}))?/);
+  if (m3) {
+    const [,a,b,y,h='0',min='0'] = m3;
+    // Assume DD/MM/YYYY (Saudi standard)
+    return new Date(+y, +b-1, +a, +h, +min);
+  }
+
+  // ── Fallback: native Date parse
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// ── Format: date only ─────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return '—';
+  try {
+    return d.toLocaleDateString('en-GB', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    });
+  } catch(e) { return '—'; }
+}
+
+// ── Format: date + time 24h ───────────────────────────────────
+function fmtDateTime(d) {
+  if (!d) return '—';
+  try {
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `${dd} ${mo}, ${hh}:${mm}`;
+  } catch(e) { return '—'; }
+}
+
+// ── Format: time only 24h ────────────────────────────────────
+function fmtTime(d) {
+  if (!d) return '—';
+  try {
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `${hh}:${mm}`;
+  } catch(e) { return '—'; }
+}
+
+// ── Format: date + full time 24h (for logs) ──────────────────
+function fmtDateTimeFull(d) {
+  if (!d) return '—';
+  try {
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+    const yr = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    const ss = String(d.getSeconds()).padStart(2,'0');
+    return `${dd} ${mo} ${yr}, ${hh}:${mm}:${ss}`;
+  } catch(e) { return '—'; }
+}
+
+function enrichRow(row) {
+  const C = CONFIG.COLS; const r = {...row};
+
+  // ── Company & Branch ─────────────────────────────
+  r._company = extractCompany(r[C.PROVIDER_NAME]);
+  r._branch  = extractBranch(r[C.PROVIDER_NAME]);
+
+  // ── Ticket number must start with GD ─────────────
+  r._validTicket = (r[C.TICKET_NUM]||'').startsWith('GD');
+
+  // ── Dates ────────────────────────────────────────
+  r._created    = parseDate(r[C.CREATED]);
+  r._dispatch   = parseDate(r[C.DISPATCH]);
+  r._completion = parseDate(r[C.COMPLETION_TIME]);
+  // Rescheduling = scheduled visit date
+  r._rescheduled = parseDate(r[C.RESCHEDULING]);
+  r._appointed   = parseDate(r[C.APPOINTED]);
+
+  // ── Raw field values ─────────────────────────────
+  const affiliated     = (r[C.AFFILIATED] || '').trim();
+  const completion     = (r[C.COMPLETION_RESULT] || '').trim();
+  const completionLow  = completion.toLowerCase();
+  const phase          = (r[C.PHASE] || '').trim();
+  const phaseLow       = phase.toLowerCase();
+  const status         = (r[C.STATUS] || '').trim();
+  const statusLow      = status.toLowerCase();
+  const serviceInfo    = (r[C.SERVICE_INFO] || r[C.SERVICE_TYPE] || '');
+  const serviceInfoUp  = serviceInfo.toUpperCase();
+
+  // ── Pending: Affiliated NOT blank + Completion Result IS blank ─
+  r._isPending = affiliated !== '' && completion === '';
+
+  // ── Status classification per spec: ──────────────
+  // Rejected:  Phase=Refusal(worker)     Status=Rejected          CompResult NOT blank/cancel
+  // Returned:  Phase=Rejected upon review Status=Returned order    CompResult NOT blank/cancel
+  // OBM-Statement: Phase=Statement Status=Statement of account CompResult=Cancel + ServiceInfo contains OBM
+  // Cancelled: CompResult contains "cancel" AND ServiceInfo does NOT contain OBM → EXCLUDED
+
+  r._isRejected = (phaseLow.includes('refusal') || statusLow.includes('rejected'))
+    && completion !== '' && !completionLow.includes('cancel');
+
+  r._isReturned = (phaseLow.includes('rejected upon review') || statusLow.includes('returned'))
+    && completion !== '' && !completionLow.includes('cancel');
+
+  r._isOBMStatement = completionLow.includes('cancel') && serviceInfoUp.includes('OBM');
+
+  // Cancelled = cancel in Completion Result AND NOT OBM → will be filtered out in loadAllData
+  r._isCancelled = completionLow.includes('cancel') && !serviceInfoUp.includes('OBM');
+
+  // ── Numerics ──────────────────────────────────────
+  const sh = parseFloat(r[C.SERVICE_HOURS]); r._serviceHours = isNaN(sh) ? null : sh;
+  const mi = parseFloat(r[C.MILEAGE]);       r._mileage      = isNaN(mi) ? null : mi;
+  r._farDistance = r._mileage !== null && r._mileage > 60;
+  r._hasWorker   = !!(r[C.WORKER] && r[C.WORKER].trim());
+
+  // ── Aging ─────────────────────────────────────────
+  const now = new Date();
+  if (r._isPending && r._dispatch)                        r._agingHours = (now - r._dispatch) / 3600000;
+  else if (!r._isPending && r._completion && r._dispatch) r._agingHours = (r._completion - r._dispatch) / 3600000;
+  else if (r._dispatch)                                   r._agingHours = (now - r._dispatch) / 3600000;
+  else                                                    r._agingHours = null;
+
+  // ── Pending Duration = Completion Time − Dispatch ─
+  if (r._dispatch) {
+    const end = r._completion || new Date();
+    r._pendingDurationHrs = (end - r._dispatch) / 3600000;
+  } else r._pendingDurationHrs = null;
+
+  // ── Month key ─────────────────────────────────────
+  r._monthKey = r._created
+    ? `${r._created.getFullYear()}-${String(r._created.getMonth()+1).padStart(2,'0')}` : '';
+
+  // ── Reschedule info ───────────────────────────────
+  r._rescheduleReason = r[C.RESCHED_REASON] || '';
+  r._rescheduleDate   = r[C.RESCHEDULING] || '';
+  r._rescheduleRemark = r[C.RESCHED_SUPP] || '';
+  // Combined display
+  r._rescheduleDisplay = [
+    r._rescheduleDate ? 'Date: ' + r._rescheduleDate.substring(0,10) : '',
+    r._rescheduleRemark ? r._rescheduleRemark : ''
+  ].filter(Boolean).join(' · ') || '—';
+
+  // ── Has reschedule reason (for counting) ──────────
+  r._hasRescheduleReason = !!(r[C.RESCHED_REASON] && r[C.RESCHED_REASON].trim());
+
+  // ── Ticket Status from Processing Phase (per spec) ──
+  // 1. Dispatch Network            → Not Assigned         (RED)
+  // 2. Accepting orders (workers)  → Dispatched to Tech but no update (RED)
+  // 3. Branch dispatching workers  → Dispatched to Tech but not Accepted (RED)
+  // 4. Change of schedule (workers)→ Accepted & Updated   (GREEN)
+  r._ticketStatus = status;  // original Ticket Status field
+  r._phase        = phase;   // original Processing Phase
+
+  if (phase.toLowerCase().includes('dispatch network')) {
+    r._phaseLabel = 'Not Assigned';
+    r._phaseColor = 'red';
+  } else if (phase.toLowerCase().includes('accepting orders')) {
+    r._phaseLabel = 'Dispatched – No Update';
+    r._phaseColor = 'red';
+  } else if (phase.toLowerCase().includes('branch dispatching')) {
+    r._phaseLabel = 'Dispatched – Not Accepted';
+    r._phaseColor = 'red';
+  } else if (phase.toLowerCase().includes('change of schedule')) {
+    r._phaseLabel = 'Accepted & Updated';
+    r._phaseColor = 'green';
+  } else if (phase.toLowerCase().includes('completion confirmation')) {
+    r._phaseLabel = 'Warranty – Under Validation';
+    r._phaseColor = 'amber';
+  } else if (phase.toLowerCase().includes('statement')) {
+    r._phaseLabel = 'Completed';
+    r._phaseColor = 'green';
+  } else {
+    r._phaseLabel = phase || status || '—';
+    r._phaseColor = 'gray';
+  }
+
+  // _isDispatchedWork = ONLY "Branch dispatching workers" (Dispatched – Not Accepted)
+  // _isNotAssigned    = "Dispatch Network" phase
+  r._isNotAssigned    = phase.toLowerCase().includes('dispatch network');
+  r._isDispatchedWork = phase.toLowerCase().includes('branch dispatching');
+
+  // ── Aging category label ──────────────────────────
+  if (r._agingHours === null) r._agingCat = '—';
+  else if (r._agingHours <= 12)  r._agingCat = '≤ 12h';
+  else if (r._agingHours <= 24)  r._agingCat = '≤ 24h';
+  else if (r._agingHours <= 48)  r._agingCat = '≤ 48h';
+  else if (r._agingHours <= 72)  r._agingCat = '≤ 72h';
+  else                           r._agingCat = '> 72h';
+
+  return r;
+}
+
+async function loadAllData(email, userASC) {
+  const rawRows = await fetchDataSheet();  // Uses GD-filtered parser
+  
+  // Load Pending Reason mapping sheet
+  let reasonMap = {};
+  try {
+    const reasonRows = await fetchSheet('Penidng Reason');
+    reasonRows.forEach(r => {
+      const reason = (r['Reason For Rescheduling'] || '').trim();
+      const cat    = (r['Category'] || '').trim();
+      if (reason && cat) reasonMap[reason.toLowerCase()] = cat;
+    });
+    console.log('Pending Reason map loaded:', Object.keys(reasonMap).length, 'entries');
+  } catch(e) { console.warn('Pending Reason sheet not found, using fallback:', e.message); }
+  
+  const enriched = rawRows
+    .map(r => {
+      const row = enrichRow(r);
+      // Apply category from Pending Reason sheet
+      if (row._rescheduleReason && reasonMap[row._rescheduleReason.toLowerCase()]) {
+        row._reasonCategory = reasonMap[row._rescheduleReason.toLowerCase()];
+      } else {
+        row._reasonCategory = '';
+      }
+      return row;
+    })
+    .filter(r => {
+      if (!r._company) return false;
+      if (!r._branch) return false;
+      if (r._isCancelled) return false;
+      return true;
+    });
+
+  DB.isAdmin = (userASC === CONFIG.ALL_ACCESS);
+  if (DB.isAdmin) { DB.allRaw=[...enriched]; DB.raw=[...enriched]; }
+  else { DB.allRaw=[]; DB.raw=enriched.filter(r=>r._company===userASC); }
+  DB.userASC=userASC; DB.loadedAt=new Date();
+  DB.filtered=[...DB.raw];
+  populateDropdowns(DB.raw);
+}
+
+function applyFilters() {
+  const from    = document.getElementById('filter-from')?.value;
+  const to      = document.getElementById('filter-to')?.value;
+  const branch  = document.getElementById('filter-branch')?.value;
+  const worker  = document.getElementById('filter-worker')?.value;
+  const company = document.getElementById('filter-company')?.value;
+  let src = DB.isAdmin ? DB.allRaw : DB.raw;
+  if (DB.isAdmin && company) src = src.filter(r=>r._company===company);
+  DB.filtered = src.filter(r => {
+    if (from && r._created && r._created<new Date(from)) return false;
+    if (to   && r._created && r._created>new Date(to+'T23:59:59')) return false;
+    if (branch && r._branch!==branch) return false;
+    if (worker && r[CONFIG.COLS.WORKER]!==worker) return false;
+    return true;
+  });
+  populateDropdowns(src);
+  renderCurrentPage();
+}
+
+function resetFilters() {
+  ['filter-from','filter-to','filter-branch','filter-worker','filter-company'].forEach(id=>{
+    const el=document.getElementById(id); if(el)el.value='';
+  });
+  DB.filtered=[...(DB.isAdmin?DB.allRaw:DB.raw)];
+  populateDropdowns(DB.isAdmin?DB.allRaw:DB.raw);
+  renderCurrentPage();
+}
+
+function populateDropdowns(src) {
+  const branches=[...new Set(src.map(r=>r._branch).filter(Boolean))].sort();
+  const workers=[...new Set(src.map(r=>r[CONFIG.COLS.WORKER]).filter(Boolean))].sort();
+  const br=document.getElementById('filter-branch');
+  if(br)br.innerHTML='<option value="">All Branches</option>'+branches.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('');
+  const wk=document.getElementById('filter-worker');
+  if(wk)wk.innerHTML='<option value="">All Workers</option>'+workers.map(w=>`<option value="${esc(w)}">${esc(w)}</option>`).join('');
+}
+
+// ── Helpers ──────────────────────────────────
+function groupByMonth(rows){
+  const m={};
+  rows.forEach(r=>{if(!r._monthKey)return;if(!m[r._monthKey])m[r._monthKey]=[];m[r._monthKey].push(r);});
+  return Object.entries(m).sort(([a],[b])=>a.localeCompare(b));
+}
+function groupBy(rows,fn){
+  const m={};
+  rows.forEach(r=>{const k=fn(r)||'(Unknown)';if(!m[k])m[k]=[];m[k].push(r);});
+  return m;
+}
+function avg(rows,fn){
+  const v=rows.map(fn).filter(x=>x!==null&&!isNaN(x));
+  return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;
+}
+function esc(s){
+  if(!s)return'';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmt(n,d=0){
+  if(n===null||n===undefined||isNaN(n))return'—';
+  return Number(n).toLocaleString('en',{maximumFractionDigits:d,minimumFractionDigits:d});
+}
+function fmtPct(n,d=1){
+  if(n===null||n===undefined||isNaN(n))return'—';
+  return Number(n).toFixed(d)+'%';
+}
+function formatMonthLabel(ym){
+  if(!ym) return '—';
+  const[y,m]=ym.split('-');
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]+' '+y;
+}
+function truncate(s,n){if(!s)return'—';return s.length>n?s.substring(0,n)+'…':s;}
