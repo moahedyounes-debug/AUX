@@ -403,22 +403,6 @@ async function renderCallCenter() {
 
   if (!CC_DB.loaded) await loadCCData();
 
-  // Debug: Log sample data to verify parsing
-  if (CC_DB.calls.length > 0) {
-    const sample = CC_DB.calls[0];
-    console.log('CC_DB Sample row:', {
-      _status: sample._status,
-      _isInbound: sample._isInbound,
-      _withinSLA: sample._withinSLA,
-      _isAbandoned: sample._isAbandoned,
-      raw_status: sample['Status'],
-      raw_calltype: sample['Call Type'],
-      all_keys: Object.keys(sample).slice(0, 20)
-    });
-    const answeredIB = CC_DB.calls.filter(r => r._isInbound && r._status === 'ANSWERED');
-    console.log('Answered IB calls:', answeredIB.length, 'Within SLA:', answeredIB.filter(r => r._withinSLA).length);
-  }
-
   if (!CC_DB.loaded) {
     el.innerHTML = `<div class="insight-card" style="border-color:#dc2626;background:#fee2e2">
       <div class="insight-icon" style="color:#dc2626">⚠️</div>
