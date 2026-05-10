@@ -48,12 +48,17 @@ function enrichCall(row) {
   const C = CONFIG.CC_COLS;
   const r = {...row};
 
-  // Month: extract from Date column (format: MM/DD/YYYY) as "YYYY-MM"
-  const dateStr = r[C.DATE] ? String(r[C.DATE]) : '';
-  const dateMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  // Month: extract from Date column (format: MM/DD/YYYY or MM/DD/YY) as "YYYY-MM"
+  const dateStr = r[C.DATE] || r['Date'] || r['date'] || r[''] || '';
+  // Try MM/DD/YYYY format first, then MM/DD/YY format
+  let dateMatch = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!dateMatch) dateMatch = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{2})/);
+
   if (dateMatch) {
     const month = dateMatch[1]; // MM
-    const year = dateMatch[3];  // YYYY
+    let year = dateMatch[3];  // YYYY or YY
+    // If year is 2-digit, convert to 4-digit (assume 20xx)
+    if (year.length === 2) year = '20' + year;
     r._monthKey = `${year}-${String(parseInt(month)).padStart(2, '0')}`;
   } else {
     r._monthKey = '';
@@ -97,9 +102,24 @@ function enrichCall(row) {
 
     return 0;
   };
+
   // Try exact column name, then fallback to variations
-  r._aht = parseTime(r[C.AHT] || r['Average Handle Time'] || r['handle time'] || r['AHT']);
-  r._tht = parseTime(r[C.THT] || r['Total Handle Time'] || r['talk time'] || r['THT']);
+  // Note: CSV may have unnamed columns (with empty header)
+  let ahtVal = r[C.AHT] || r['Average Handle Time'] || r['handle time'] || r['AHT'] || r[''];
+  let thtVal = r[C.THT] || r['Total Handle Time'] || r['talk time'] || r['THT'] || r[''];
+
+  // If still not found, search all columns for time-formatted values
+  if (!ahtVal || !thtVal) {
+    const timeValues = Object.values(row).filter(v => {
+      const s = String(v || '').trim();
+      return /^\d+:\d+:\d+/.test(s) || (parseFloat(s) > 0 && parseFloat(s) < 1);
+    }).sort();
+    if (timeValues.length >= 2 && !ahtVal) ahtVal = timeValues[0];
+    if (timeValues.length >= 2 && !thtVal) thtVal = timeValues[1];
+  }
+
+  r._aht = parseTime(ahtVal);
+  r._tht = parseTime(thtVal);
 
   r._qty      = parseFloat(r[C.QTY])  || 1;
   r._agent    = (r[C.AGENT_NAME] || r[C.AGENT] || '').trim();
@@ -107,8 +127,10 @@ function enrichCall(row) {
   r._event    = (r[C.EVENT]     || '').trim().toUpperCase();
 
   // SLA: Within SLA = 1 (or "yes") → true
-  const w = String(r[C.WITHIN_SLA] || '').trim().toLowerCase();
-  r._withinSLA   = (w === '1' || w === 'yes');
+  // Try exact column name, then fallback to variations
+  const withinSlaVal = r[C.WITHIN_SLA] || r['Within SLA'] || r['within_sla'] || r['SLA'] || '';
+  const w = String(withinSlaVal || '').trim().toLowerCase();
+  r._withinSLA = (w === '1' || w === 'yes' || w === 'true');
 
   // Abandon: Event contains "ABANDON"
   r._isAbandoned = r._event.includes('ABANDON');
