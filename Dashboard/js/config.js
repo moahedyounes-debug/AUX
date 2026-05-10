@@ -167,18 +167,16 @@ function partsSheetUrl(name) {
   return `https://docs.google.com/spreadsheets/d/${CONFIG.PARTS_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}`;
 }
 function ccKpiUrl() {
-  // Direct CSV export instead of gviz to ensure all columns are included
-  // gviz export had issues with missing/empty columns (e.g., Manager Evaluation)
-  return `https://docs.google.com/spreadsheets/d/${CONFIG.CC_KPI_SHEET_ID}/export?format=csv&gid=0`;
+  // Use gviz export for Calls sheet - works correctly
+  return `https://docs.google.com/spreadsheets/d/${CONFIG.CC_KPI_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(CONFIG.CC_KPI_SHEET)}`;
 }
 function ccWaUrl() {
-  // Direct CSV export - find the correct gid for WhatsApp sheet
-  // For now, use export format - gid parameter may need adjustment for correct sheet tab
-  return `https://docs.google.com/spreadsheets/d/${CONFIG.CC_KPI_SHEET_ID}/export?format=csv`;
+  // Use gviz export for WhatsApp sheet - works correctly
+  return `https://docs.google.com/spreadsheets/d/${CONFIG.CC_KPI_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(CONFIG.CC_WA_SHEET)}`;
 }
 function ccEvalUrl() {
-  // Direct CSV export instead of gviz to ensure Score (1-5) column data is included
-  // gviz export was returning empty Score (1-5) columns, preventing evaluation scores from calculating
+  // Use direct CSV export for Evaluation sheet - gviz was returning empty Score (1-5) columns
+  // Direct export ensures all column data including evaluation scores are included correctly
   return `https://docs.google.com/spreadsheets/d/${CONFIG.CC_EVAL_SHEET_ID}/export?format=csv`;
 }
 function trackingUrl(awb) {
