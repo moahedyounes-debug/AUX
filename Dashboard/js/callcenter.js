@@ -125,10 +125,10 @@ function enrichEval(row) {
   r._category = (r[C.CATEGORY] || '').trim();
   r._criteria = (r[C.CRITERIA] || '').trim();
 
-  // Score comes from "Score (1-5)" column (actual entered value, not formula)
-  r._score    = parseFloat(r[C.SCORE_15]) || 0;
-  r._max      = parseFloat(r[C.MAX]) || 5;
-  r._mgrEval  = parseFloat(r[C.SCORE_15]) || 0;
+  // Score comes from "Manager Evaluation" column (user assessment 0-5)
+  r._score    = parseFloat(r[C.MGR_EVAL]) || 0;
+  r._max      = 5;  // Manager Evaluation is always 0-5 scale
+  r._mgrEval  = parseFloat(r[C.MGR_EVAL]) || 0;
   r._pct      = r._max > 0 ? Math.round(r._score / r._max * 100) : 0;
 
   return r;
