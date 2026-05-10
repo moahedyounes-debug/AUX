@@ -36,7 +36,10 @@
       "Bash(git commit -m 'Clean Dashboard repository - remove duplicates and test files *)",
       "Bash(git mv *)",
       "Bash(cd \"C:/Users/moahe/OneDrive/Desktop/Dashboard\" && rm -rf '{css,js}' && git status)",
-      "Bash(git commit -m 'Revert SLAP2 changes - use HOUR column for peak hours *)"
+      "Bash(git commit -m 'Revert SLAP2 changes - use HOUR column for peak hours *)",
+      "Bash(curl -s \"https://docs.google.com/spreadsheets/d/e/2PACX-1vTRNmmUUjsjoE2_zLyOglCs0xDHJ2ZhJtYmjQ86oWoHQfmcMNv0zSHiHQQwsaMLow0rnjr0mpJKLbG-/pub?output=tsv\")",
+      "Read(//c/Users/moahe/Downloads/**)",
+      "Bash(python3)"
     ]
   }
 }

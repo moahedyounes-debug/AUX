@@ -47,13 +47,40 @@ async function loadCCData() {
 function enrichCall(row) {
   const C = CONFIG.CC_COLS;
   const r = {...row};
-  r._monthKey = (r[C.MONTH]    || '').trim();
-  r._hour     = parseInt(r[C.HOUR]) || 0;
-  r._aht      = parseFloat(r[C.AHT])  || 0;
-  r._tht      = parseFloat(r[C.THT])  || 0;
+
+  // Month: "Apr" → "2026-4" (extract from Date column)
+  const dateStr = r[C.DATE] ? String(r[C.DATE]) : '';
+  const dateMatch = dateStr.match(/(\d{4})-(\d{1,2})/);
+  if (dateMatch) {
+    const year = dateMatch[1];
+    const month = dateMatch[2];
+    r._monthKey = `${year}-${month}`;
+  } else {
+    r._monthKey = '';
+  }
+
+  // Hour: Use SLAP2 if available, else HOUR
+  const slap2Val = r[C.SLAP2] ? String(r[C.SLAP2]).trim() : '';
+  const hourVal = r[C.HOUR] ? String(r[C.HOUR]).trim() : '';
+  r._hour = parseInt(slap2Val || hourVal) || 0;
+
+  // AHT/THT: Could be timedelta (HH:MM:SS) or float (seconds)
+  // Convert timedelta string to seconds
+  const parseTime = (val) => {
+    if (!val) return 0;
+    const str = String(val).trim();
+    const timeMatch = str.match(/(\d+):(\d+):(\d+)/);
+    if (timeMatch) {
+      return parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseInt(timeMatch[3]);
+    }
+    return parseFloat(str) || 0;
+  };
+  r._aht = parseTime(r[C.AHT]);
+  r._tht = parseTime(r[C.THT]);
+
   r._qty      = parseFloat(r[C.QTY])  || 1;
   r._agent    = (r[C.AGENT_NAME] || r[C.AGENT] || '').trim();
-  r._callType = (r[C.CALL_TYPE] || '').trim().toLowerCase();
+  r._callType = (r[C.CALL_TYPE] || '').trim().toUpperCase();
   r._event    = (r[C.EVENT]     || '').trim().toUpperCase();
 
   // SLA: Within SLA = 1 (or "yes") → true
@@ -63,9 +90,9 @@ function enrichCall(row) {
   // Abandon: Event contains "ABANDON"
   r._isAbandoned = r._event.includes('ABANDON');
 
-  // Inbound / Outbound from Call Type
-  r._isInbound  = r._callType.includes('inbound')  || r._callType.includes('in');
-  r._isOutbound = r._callType.includes('outbound') || r._callType.includes('out');
+  // Inbound / Outbound from Call Type (IB = Inbound, OB = Outbound)
+  r._isInbound  = r._callType.includes('IB');
+  r._isOutbound = r._callType.includes('OB');
 
   return r;
 }
@@ -74,9 +101,17 @@ function enrichCall(row) {
 // Every row in WhatsApp Uniqe = 1 conversation
 function enrichWA(row) {
   const r = {...row};
-  r._monthKey = (r['Month'] || r['month'] || '').trim();
-  r._hour     = parseInt(r['Hour'] || r['hour']) || 0;
-  r._agent    = (r['Agent Name'] || r['Agent'] || r['agent'] || '').trim();
+
+  // Month format: extract year-month from available date
+  const monthStr = (r['Month'] || r['month'] || '').trim();
+  r._monthKey = monthStr;  // If provided, use directly
+
+  // Hour: Use SLAP 2 if available, else Hour
+  const slap2Val = r['SLAP 2'] ? String(r['SLAP 2']).trim() : '';
+  const hourVal = r['Hour'] ? String(r['Hour']).trim() : '';
+  r._hour = parseInt(slap2Val || hourVal) || 0;
+
+  r._agent = (r['Agent Name'] || r['Agent'] || r['agent'] || '').trim();
   return r;
 }
 
@@ -89,10 +124,13 @@ function enrichEval(row) {
   r._month    = (r[C.MONTH]    || r._mYear || '').trim();
   r._category = (r[C.CATEGORY] || '').trim();
   r._criteria = (r[C.CRITERIA] || '').trim();
-  r._score    = parseFloat(r[C.MGR_EVAL]) || 0;
-  r._max      = 5;
-  r._mgrEval  = parseFloat(r[C.MGR_EVAL]) || 0;
+
+  // Score comes from "Score (1-5)" column (actual entered value, not formula)
+  r._score    = parseFloat(r[C.SCORE_15]) || 0;
+  r._max      = parseFloat(r[C.MAX]) || 5;
+  r._mgrEval  = parseFloat(r[C.SCORE_15]) || 0;
   r._pct      = r._max > 0 ? Math.round(r._score / r._max * 100) : 0;
+
   return r;
 }
 
