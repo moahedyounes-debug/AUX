@@ -160,7 +160,19 @@ function enrichEval(row) {
 
   // Score comes from "Manager Evaluation" column (0-5 scale)
   // Try exact name first, then fallbacks
-  const mgrEvalVal = r[C.MGR_EVAL] || r['Manager Evaluation'] || r['Manager_Evaluation'] || r['manager evaluation'] || '';
+  let mgrEvalVal = r[C.MGR_EVAL] || r['Manager Evaluation'] || r['Manager_Evaluation'] || r['manager evaluation'] || '';
+
+  // If not found, search all keys for columns containing "manager" AND "evaluation"
+  if (!mgrEvalVal) {
+    const foundKey = Object.keys(row).find(k => {
+      const kLower = k.toLowerCase().replace(/\s+/g, '');
+      return kLower.includes('manager') && kLower.includes('evaluation');
+    });
+    if (foundKey) mgrEvalVal = row[foundKey];
+  }
+
+  // Trim whitespace from the value
+  mgrEvalVal = String(mgrEvalVal || '').trim();
   r._score = parseFloat(mgrEvalVal) || 0;
   r._max = 5;
   r._mgrEval = r._score;
