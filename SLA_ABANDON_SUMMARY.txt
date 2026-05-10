@@ -1,0 +1,75 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║          CALL CENTER KPI CALCULATIONS - MAY & JUNE 2025                   ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ MAY 2025 METRICS                                                           │
+└────────────────────────────────────────────────────────────────────────────┘
+
+SLA RATE CALCULATION:
+  Filter: Status = "Answered" AND Call Type = "IB"
+  Formula: (Within SLA count) ÷ (Total Answered IB) × 100
+  
+  Data:
+    • Total Answered IB Calls: 33
+    • Within SLA: 19
+    • SLA Rate: 19 ÷ 33 = 57.6%
+
+ABANDON RATE CALCULATION:
+  Filter: Call Type = "IB"
+  Formula: (Abandoned count) ÷ (Total IB) × 100
+  
+  Data:
+    • Total IB Calls: 61
+    • Abandoned IB Calls: 28
+    • Abandon Rate: 28 ÷ 61 = 45.9%
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ JUNE 2025 METRICS                                                          │
+└────────────────────────────────────────────────────────────────────────────┘
+
+SLA RATE CALCULATION:
+  Filter: Status = "Answered" AND Call Type = "IB"
+  Formula: (Within SLA count) ÷ (Total Answered IB) × 100
+  
+  Data:
+    • Total Answered IB Calls: 27
+    • Within SLA: 12
+    • SLA Rate: 12 ÷ 27 = 44.4%
+
+ABANDON RATE CALCULATION:
+  Filter: Call Type = "IB"
+  Formula: (Abandoned count) ÷ (Total IB) × 100
+  
+  Data:
+    • Total IB Calls: 50
+    • Abandoned IB Calls: 23
+    • Abandon Rate: 23 ÷ 50 = 46.0%
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ COLUMN MAPPINGS (0-indexed in JavaScript)                                 │
+└────────────────────────────────────────────────────────────────────────────┘
+
+Critical Columns Used:
+  • Event (Col 5) → Index 4 → Identifies "ABANDON" events
+  • Status (Col 13) → Index 12 → Identifies "Answered" vs "ABANDON"
+  • Call Type (Col 14) → Index 13 → Identifies "IB" vs "OB"
+  • Month (Col 16) → Index 15 → Filters by May/June
+  • Within SLA (Col 25) → Index 24 → Checks value = "1"
+
+Code References:
+  ✓ r[C.STATUS] = 'Status'
+  ✓ r[C.CALL_TYPE] = 'Call Type'
+  ✓ r[C.EVENT] = 'Event'
+  ✓ r[C.WITHIN_SLA] = 'Within SLA'
+
+═════════════════════════════════════════════════════════════════════════════
+
+Dashboard Implementation Status: COMPLETE ✓
+
+All calculations verified and implemented correctly in:
+  - callcenter.js (enrichCall, groupByMonthCC, KPI calculation)
+  - config.js (CC_COLS mapping)
+  - parseCSV (data.js - column header handling)
+
+═════════════════════════════════════════════════════════════════════════════
