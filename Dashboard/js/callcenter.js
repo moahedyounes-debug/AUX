@@ -48,12 +48,12 @@ function enrichCall(row) {
   const C = CONFIG.CC_COLS;
   const r = {...row};
 
-  // Month: "Apr" → "2026-4" (extract from Date column)
+  // Month: extract from Date column as "YYYY-MM" (with leading zero on month)
   const dateStr = r[C.DATE] ? String(r[C.DATE]) : '';
   const dateMatch = dateStr.match(/(\d{4})-(\d{1,2})/);
   if (dateMatch) {
     const year = dateMatch[1];
-    const month = dateMatch[2];
+    const month = String(parseInt(dateMatch[2])).padStart(2, '0');
     r._monthKey = `${year}-${month}`;
   } else {
     r._monthKey = '';
@@ -102,9 +102,19 @@ function enrichCall(row) {
 function enrichWA(row) {
   const r = {...row};
 
-  // Month format: extract year-month from available date
-  const monthStr = (r['Month'] || r['month'] || '').trim();
-  r._monthKey = monthStr;  // If provided, use directly
+  // Month format: extract year-month from Date column (same as Calls) as "YYYY-MM"
+  // Try to find a date column (Date, date, DATE_FMT, etc.)
+  const dateStr = r['Date'] ? String(r['Date']).trim() :
+                  r['date'] ? String(r['date']).trim() : '';
+  const dateMatch = dateStr.match(/(\d{4})-(\d{1,2})/);
+  if (dateMatch) {
+    const year = dateMatch[1];
+    const month = String(parseInt(dateMatch[2])).padStart(2, '0');
+    r._monthKey = `${year}-${month}`;
+  } else {
+    // Fallback: use Month column if available (assume it's raw like "Apr" or similar)
+    r._monthKey = (r['Month'] || r['month'] || '').trim();
+  }
 
   // Hour: Use SLAP 2 if available, else Hour
   const slap2Val = r['SLAP 2'] ? String(r['SLAP 2']).trim() : '';
@@ -138,8 +148,8 @@ function enrichEval(row) {
 function filterCalls(agent, year, month, direction) {
   let d = CC_DB.calls;
   if (agent)    d = d.filter(r => r._agent === agent);
-  if (month)    d = d.filter(r => r._monthKey.includes(month));
-  if (year)     d = d.filter(r => r._monthKey.includes(year));
+  if (month)    d = d.filter(r => r._monthKey === month);
+  if (year)     d = d.filter(r => r._monthKey.startsWith(year + '-'));
   if (direction === 'Inbound')  d = d.filter(r => r._isInbound);
   if (direction === 'Outbound') d = d.filter(r => r._isOutbound);
   return d;
@@ -147,14 +157,27 @@ function filterCalls(agent, year, month, direction) {
 function filterWA(agent, year, month) {
   let d = CC_DB.wa;
   if (agent) d = d.filter(r => r._agent === agent);
-  if (month) d = d.filter(r => r._monthKey.includes(month));
-  if (year)  d = d.filter(r => r._monthKey.includes(year));
+  if (month) d = d.filter(r => r._monthKey === month);
+  if (year)  d = d.filter(r => r._monthKey.startsWith(year + '-'));
   return d;
 }
 function filterEvals(agent, month) {
   let d = CC_DB.evals;
   if (agent) d = d.filter(r => r._agent === agent);
-  if (month) d = d.filter(r => r._month.includes(month));
+  if (month) {
+    // month is in format "2026-04", extract the month number
+    const monthParts = month.split('-');
+    const monthNum = monthParts[1]; // "04"
+    const monthIndex = parseInt(monthNum);
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthName = monthNames[monthIndex - 1]; // "Apr"
+
+    // Filter by month name (case-insensitive) or by the full month key
+    d = d.filter(r => {
+      const m = (r._month || '').toLowerCase();
+      return m.includes(monthName.toLowerCase()) || m.includes(monthNum) || m === month;
+    });
+  }
   return d;
 }
 
