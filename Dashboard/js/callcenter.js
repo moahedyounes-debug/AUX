@@ -48,13 +48,13 @@ function enrichCall(row) {
   const C = CONFIG.CC_COLS;
   const r = {...row};
 
-  // Month: extract from Date column as "YYYY-MM" (with leading zero on month)
+  // Month: extract from Date column (format: MM/DD/YYYY) as "YYYY-MM"
   const dateStr = r[C.DATE] ? String(r[C.DATE]) : '';
-  const dateMatch = dateStr.match(/(\d{4})-(\d{1,2})/);
+  const dateMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (dateMatch) {
-    const year = dateMatch[1];
-    const month = String(parseInt(dateMatch[2])).padStart(2, '0');
-    r._monthKey = `${year}-${month}`;
+    const month = dateMatch[1]; // MM
+    const year = dateMatch[3];  // YYYY
+    r._monthKey = `${year}-${String(parseInt(month)).padStart(2, '0')}`;
   } else {
     r._monthKey = '';
   }
@@ -64,14 +64,18 @@ function enrichCall(row) {
   const hourVal = r[C.HOUR] ? String(r[C.HOUR]).trim() : '';
   r._hour = parseInt(slap2Val || hourVal) || 0;
 
-  // AHT/THT: Could be timedelta (HH:MM:SS) or float (seconds)
-  // Convert timedelta string to seconds
+  // AHT/THT: Format is HH:MM:SS.mmm (e.g., "00:00:09.000")
+  // Convert to seconds (ignoring milliseconds)
   const parseTime = (val) => {
     if (!val) return 0;
     const str = String(val).trim();
-    const timeMatch = str.match(/(\d+):(\d+):(\d+)/);
+    // Match HH:MM:SS or HH:MM:SS.mmm
+    const timeMatch = str.match(/(\d+):(\d+):(\d+)(?:\.(\d+))?/);
     if (timeMatch) {
-      return parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseInt(timeMatch[3]);
+      const hours = parseInt(timeMatch[1]);
+      const minutes = parseInt(timeMatch[2]);
+      const seconds = parseInt(timeMatch[3]);
+      return hours * 3600 + minutes * 60 + seconds;
     }
     return parseFloat(str) || 0;
   };
@@ -102,17 +106,16 @@ function enrichCall(row) {
 function enrichWA(row) {
   const r = {...row};
 
-  // Month format: extract year-month from Date column (same as Calls) as "YYYY-MM"
-  // Try to find a date column (Date, date, DATE_FMT, etc.)
+  // Month: extract from Date column (format: YYYY-MM-DD) as "YYYY-MM"
   const dateStr = r['Date'] ? String(r['Date']).trim() :
                   r['date'] ? String(r['date']).trim() : '';
-  const dateMatch = dateStr.match(/(\d{4})-(\d{1,2})/);
+  const dateMatch = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (dateMatch) {
-    const year = dateMatch[1];
-    const month = String(parseInt(dateMatch[2])).padStart(2, '0');
-    r._monthKey = `${year}-${month}`;
+    const year = dateMatch[1];   // YYYY
+    const month = dateMatch[2];  // MM
+    r._monthKey = `${year}-${String(parseInt(month)).padStart(2, '0')}`;
   } else {
-    // Fallback: use Month column if available (assume it's raw like "Apr" or similar)
+    // Fallback: use Month column if available
     r._monthKey = (r['Month'] || r['month'] || '').trim();
   }
 
