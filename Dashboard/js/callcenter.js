@@ -11,8 +11,9 @@
 //    SLA Rate = Σ(Within SLA=1) / total Answered IB rows × 100
 //
 //  Abandon calculation:
+//    Filter: only IB calls (Call Type=IB)
 //    Event column contains "ABANDON" (case-insensitive)
-//    Abandon Rate = Σ(Event contains ABANDON) / total × 100
+//    Abandon Rate = Σ(Event contains ABANDON) / total IB rows × 100
 //
 //  WhatsApp:
 //    Any row in WhatsApp Uniqe tab = 1 WhatsApp conversation
@@ -286,7 +287,7 @@ function groupByMonthCC(rows) {
   const m = {};
   rows.forEach(r => {
     const k = r._monthKey || '—';
-    if (!m[k]) m[k] = {mk:k, total:0, sla:0, abandon:0, inbound:0, outbound:0, totalAHT:0, ahtN:0, totalTHT:0, thtN:0, answeredIB:0, slaAnsweredIB:0};
+    if (!m[k]) m[k] = {mk:k, total:0, sla:0, abandon:0, inbound:0, outbound:0, totalAHT:0, ahtN:0, totalTHT:0, thtN:0, answeredIB:0, slaAnsweredIB:0, abandonedIB:0};
     m[k].total++;
     if (r._withinSLA)   m[k].sla++;
     if (r._isAbandoned) m[k].abandon++;
@@ -300,13 +301,18 @@ function groupByMonthCC(rows) {
       m[k].answeredIB++;
       if (r._withinSLA) m[k].slaAnsweredIB++;
     }
+
+    // Abandon Rate: only count IB calls per user requirement
+    if (r._isInbound && r._isAbandoned) {
+      m[k].abandonedIB++;
+    }
   });
   return Object.values(m)
     .sort((a,b) => String(a.mk).localeCompare(String(b.mk)))
     .map(m => ({
       ...m,
       slaRate:     m.answeredIB > 0 ? +(m.slaAnsweredIB / m.answeredIB * 100).toFixed(1) : null,
-      abandonRate: m.total ? +(m.abandon / m.total * 100).toFixed(1) : null,
+      abandonRate: m.inbound > 0 ? +(m.abandonedIB / m.inbound * 100).toFixed(1) : null,
       avgAHT:      m.ahtN  ? +(m.totalAHT / m.ahtN).toFixed(0) : null,
       avgTHT:      m.thtN  ? +(m.totalTHT / m.thtN).toFixed(0) : null,
     }));
@@ -428,8 +434,10 @@ async function renderCallCenter() {
   const slaCount    = answeredIBCalls.filter(r => r._withinSLA).length;
   const slaRate     = answeredIBCalls.length ? +(slaCount / answeredIBCalls.length * 100).toFixed(1) : null;
 
-  const abandonCount= calls.filter(r => r._isAbandoned).length;
-  const abandonRate = total ? +(abandonCount/ total * 100).toFixed(1) : null;
+  // Abandon Rate: only count IB calls per user requirement
+  const inboundCalls = calls.filter(r => r._isInbound);
+  const abandonCount = inboundCalls.filter(r => r._isAbandoned).length;
+  const abandonRate  = inbound > 0 ? +(abandonCount / inbound * 100).toFixed(1) : null;
   const avgAHT      = avg(calls.filter(r=>r._aht>0), r=>r._aht);
   const avgTHT      = avg(calls.filter(r=>r._tht>0), r=>r._tht);
   const waTotal     = wa.length;
