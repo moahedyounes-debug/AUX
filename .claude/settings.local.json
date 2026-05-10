@@ -40,7 +40,23 @@
       "Bash(curl -s \"https://docs.google.com/spreadsheets/d/e/2PACX-1vTRNmmUUjsjoE2_zLyOglCs0xDHJ2ZhJtYmjQ86oWoHQfmcMNv0zSHiHQQwsaMLow0rnjr0mpJKLbG-/pub?output=tsv\")",
       "Read(//c/Users/moahe/Downloads/**)",
       "Bash(python3)",
-      "Bash(git commit -m 'Confirm evaluation scoring - Manager Evaluation column *)"
+      "Bash(git commit -m 'Confirm evaluation scoring - Manager Evaluation column *)",
+      "Bash(git commit -m 'Fix Call Center data parsing and filtering issues *)",
+      "Bash(git commit -m 'Fix date and time format parsing for Call Center data *)",
+      "Bash(git commit -m 'Improve AHT/THT time parsing to handle Google Sheets decimal exports *)",
+      "Bash(git commit -m 'Fix WhatsApp Slap2 column name and improve time parsing robustness *)",
+      "Bash(git commit -m 'Add Manager Evaluation column name fallbacks to enrichEval *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__computer",
+      "mcp__Claude_in_Chrome__read_console_messages",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(xargs kill -9)",
+      "Bash(git commit -m 'Improve Manager Evaluation column detection with dynamic key search *)",
+      "Bash(node -e ' *)",
+      "Bash(git commit -m 'Add Score \\(1-5\\) and Score column fallbacks to enrichEval *)",
+      "Bash(git commit -m 'Improve enrichCall robustness for misaligned CSV column headers *)",
+      "Bash(git commit -m 'Fix AHT/THT time value detection and improve SLA column search *)"
     ]
   }
 }

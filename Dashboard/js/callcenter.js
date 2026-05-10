@@ -49,7 +49,8 @@ function enrichCall(row) {
   const r = {...row};
 
   // Month: extract from Date column (format: MM/DD/YYYY or MM/DD/YY) as "YYYY-MM"
-  const dateStr = r[C.DATE] || r['Date'] || r['date'] || r[''] || '';
+  // Try named columns first, then unnamed columns by index
+  const dateStr = r[C.DATE] || r['Date'] || r['date'] || r['__col_0'] || '';
   // Try MM/DD/YYYY format first, then MM/DD/YY format
   let dateMatch = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (!dateMatch) dateMatch = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{2})/);
@@ -104,9 +105,11 @@ function enrichCall(row) {
   };
 
   // Try exact column name, then fallback to variations
-  // Note: CSV may have unnamed columns (with empty header)
-  let ahtVal = r[C.AHT] || r['Average Handle Time'] || r['handle time'] || r['AHT'] || r[''];
-  let thtVal = r[C.THT] || r['Total Handle Time'] || r['talk time'] || r['THT'] || r[''];
+  // Note: CSV may have unnamed columns using __col_N format
+  let ahtVal = r[C.AHT] || r['Average Handle Time'] || r['handle time'] || r['AHT'] ||
+               r['__col_5'] || r['__col_9'] || '';  // Try common unnamed column indices
+  let thtVal = r[C.THT] || r['Total Handle Time'] || r['talk time'] || r['THT'] ||
+               r['__col_6'] || r['__col_10'] || '';  // Try common unnamed column indices
 
   // If still not found, search all columns for time-formatted values
   // Look for patterns like "H:MM:SS" or "HH:MM:SS" or decimal seconds

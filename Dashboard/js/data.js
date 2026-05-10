@@ -42,9 +42,25 @@ function parseCSV(text) {
   if (rows.length < 2) return [];
   const headers = rows[0];
 
+  // Handle duplicate headers (like multiple empty columns) by making them unique
+  const uniqueHeaders = [];
+  const headerCounts = {};
+  headers.forEach((h, i) => {
+    let key = h;
+    if (!key) {
+      // For empty headers, use index as key: __col_0, __col_1, etc.
+      key = `__col_${i}`;
+    } else if (uniqueHeaders.includes(key)) {
+      // For duplicate non-empty headers, append counter
+      headerCounts[key] = (headerCounts[key] || 1) + 1;
+      key = `${h}__${headerCounts[key]}`;
+    }
+    uniqueHeaders.push(key);
+  });
+
   return rows.slice(1).map(vals => {
     const o = {};
-    headers.forEach((h, i) => { o[h] = (vals[i] || '').trim(); });
+    uniqueHeaders.forEach((h, i) => { o[h] = (vals[i] || '').trim(); });
     return o;
   }).filter(r => {
     // Remove completely empty rows
