@@ -158,11 +158,13 @@ function enrichEval(row) {
   r._category = (r[C.CATEGORY] || '').trim();
   r._criteria = (r[C.CRITERIA] || '').trim();
 
-  // Score comes from "Manager Evaluation" column (user assessment 0-5)
-  r._score    = parseFloat(r[C.MGR_EVAL]) || 0;
-  r._max      = 5;  // Manager Evaluation is always 0-5 scale
-  r._mgrEval  = parseFloat(r[C.MGR_EVAL]) || 0;
-  r._pct      = r._max > 0 ? Math.round(r._score / r._max * 100) : 0;
+  // Score comes from "Manager Evaluation" column (0-5 scale)
+  // Try exact name first, then fallbacks
+  const mgrEvalVal = r[C.MGR_EVAL] || r['Manager Evaluation'] || r['Manager_Evaluation'] || r['manager evaluation'] || '';
+  r._score = parseFloat(mgrEvalVal) || 0;
+  r._max = 5;
+  r._mgrEval = r._score;
+  r._pct = r._max > 0 ? Math.round(r._score / r._max * 100) : 0;
 
   return r;
 }
