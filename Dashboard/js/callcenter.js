@@ -150,7 +150,7 @@ function enrichCall(row) {
 
   // SLA: Within SLA = 1 (or "yes" or "true") → true
   // Try exact column name, then fallback to variations
-  let withinSlaVal = r[C.WITHIN_SLA] || r['Within SLA'] || r['within_sla'] || r['SLA'] || '';
+  let withinSlaVal = r[C.WITHIN_SLA] || r['Within SLA'] || r['within_sla'] || r['SLA'] || r['__col_7'] || '';
 
   // If not found by name, search for numeric 1/0 or yes/no pattern
   if (!withinSlaVal) {
@@ -162,7 +162,9 @@ function enrichCall(row) {
   }
 
   const w = String(withinSlaVal || '').trim().toLowerCase();
-  r._withinSLA = (w === '1' || w === 'yes' || w === 'true');
+  const wNum = parseFloat(w);
+  // Match: "1", "yes", "true", "y" or numeric 1 or > 0
+  r._withinSLA = (w === '1' || w === 'yes' || w === 'true' || w === 'y' || (wNum === 1 || (wNum > 0 && wNum < 1)));
 
   // Abandon: Event contains "ABANDON"
   r._isAbandoned = r._event.includes('ABANDON');
