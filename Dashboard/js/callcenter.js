@@ -158,21 +158,23 @@ function enrichEval(row) {
   r._category = (r[C.CATEGORY] || '').trim();
   r._criteria = (r[C.CRITERIA] || '').trim();
 
-  // Score comes from "Manager Evaluation" column (0-5 scale)
-  // Try exact name first, then fallbacks
-  let mgrEvalVal = r[C.MGR_EVAL] || r['Manager Evaluation'] || r['Manager_Evaluation'] || r['manager evaluation'] || '';
+  // Score comes from multiple possible columns: "Manager Evaluation", "Score (1-5)", or "Score"
+  // Try in order of preference: Manager Evaluation > Score (1-5) > Score
+  let mgrEvalVal = r[C.MGR_EVAL] || r['Manager Evaluation'] || r['Manager_Evaluation'] || r['manager evaluation'] ||
+                   r['Score (1-5)'] || r['Score (1-5)'.toLowerCase()] ||
+                   r['Score'] || r['score'] || '';
 
-  // If not found, search all keys for columns containing "manager" AND "evaluation"
+  // If not found, search all keys for columns containing "score" or "evaluation"
   if (!mgrEvalVal) {
     const foundKey = Object.keys(row).find(k => {
       const kLower = k.toLowerCase().replace(/\s+/g, '');
-      return kLower.includes('manager') && kLower.includes('evaluation');
+      return (kLower.includes('evaluation') || kLower.includes('score')) && !kLower.includes('sort');
     });
     if (foundKey) mgrEvalVal = row[foundKey];
   }
 
-  // Trim whitespace from the value
-  mgrEvalVal = String(mgrEvalVal || '').trim();
+  // Trim whitespace and remove % if present
+  mgrEvalVal = String(mgrEvalVal || '').trim().replace(/%$/, '');
   r._score = parseFloat(mgrEvalVal) || 0;
   r._max = 5;
   r._mgrEval = r._score;
