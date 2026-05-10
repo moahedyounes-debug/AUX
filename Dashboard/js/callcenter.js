@@ -219,30 +219,32 @@ function enrichEval(row) {
   let maxVal = (r[C.MAX] || r['Max'] || r['max'] || r['__col_8'] || '5').trim();
   r._max = parseInt(maxVal) || 5;
 
+  // The gviz CSV export has a quirk where it doesn't include Manager Evaluation column
   // Try to find numeric score from multiple columns in order of preference:
-  // 1. Manager Evaluation (named column or variations)
-  // 2. Score (1-5) (named column or variations)
-  // 3. Score (named column or variations)
+  // 1. Manager Evaluation (if available in the export)
+  // 2. Score (1-5) (the alternative source when Manager Evaluation is missing)
+  // 3. Score (calculated percentage)
   // 4. Unnamed columns by expected index
 
   let scoreVal = '';
 
-  // Try Manager Evaluation first
+  // Try Manager Evaluation first (columns 7 in 0-indexed arrays)
   scoreVal = r[C.MGR_EVAL] || r['Manager Evaluation'] || r['Manager_Evaluation'] || r['manager evaluation'] || '';
 
-  // Try Score (1-5)
+  // If Manager Evaluation is empty/missing, try Score (1-5) which contains the actual numeric scores
+  // This is because gviz export often omits the Manager Evaluation column
   if (!scoreVal) {
     scoreVal = r[C.SCORE_15] || r['Score (1-5)'] || r['Score (1-5)'.toLowerCase()] || '';
   }
 
-  // Try Score column
+  // Try the calculated Score percentage column as fallback
   if (!scoreVal) {
     scoreVal = r[C.SCORE] || r['Score'] || r['score'] || '';
   }
 
-  // Try unnamed columns by expected index (7, 6, 9 based on mapping)
+  // Try unnamed columns by expected index
   if (!scoreVal) {
-    scoreVal = r['__col_7'] || r['__col_6'] || r['__col_9'] || '';
+    scoreVal = r['__col_7'] || r['__col_6'] || r['__col_5'] || '';
   }
 
   // If still not found, search all keys for columns containing "score" or "evaluation"
