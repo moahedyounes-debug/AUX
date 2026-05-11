@@ -251,21 +251,6 @@ function renderDaily(){
       </tbody></table></div>
   </div>
   <div class="table-card">
-    <div class="table-header"><div class="table-title">Over 60 KM (Mileage)</div><div class="table-count">${farDistance.length} tickets</div></div>
-    <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Ticket #</th><th>Branch</th><th>Worker</th><th>Ticket Status</th><th>Aging</th><th>Mileage</th><th>Date</th><th>Remark</th><th>Parts</th></tr></thead>
-      <tbody>${farDistance.length===0?'<tr><td colspan="9" class="table-empty">No tickets with mileage over 60 KM</td></tr>':
-        farDistance.map(r=>'<tr>'+
-          '<td class="ticket-id">'+esc(r[C.TICKET_NUM])+'</td><td>'+esc(r._branch)+'</td>'+
-          '<td>'+(r._hasWorker?esc(r[C.WORKER]):'<span class="badge badge-red">Unassigned</span>')+'</td>'+
-          '<td>'+ticketStatusBadge(r)+'</td><td>'+agingBadge(r._agingHours)+'</td>'+
-          '<td class="text-mono fw-600">'+fmt(r._mileage)+' KM</td>'+
-          '<td class="text-mono">'+fmtDate(r._rescheduled)+'</td>'+
-          '<td>'+esc(r._rescheduleRemark||'—')+'</td>'+
-          '<td>'+partsStatusCell(r)+'</td></tr>').join('')}
-      </tbody></table></div>
-  </div>
-  <div class="table-card">
     <div class="table-header"><div class="table-title">${_chartFilter?'Filtered Pending Tickets':'All Pending Tickets'}</div><div class="table-count">${displayPending.length} tickets</div></div>
     <div class="table-scroll"><table class="data-table">
       <thead><tr><th>Ticket #</th><th>Branch</th><th>Worker</th><th>Ticket Status</th><th>Aging</th><th>Reason</th><th>Date</th><th>Remark</th><th>Parts</th></tr></thead>
@@ -538,6 +523,9 @@ function renderInsights(){
     r._serviceHours > 48
   );
 
+  // ── Segment: Tickets with Mileage > 60 KM ─────────────────
+  const farDistance = rows.filter(r => r._farDistance);
+
   // ── Segment: ALL closed ────────────────────────────────────
   const allClosed = rows.filter(r => !r._isPending);
   const rate48 = allClosed.length ? (allClosed.filter(r=>r._serviceHours<=48).length/allClosed.length*100) : null;
@@ -751,6 +739,23 @@ function renderInsights(){
         '</tr>';
       }).join('')}</tbody>
     </table></div>
+  </div>
+
+  <!-- OVER 60 KM TICKETS -->
+  <div class="section-header"><div class="section-title">Over 60 KM (Mileage)</div><span class="section-badge">${farDistance.length} tickets</span></div>
+  <div class="table-card" style="margin-bottom:22px">
+    <div class="table-scroll"><table class="data-table">
+      <thead><tr><th>Ticket #</th><th>Branch</th><th>Worker</th><th>Ticket Status</th><th>Aging</th><th>Mileage</th><th>Date</th><th>Remark</th><th>Parts</th></tr></thead>
+      <tbody>${farDistance.length===0?'<tr><td colspan="9" class="table-empty">No tickets with mileage over 60 KM</td></tr>':
+        farDistance.map(r=>'<tr>'+
+          '<td class="ticket-id">'+esc(r[C.TICKET_NUM])+'</td><td>'+esc(r._branch)+'</td>'+
+          '<td>'+(r._hasWorker?esc(r[C.WORKER]):'<span class="badge badge-red">Unassigned</span>')+'</td>'+
+          '<td>'+ticketStatusBadge(r)+'</td><td>'+agingBadge(r._agingHours)+'</td>'+
+          '<td class="text-mono fw-600">'+fmt(r._mileage)+' KM</td>'+
+          '<td class="text-mono">'+fmtDate(r._rescheduled)+'</td>'+
+          '<td>'+esc(r._rescheduleRemark||'—')+'</td>'+
+          '<td>'+partsStatusCell(r)+'</td></tr>').join('')}
+      </tbody></table></div>
   </div>
 
   <!-- MAINTENANCE INSTRUCTIONS DEEP DIVE -->
