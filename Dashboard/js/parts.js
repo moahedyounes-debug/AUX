@@ -536,6 +536,19 @@ function showPartsRequestModal(opts) {
               style="width:100%;font-size:13px;padding:8px 10px;border:.5px solid #d1d5db;border-radius:8px;background:#fff;color:#000">
           </div>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="position:relative">
+            <label style="font-size:11px;color:#6b7280;display:block;margin-bottom:4px">Model Number</label>
+            <input id="pm-model" value="${esc(opts.model||'')}" type="text" placeholder="e.g. ATW24" autocomplete="off"
+              style="width:100%;font-size:13px;padding:8px 10px;border:.5px solid #d1d5db;border-radius:8px;background:#fff;color:#000;font-family:monospace">
+            <div id="pm-model-dropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:.5px solid #d1d5db;border-top:none;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:1000;display:none;box-shadow:0 4px 6px rgba(0,0,0,.1)"></div>
+          </div>
+          <div>
+            <label style="font-size:11px;color:#6b7280;display:block;margin-bottom:4px">Serial Number (optional)</label>
+            <input id="pm-serial" value="" type="text" placeholder="Optional"
+              style="width:100%;font-size:13px;padding:8px 10px;border:.5px solid #d1d5db;border-radius:8px;background:#fff;color:#000;font-family:monospace">
+          </div>
+        </div>
         <div>
           <label style="font-size:11px;color:#6b7280;display:block;margin-bottom:4px">
             Order Number <span style="color:#dc2626">*</span>
@@ -566,16 +579,82 @@ function showPartsRequestModal(opts) {
       </div>
     </div>`;
   document.body.appendChild(overlay);
+
+  // Setup model autocomplete
+  setupModelAutocomplete();
+}
+
+// ── Model autocomplete functionality ────────────────────────
+function setupModelAutocomplete() {
+  const modelInput = document.getElementById('pm-model');
+  const dropdown = document.getElementById('pm-model-dropdown');
+  const partCodeInput = document.getElementById('pm-part-code');
+  const partNameInput = document.getElementById('pm-part-name');
+
+  if (!modelInput || !dropdown) return;
+
+  modelInput.addEventListener('input', async (e) => {
+    const query = e.target.value.trim();
+    if (query.length < 2) {
+      dropdown.style.display = 'none';
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${HEARTBEAT_URL}?action=models&query=${encodeURIComponent(query)}`);
+      const data = await resp.json();
+      const models = data.models || [];
+
+      if (models.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      dropdown.innerHTML = models.map((m, i) => `
+        <div style="padding:8px 12px;border-bottom:.5px solid #f0f0f0;cursor:pointer;font-size:12px;color:#374151;font-family:monospace"
+          onclick="selectModel('${esc(m.model)}','${esc(m.partNumber)}','${esc(m.partDescription)}')">
+          <div style="font-weight:600">${esc(m.model)}</div>
+          <div style="font-size:11px;color:#9ca3af">${esc(m.partNumber)} — ${esc(m.partDescription)}</div>
+        </div>
+      `).join('');
+
+      dropdown.style.display = 'block';
+    } catch (err) {
+      console.error('Model lookup error:', err);
+      dropdown.style.display = 'none';
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!modelInput.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+}
+
+function selectModel(model, partNumber, partDescription) {
+  document.getElementById('pm-model').value = model;
+  document.getElementById('pm-model-dropdown').style.display = 'none';
+
+  // Auto-fill part number and description if available
+  if (partNumber && !document.getElementById('pm-part-code').value) {
+    document.getElementById('pm-part-code').value = partNumber;
+  }
+  if (partDescription && !document.getElementById('pm-part-name').value) {
+    document.getElementById('pm-part-name').value = partDescription;
+  }
 }
 
 // ── Submit request ─────────────────────────────────────────────
 async function submitPartsRequest() {
-  const orderNo =(document.getElementById('pm-order-no')?.value ||'').trim();
-  const partName=(document.getElementById('pm-part-name')?.value||'').trim();
-  const partCode=(document.getElementById('pm-part-code')?.value||'').trim();
-  const qty     =(document.getElementById('pm-qty')?.value      ||'1').trim();
-  const branch  =(document.getElementById('pm-branch')?.value   ||'').trim();
-  const notes   =(document.getElementById('pm-notes')?.value    ||'').trim();
+  const orderNo   =(document.getElementById('pm-order-no')?.value ||'').trim();
+  const partName  =(document.getElementById('pm-part-name')?.value||'').trim();
+  const partCode  =(document.getElementById('pm-part-code')?.value||'').trim();
+  const qty       =(document.getElementById('pm-qty')?.value      ||'1').trim();
+  const branch    =(document.getElementById('pm-branch')?.value   ||'').trim();
+  const notes     =(document.getElementById('pm-notes')?.value    ||'').trim();
+  const model     =(document.getElementById('pm-model')?.value    ||'').trim();
+  const serialNum =(document.getElementById('pm-serial')?.value   ||'').trim();
 
   if(!orderNo){alert('Order Number is required (GD…)');return;}
   if(!partName&&!partCode){alert('Please enter part name or part number.');return;}
@@ -589,6 +668,7 @@ async function submitPartsRequest() {
     orderNo, part:partName||partCode, code:partCode,
     branch, qty, status:'pending',
     time: new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}), awb:'',
+    model, serialNumber:serialNum,
   });
 
   if(HEARTBEAT_URL){
@@ -599,6 +679,7 @@ async function submitPartsRequest() {
           action:'parts_request',sheet:CONFIG.PARTS_SHEET,
           orderNumber:orderNo,partNumber:partCode,partDesc:partName,
           awb:'',requestDate,finalStatus:'Pending',branch,qty,notes,
+          model:model,serialNumber:serialNum,
           requestedBy:_currentEmail||'—',asc:_currentASC||'—',
         })
       });
@@ -612,7 +693,8 @@ async function submitPartsRequest() {
   const body=encodeURIComponent(
     `Dear Parts Team,\n\nNew spare part request:\n\n`+
     `Order Number : ${orderNo}\nBranch       : ${branch}\nPart Name    : ${partName}\n`+
-    `Part Number  : ${partCode}\nQuantity     : ${qty}\nNotes        : ${notes||'—'}\n`+
+    `Part Number  : ${partCode}\nQuantity     : ${qty}\n`+
+    `Model        : ${model||'—'}\nSerial Number: ${serialNum||'—'}\nNotes        : ${notes||'—'}\n`+
     `Requested By : ${_currentEmail||'AUX ASC Dashboard'}\nDate         : ${requestDate}\n\n`+
     `Please process and update AWB in the Parts sheet.\n\nAUX ASC Dashboard — Created by Moahed Younes`
   );

@@ -21,17 +21,61 @@
  */
 
 const SHEET_NAME = 'ActiveUsers';
+const SHEET_PARTS_MODEL = 'Parts Model';
 const ACTIVE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-// ── GET: Read active users ────────────────────────────────────
+// ── GET: Handle multiple actions ─────────────────────────────
 function doGet(e) {
   const action = e.parameter.action;
+  const query = e.parameter.query || '';
 
+  // Lookup models from Parts Model sheet
+  if (action === 'models') {
+    return ContentService
+      .createTextOutput(JSON.stringify(getModelsList(query)))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Default: return active users from cache
   const result = CacheService.getScriptCache().get('active_users') || '{}';
 
   return ContentService
     .createTextOutput(result)
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── GET Models from Parts Model sheet ────────────────────────
+function getModelsList(query) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_PARTS_MODEL);
+    if (!sheet) return { error: 'Parts Model sheet not found', models: [] };
+
+    const data = sheet.getDataRange().getValues();
+    const models = [];
+
+    // Skip header row, collect unique models matching query
+    const seen = new Set();
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const model = String(row[0] || '').trim();
+      const partNum = String(row[1] || '').trim();
+      const partDesc = String(row[2] || '').trim();
+
+      if (model && !seen.has(model) && model.toUpperCase().startsWith(query.toUpperCase())) {
+        models.push({
+          model: model,
+          partNumber: partNum,
+          partDescription: partDesc,
+        });
+        seen.add(model);
+      }
+    }
+
+    return { error: null, models: models };
+  } catch (err) {
+    return { error: err.toString(), models: [] };
+  }
 }
 
 // ── POST: Write heartbeat or logout ──────────────────────────
@@ -93,8 +137,8 @@ function writePartsRequest(data) {
     let sheet   = ss.getSheetByName(SHEET);
     if (!sheet) {
       sheet = ss.insertSheet(SHEET);
-      sheet.appendRow(['Order Number','Part Number','Part Description','AWB','Request Date','Final Status','Branch','Qty']);
-      sheet.getRange(1,1,1,8).setFontWeight('bold');
+      sheet.appendRow(['Order Number','Part Number','Part Description','Model','Serial Number','AWB','Request Date','Final Status','Branch','Qty','Notes','Requested By','ASC']);
+      sheet.getRange(1,1,1,13).setFontWeight('bold');
       sheet.setFrozenRows(1);
     }
     // Check if order already exists — update AWB / status if so
@@ -104,8 +148,8 @@ function writePartsRequest(data) {
       const existIdx = orderCol.findIndex(v => String(v).trim() === String(data.orderNumber||'').trim());
       if (existIdx >= 0) {
         const row = existIdx + 2;
-        if (data.awb) sheet.getRange(row, 4).setValue(data.awb);
-        if (data.finalStatus) sheet.getRange(row, 6).setValue(data.finalStatus);
+        if (data.awb) sheet.getRange(row, 6).setValue(data.awb);
+        if (data.finalStatus) sheet.getRange(row, 8).setValue(data.finalStatus);
         return;
       }
     }
@@ -114,11 +158,16 @@ function writePartsRequest(data) {
       data.orderNumber  || '—',
       data.partNumber   || '—',
       data.partDesc     || '—',
+      data.model        || '—',
+      data.serialNumber || '',
       data.awb          || '',
       data.requestDate  || new Date().toLocaleDateString('en-GB'),
       data.finalStatus  || 'Pending',
       data.branch       || '—',
       data.qty          || '1',
+      data.notes        || '',
+      data.requestedBy  || '—',
+      data.asc          || '—',
     ]);
   } catch(err) {
     // best-effort

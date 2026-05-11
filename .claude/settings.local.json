@@ -80,7 +80,8 @@
       "Bash(git commit -m 'Use direct CSV export only for Evaluation sheet, revert Calls/WhatsApp to gviz *)",
       "Bash(git commit -m 'Fix '\\\\''Don'\\\\''t show again'\\\\'' persistence - properly store and use user email *)",
       "Bash(git commit -m 'Fix Parts sheet column name mismatch and update Google Apps Script *)",
-      "Bash(git commit -m 'Fix column name to match actual Google Sheet: '\\\\''Part Description'\\\\'' *)"
+      "Bash(git commit -m 'Fix column name to match actual Google Sheet: '\\\\''Part Description'\\\\'' *)",
+      "Bash(git commit -m 'Add Model Number and Serial Number to parts request with autocomplete *)"
     ]
   }
 }
