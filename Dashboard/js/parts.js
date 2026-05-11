@@ -662,58 +662,63 @@ function selectModel(model, partNumber, partDescription) {
   }
 }
 
-// ── Get branch email and ASC + Always CC managers from Access sheet ──────
-async function getBranchEmailAndASCManagers(branchName) {
+// ── Get TO and CC emails from Access sheet ──────────────────
+// TO: All people for the specific branch
+// CC: ASC CC team + Always CC team
+async function getBranchEmailList(branchName) {
   try {
     const url = sheetUrl(CONFIG.ACCESS_SHEET);
     const resp = await fetch(url);
-    if (!resp.ok) return { branchEmail: null, ccEmails: [] };
+    if (!resp.ok) return { toEmails: [], ccEmails: [], ascName: null };
     const csv = await resp.text();
     const rows = parseCSV(csv);
 
-    // Find branch supervisor and ASC name
     const branchCol = 'If Branch has pending';
     const emailCol = 'Email';
     const ascCol = 'ASC';
 
-    let branchEmail = null;
-    let ascName = null;
+    let toEmails = [];
     let ccEmails = [];
+    let ascName = null;
 
-    // First pass: find branch email and ASC name
+    // First pass: find TO emails and ASC name
     for (const row of rows) {
       const rowBranch = (row[branchCol] || '').trim();
+      const email = (row[emailCol] || '').trim();
+
       if (rowBranch.toLowerCase() === branchName.toLowerCase()) {
-        branchEmail = (row[emailCol] || '').trim();
-        ascName = (row[ascCol] || '').trim();
-        break;
+        if (email) toEmails.push(email);
+        if (!ascName) ascName = (row[ascCol] || '').trim();
       }
     }
 
-    // Second pass: get all emails for the ASC + Always CC (ASC = "All")
+    // Second pass: get CC emails
+    // 1. All people where "If Branch has pending" = "{ASC} CC" (e.g., "ZAM CC")
+    // 2. All people where "If Branch has pending" = "Always CC"
     for (const row of rows) {
-      const rowASC = (row[ascCol] || '').trim();
+      const rowBranch = (row[branchCol] || '').trim();
       const email = (row[emailCol] || '').trim();
 
-      // Include:
-      // 1. All people with same ASC (e.g., ZAM team)
-      // 2. All people with ASC = "All" (Always CC)
-      if (email && email !== branchEmail) {
-        if (rowASC.toLowerCase() === ascName.toLowerCase() ||
-            rowASC.toLowerCase() === 'all') {
+      if (email && !toEmails.includes(email)) {
+        // Check for ASC CC entries (e.g., "ZAM CC")
+        if (ascName && rowBranch.toLowerCase() === (ascName + ' CC').toLowerCase()) {
+          ccEmails.push(email);
+        }
+        // Check for Always CC entries
+        else if (rowBranch.toLowerCase() === 'always cc') {
           ccEmails.push(email);
         }
       }
     }
 
     return {
-      branchEmail: branchEmail || null,
-      ascName: ascName || null,
-      ccEmails: ccEmails
+      toEmails: toEmails,
+      ccEmails: ccEmails,
+      ascName: ascName
     };
   } catch (err) {
-    console.error('getBranchEmailAndASCManagers error:', err);
-    return { branchEmail: null, ccEmails: [] };
+    console.error('getBranchEmailList error:', err);
+    return { toEmails: [], ccEmails: [], ascName: null };
   }
 }
 
@@ -774,18 +779,21 @@ async function submitPartsRequest() {
     alert('⚠️ HEARTBEAT_URL not configured - cannot save to sheet');
   }
 
-  // Email - Route to branch supervisor and CC ASC team + Always CC list
-  const emailData = await getBranchEmailAndASCManagers(branch);
-  const to = emailData.branchEmail || 'arslan@auxair.com'; // Fallback if branch not found
+  // Email routing from Access sheet
+  const emailData = await getBranchEmailList(branch);
 
-  // Build CC list: ASC team + Always CC people (automatically fetched from Access sheet)
-  // Remove duplicates and exclude TO email
-  const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e && e !== to);
+  // TO: All people assigned to this branch (from "If Branch has pending" column)
+  const to = emailData.toEmails.length > 0
+    ? emailData.toEmails.join(';')
+    : 'arslan@auxair.com'; // Fallback if branch not found
+
+  // CC: ASC CC team + Always CC team (remove duplicates)
+  const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
   const cc = encodeURIComponent(uniqueCC.join(';'));
 
   const sub = encodeURIComponent(`Parts Request — ${orderNo} — ${branch}`);
   const body = encodeURIComponent(
-    `Dear Parts Supervisor,\n\nNew spare part request:\n\n`+
+    `Dear Parts Team,\n\nNew spare part request:\n\n`+
     `Order Number : ${orderNo}\nBranch       : ${branch}\nASC          : ${emailData.ascName||'—'}\n`+
     `Part Name    : ${partName}\nPart Number  : ${partCode}\nQuantity     : ${qty}\n`+
     `Model        : ${model||'—'}\nSerial Number: ${serialNum||'—'}\nNotes        : ${notes||'—'}\n`+
