@@ -98,6 +98,29 @@ const KPI = {
     }).sort((a,b)=>b.score-a.score);
   },
 
+  // ── By City: Extract city from branch (format: "City - Company") ──
+  byCity(rows) {
+    const m=groupBy(rows,r=>{
+      if(!r._branch)return'(Unknown)';
+      const city=r._branch.split('-')[0].trim();
+      return city||'(Unknown)';
+    });
+    return Object.entries(m).map(([city,cRows])=>{
+      const done=cRows.filter(r=>!r._isPending&&r._serviceHours!==null);
+      const pc=cRows.filter(r=>r._isPending).length;
+      const closed=cRows.filter(r=>!r._isPending).length;
+      return {
+        city,
+        registration: cRows.length,
+        closed: closed,
+        pending: pc,
+        pendingRate: cRows.length?pc/cRows.length*100:null,
+        rate48h: done.length?done.filter(r=>r._serviceHours<=48).length/done.length*100:null,
+        rate72h: done.length?done.filter(r=>r._serviceHours<=72).length/done.length*100:null,
+      };
+    }).sort((a,b)=>b.registration-a.registration);
+  },
+
   // ── REJECTED / RETURNED / OBM per spec:
   // Rejected:  Phase contains "Refusal" OR Status contains "Rejected", CompResult NOT blank/cancel
   // Returned:  Phase contains "Rejected upon review" OR Status contains "Returned", CompResult NOT blank/cancel
@@ -204,7 +227,12 @@ function statusBadge(r){
 function ticketStatusBadge(r){
   const color = r._phaseColor || 'gray';
   const label = r._phaseLabel || r._ticketStatus || '—';
-  const cls = color==='red'?'badge-red':color==='green'?'badge-green':color==='amber'?'badge-amber':'badge-gray';
+  let cls;
+  if (color === 'red') cls = 'badge-red';
+  else if (color === 'green') cls = 'badge-green';
+  else if (color === 'amber') cls = 'badge-amber';
+  else if (color === 'orange') cls = 'badge-orange';
+  else cls = 'badge-gray';
   return '<span class="badge '+cls+'">'+esc(label)+'</span>';
 }
 

@@ -269,6 +269,16 @@ function enrichRow(row) {
   const sh = parseFloat(r[C.SERVICE_HOURS]); r._serviceHours = isNaN(sh) ? null : sh;
   const mi = parseFloat(r[C.MILEAGE]);       r._mileage      = isNaN(mi) ? null : mi;
   r._farDistance = r._mileage !== null && r._mileage > 60;
+
+  // Debug: Log mileage values for tickets marked as far distance
+  if (r._farDistance && !window._mileageDebugLogged) {
+    console.log('Sample far distance tickets:', {
+      ticket: r[C.TICKET_NUM],
+      rawMileage: r[C.MILEAGE],
+      parsedMileage: r._mileage,
+      isFarDistance: r._farDistance
+    });
+  }
   r._hasWorker   = !!(r[C.WORKER] && r[C.WORKER].trim());
 
   // ── Aging ─────────────────────────────────────────
@@ -302,40 +312,73 @@ function enrichRow(row) {
   r._hasRescheduleReason = !!(r[C.RESCHED_REASON] && r[C.RESCHED_REASON].trim());
 
   // ── Ticket Status from Processing Phase (per spec) ──
-  // 1. Dispatch Network            → Not Assigned         (RED)
-  // 2. Accepting orders (workers)  → Dispatched to Tech but no update (RED)
-  // 3. Branch dispatching workers  → Dispatched to Tech but not Accepted (RED)
-  // 4. Change of schedule (workers)→ Accepted & Updated   (GREEN)
+  // Mapping: Processing Phase + Ticket Status → Final Status Label & Color
   r._ticketStatus = status;  // original Ticket Status field
   r._phase        = phase;   // original Processing Phase
 
-  if (phase.toLowerCase().includes('dispatch network')) {
-    r._phaseLabel = 'Not Assigned';
+  const phaseLowTrimmed = phaseLow.trim();
+  const statusLowTrimmed = statusLow.trim();
+
+  // 1. Headquarters Dispatch Network | Not assigned → Red
+  if (phaseLowTrimmed.includes('dispatch network')) {
+    r._phaseLabel = 'Not assigned';
     r._phaseColor = 'red';
-  } else if (phase.toLowerCase().includes('accepting orders')) {
-    r._phaseLabel = 'Dispatched – No Update';
-    r._phaseColor = 'red';
-  } else if (phase.toLowerCase().includes('branch dispatching')) {
-    r._phaseLabel = 'Dispatched – Not Accepted';
-    r._phaseColor = 'red';
-  } else if (phase.toLowerCase().includes('change of schedule')) {
-    r._phaseLabel = 'Accepted & Updated';
-    r._phaseColor = 'green';
-  } else if (phase.toLowerCase().includes('completion confirmation')) {
-    r._phaseLabel = 'Warranty – Under Validation';
+  }
+  // 2. Branch dispatching workers | Dispatched work → amber
+  else if (phaseLowTrimmed.includes('branch dispatching')) {
+    r._phaseLabel = 'Dispatched But Not Accepted By Technician';
     r._phaseColor = 'amber';
-  } else if (phase.toLowerCase().includes('statement')) {
+  }
+  // 3. Accepting orders (workers) | Accepted → Orange
+  else if (phaseLowTrimmed.includes('accepting orders')) {
+    r._phaseLabel = 'Accepted By Technician but no appointment or pending reason';
+    r._phaseColor = 'orange';
+  }
+  // 4a. Change of appointment time (branch) with Dispatched work → amber
+  else if (phaseLowTrimmed.includes('change of appointment time') && statusLowTrimmed.includes('dispatched')) {
+    r._phaseLabel = 'Dispatched & appointment updated But Not Accepted By Technician';
+    r._phaseColor = 'amber';
+  }
+  // 4b. Change of appointment time (branch) with Accepted → Green
+  else if (phaseLowTrimmed.includes('change of appointment time') && statusLowTrimmed.includes('accepted')) {
+    r._phaseLabel = 'Dispatched & appointment updated and Accepted By Technician';
+    r._phaseColor = 'green';
+  }
+  // 5. Statement | Statement of account → Green
+  else if (phaseLowTrimmed.includes('statement')) {
     r._phaseLabel = 'Completed';
     r._phaseColor = 'green';
-  } else {
+  }
+  // 6. Change of schedule (workers) | Accepted → Green
+  else if (phaseLowTrimmed.includes('change of schedule')) {
+    r._phaseLabel = 'Accepted By Technician and appointment or pending reason updated';
+    r._phaseColor = 'green';
+  }
+  // 7. Completion Confirmation (Headquarters) | Completed → Green
+  else if (phaseLowTrimmed.includes('completion confirmation')) {
+    r._phaseLabel = 'Completed';
+    r._phaseColor = 'green';
+  }
+  // 8. Rejected upon review (repair) | Returned order → Red
+  else if (phaseLowTrimmed.includes('rejected upon review')) {
+    r._phaseLabel = 'Rejected';
+    r._phaseColor = 'red';
+  }
+  // 9. Order Creation (Headquarters) | Not assigned → Red
+  else if (phaseLowTrimmed.includes('order creation')) {
+    r._phaseLabel = 'Created but not assigned to SVC Center';
+    r._phaseColor = 'red';
+  }
+  // Fallback
+  else {
     r._phaseLabel = phase || status || '—';
     r._phaseColor = 'gray';
   }
 
-  // _isDispatchedWork = ONLY "Branch dispatching workers" (Dispatched – Not Accepted)
+  // _isDispatchedWork = ONLY "Branch dispatching workers"
   // _isNotAssigned    = "Dispatch Network" phase
-  r._isNotAssigned    = phase.toLowerCase().includes('dispatch network');
-  r._isDispatchedWork = phase.toLowerCase().includes('branch dispatching');
+  r._isNotAssigned    = phaseLowTrimmed.includes('dispatch network');
+  r._isDispatchedWork = phaseLowTrimmed.includes('branch dispatching');
 
   // ── Aging category label ──────────────────────────
   if (r._agingHours === null) r._agingCat = '—';

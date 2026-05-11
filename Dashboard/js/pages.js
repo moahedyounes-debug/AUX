@@ -211,6 +211,8 @@ function renderDaily(){
   const allRows=DB.filtered, C=CONFIG.COLS;
   const rows=_chartFilter?getFilteredRows():allRows;
   const today=KPI.todaySchedule(allRows), pending=KPI.pending(allRows);
+  const farDistance=allRows.filter(r=>r._farDistance);  // Tickets with Mileage > 60 KM
+  const cityLoad=KPI.byCity(allRows);  // Q'ty by City
   const aging=KPI.agingDistribution(pending);
   const reasons=KPI.pendingByReason(allRows);
   const dispatchedWork=pending.filter(r=>r._isDispatchedWork).length;
@@ -243,7 +245,22 @@ function renderDaily(){
           '<td>'+(r._hasWorker?esc(r[C.WORKER]):'<span class="badge badge-red">Unassigned</span>')+'</td>'+
           '<td>'+ticketStatusBadge(r)+'</td><td>'+agingBadge(r._agingHours)+'</td>'+
           '<td>'+esc(r._rescheduleReason||'—')+'</td>'+
-          '<td class="text-mono">'+esc(r._rescheduleDate?r._rescheduleDate.substring(0,10):'—')+'</td>'+
+          '<td class="text-mono">'+fmtDate(r._rescheduled)+'</td>'+
+          '<td>'+esc(r._rescheduleRemark||'—')+'</td>'+
+          '<td>'+partsStatusCell(r)+'</td></tr>').join('')}
+      </tbody></table></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header"><div class="table-title">Over 60 KM (Mileage)</div><div class="table-count">${farDistance.length} tickets</div></div>
+    <div class="table-scroll"><table class="data-table">
+      <thead><tr><th>Ticket #</th><th>Branch</th><th>Worker</th><th>Ticket Status</th><th>Aging</th><th>Mileage</th><th>Date</th><th>Remark</th><th>Parts</th></tr></thead>
+      <tbody>${farDistance.length===0?'<tr><td colspan="9" class="table-empty">No tickets with mileage over 60 KM</td></tr>':
+        farDistance.map(r=>'<tr>'+
+          '<td class="ticket-id">'+esc(r[C.TICKET_NUM])+'</td><td>'+esc(r._branch)+'</td>'+
+          '<td>'+(r._hasWorker?esc(r[C.WORKER]):'<span class="badge badge-red">Unassigned</span>')+'</td>'+
+          '<td>'+ticketStatusBadge(r)+'</td><td>'+agingBadge(r._agingHours)+'</td>'+
+          '<td class="text-mono fw-600">'+fmt(r._mileage)+' KM</td>'+
+          '<td class="text-mono">'+fmtDate(r._rescheduled)+'</td>'+
           '<td>'+esc(r._rescheduleRemark||'—')+'</td>'+
           '<td>'+partsStatusCell(r)+'</td></tr>').join('')}
       </tbody></table></div>
@@ -273,6 +290,22 @@ function renderDaily(){
         pivot.cols.map(c=>'<td class="text-mono">'+(r[c]||'')+'</td>').join('')+
         '<td class="fw-600 text-mono">'+r.total+'</td></tr>').join('')}
       ${pivot.rows.length===0?'<tr><td colspan="'+(pivot.cols.length+2)+'" class="table-empty">No pending tickets</td></tr>':''}
+      </tbody></table></div>
+  </div>
+  <div class="section-header"><div class="section-title">Load by City</div></div>
+  <div class="table-card">
+    <div class="table-header"><div class="table-title">Registration Q'ty &amp; Closed Q'ty by City</div><div class="table-count">${cityLoad.length} cities</div></div>
+    <div class="table-scroll"><table class="data-table">
+      <thead><tr><th>City</th><th class="text-mono">Registration</th><th class="text-mono">Closed</th><th class="text-mono">Pending</th><th class="text-mono">Pending %</th><th class="text-mono">48h Rate</th><th class="text-mono">72h Rate</th></tr></thead>
+      <tbody>${cityLoad.length===0?'<tr><td colspan="7" class="table-empty">No data available</td></tr>':
+        cityLoad.map(c=>'<tr>'+
+          '<td class="fw-600">'+esc(c.city)+'</td>'+
+          '<td class="text-mono text-center">'+c.registration+'</td>'+
+          '<td class="text-mono text-center">'+c.closed+'</td>'+
+          '<td class="text-mono text-center">'+c.pending+'</td>'+
+          '<td class="text-mono text-center">'+fmtPct(c.pendingRate)+'</td>'+
+          '<td class="text-mono text-center">'+fmtPct(c.rate48h)+'</td>'+
+          '<td class="text-mono text-center">'+fmtPct(c.rate72h)+'</td></tr>').join('')}
       </tbody></table></div>
   </div>
   ${DB.isAdmin&&brAlerts.length>0?`
