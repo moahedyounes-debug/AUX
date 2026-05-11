@@ -662,30 +662,53 @@ function selectModel(model, partNumber, partDescription) {
   }
 }
 
-// ── Get branch email from Access sheet ────────────────────────
-async function getBranchEmail(branchName) {
+// ── Get branch email and ASC managers from Access sheet ──────
+async function getBranchEmailAndASCManagers(branchName) {
   try {
     const url = sheetUrl(CONFIG.ACCESS_SHEET);
     const resp = await fetch(url);
-    if (!resp.ok) return null;
+    if (!resp.ok) return { branchEmail: null, ascEmails: [] };
     const csv = await resp.text();
     const rows = parseCSV(csv);
 
-    // Find row matching branch name in "If Branch has pending" column
+    // Find branch supervisor and ASC name
     const branchCol = 'If Branch has pending';
     const emailCol = 'Email';
+    const ascCol = 'ASC';
 
+    let branchEmail = null;
+    let ascName = null;
+    let ascEmails = [];
+
+    // First pass: find branch email and ASC name
     for (const row of rows) {
       const rowBranch = (row[branchCol] || '').trim();
       if (rowBranch.toLowerCase() === branchName.toLowerCase()) {
-        const email = (row[emailCol] || '').trim();
-        return email ? encodeURIComponent(email) : null;
+        branchEmail = (row[emailCol] || '').trim();
+        ascName = (row[ascCol] || '').trim();
+        break;
       }
     }
-    return null;
+
+    // Second pass: if we found the ASC, get all emails for that ASC
+    if (ascName) {
+      for (const row of rows) {
+        const rowASC = (row[ascCol] || '').trim();
+        const email = (row[emailCol] || '').trim();
+        if (rowASC.toLowerCase() === ascName.toLowerCase() && email && email !== branchEmail) {
+          ascEmails.push(email);
+        }
+      }
+    }
+
+    return {
+      branchEmail: branchEmail || null,
+      ascName: ascName || null,
+      ascEmails: ascEmails
+    };
   } catch (err) {
-    console.error('getBranchEmail error:', err);
-    return null;
+    console.error('getBranchEmailAndASCManagers error:', err);
+    return { branchEmail: null, ascEmails: [] };
   }
 }
 
@@ -746,15 +769,26 @@ async function submitPartsRequest() {
     alert('⚠️ HEARTBEAT_URL not configured - cannot save to sheet');
   }
 
-  // Email - Route to branch team based on Access sheet lookup
-  const branchEmail = await getBranchEmail(branch);
-  const to = branchEmail || 'arslan@auxair.com;nawthah@auxair.com;nujud@auxair.com'; // Fallback if branch not found
-  const cc = encodeURIComponent('moahed.younis@auxair.com;Nawthah.Alqahtani@auxair.com;Nujud.Kaabi@auxair.com');
+  // Email - Route to branch supervisor and CC ASC managers + AUX team
+  const emailData = await getBranchEmailAndASCManagers(branch);
+  const to = emailData.branchEmail || 'arslan@auxair.com'; // Fallback if branch not found
+
+  // Build CC list: ASC managers + AUX team
+  const ccEmails = [
+    ...emailData.ascEmails,
+    'moahed.younis@auxair.com',
+    'Nawthah.Alqahtani@auxair.com',
+    'Nujud.Kaabi@auxair.com'
+  ];
+  // Remove duplicates
+  const uniqueCC = [...new Set(ccEmails)].filter(e => e && e !== to);
+  const cc = encodeURIComponent(uniqueCC.join(';'));
+
   const sub = encodeURIComponent(`Parts Request — ${orderNo} — ${branch}`);
   const body = encodeURIComponent(
     `Dear Parts Supervisor,\n\nNew spare part request:\n\n`+
-    `Order Number : ${orderNo}\nBranch       : ${branch}\nPart Name    : ${partName}\n`+
-    `Part Number  : ${partCode}\nQuantity     : ${qty}\n`+
+    `Order Number : ${orderNo}\nBranch       : ${branch}\nASC          : ${emailData.ascName||'—'}\n`+
+    `Part Name    : ${partName}\nPart Number  : ${partCode}\nQuantity     : ${qty}\n`+
     `Model        : ${model||'—'}\nSerial Number: ${serialNum||'—'}\nNotes        : ${notes||'—'}\n`+
     `Requested By : ${_currentEmail||'AUX ASC Dashboard'}\nDate         : ${requestDate}\n\n`+
     `Please process and update AWB in the Parts sheet.\n\nAUX ASC Dashboard — Created by Moahed Younes`
