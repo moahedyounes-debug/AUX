@@ -80,6 +80,14 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  // Lookup all parts for a specific model
+  if (action === 'parts_for_model') {
+    const result = getPartsForModel(query);
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   // Default: return active users from cache
   const result = CacheService.getScriptCache().get('active_users') || '{}';
 
@@ -143,6 +151,59 @@ function getModelsList(query) {
       error: `Error loading models: ${errMsg}`,
       models: [],
       debug: { query }
+    };
+  }
+}
+
+// ── GET All Parts for a specific Model ───────────────────────
+// Returns all parts (accessories) available for a given model
+function getPartsForModel(modelName) {
+  try {
+    // Read from the SEPARATE Parts Model spreadsheet
+    const partsModelSS = SpreadsheetApp.openById(PARTS_MODEL_SHEET_ID);
+    const sheet = partsModelSS.getSheetByName(SHEET_PARTS_MODEL);
+
+    if (!sheet) {
+      return {
+        error: 'Parts Model sheet not found',
+        parts: []
+      };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const parts = [];
+
+    Logger.log(`getPartsForModel: Model="${modelName}", Total rows=${data.length}`);
+
+    // Columns: J=Customer Model (index 9), E=Accessory Code (index 4), G=Accessory Name (index 6)
+    const seen = new Set();
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const model = String(row[9] || '').trim();        // Column J: Customer Model
+      const partNum = String(row[4] || '').trim();      // Column E: Accessory Code
+      const partDesc = String(row[6] || '').trim();     // Column G: Accessory Name
+
+      // Collect ALL parts for the exact model match
+      if (model.toUpperCase() === modelName.toUpperCase() && partNum && !seen.has(partNum)) {
+        parts.push({
+          partNumber: partNum,
+          partDescription: partDesc,
+          model: model
+        });
+        seen.add(partNum);
+        Logger.log(`Found part for model ${model}: ${partNum} - ${partDesc}`);
+      }
+    }
+
+    Logger.log(`getPartsForModel: Found ${parts.length} parts for model ${modelName}`);
+    return { error: null, parts: parts };
+  } catch (err) {
+    const errMsg = err.toString();
+    Logger.log(`getPartsForModel ERROR: ${errMsg}`);
+    return {
+      error: `Error loading parts: ${errMsg}`,
+      parts: []
     };
   }
 }

@@ -588,8 +588,6 @@ function showPartsRequestModal(opts) {
 function setupModelAutocomplete() {
   const modelInput = document.getElementById('pm-model');
   const dropdown = document.getElementById('pm-model-dropdown');
-  const partCodeInput = document.getElementById('pm-part-code');
-  const partNameInput = document.getElementById('pm-part-name');
 
   if (!modelInput || !dropdown) {
     console.error('setupModelAutocomplete: Missing elements', { modelInput: !!modelInput, dropdown: !!dropdown });
@@ -608,15 +606,12 @@ function setupModelAutocomplete() {
     }
 
     try {
-      const url = `${HEARTBEAT_URL}?action=models&query=${encodeURIComponent(query)}`;
-      console.log('Fetching models from:', url);
+      // First fetch matching models
+      const modelsUrl = `${HEARTBEAT_URL}?action=models&query=${encodeURIComponent(query)}`;
+      console.log('Fetching models from:', modelsUrl);
 
-      const resp = await fetch(url);
-      console.log('Model fetch response status:', resp.status, resp.ok);
-
+      const resp = await fetch(modelsUrl);
       const data = await resp.json();
-      console.log('Model data received:', data);
-
       const models = data.models || [];
 
       if (models.length === 0) {
@@ -625,12 +620,16 @@ function setupModelAutocomplete() {
         return;
       }
 
-      console.log('Rendering', models.length, 'models');
-      dropdown.innerHTML = models.map((m, i) => `
-        <div style="padding:8px 12px;border-bottom:.5px solid #f0f0f0;cursor:pointer;font-size:12px;color:#374151;font-family:monospace"
-          onclick="selectModel('${esc(m.model)}','${esc(m.partNumber)}','${esc(m.partDescription)}')">
-          <div style="font-weight:600">${esc(m.model)}</div>
-          <div style="font-size:11px;color:#9ca3af">${esc(m.partNumber)} — ${esc(m.partDescription)}</div>
+      console.log('Rendering', models.length, 'matching models');
+
+      // Show models as clickable options that will load parts
+      dropdown.innerHTML = models.map((m) => `
+        <div style="padding:12px;border-bottom:.5px solid #f0f0f0;cursor:pointer;font-size:12px;color:#374151;font-family:monospace;background:#f9fafb;transition:.15s"
+          onmouseover="this.style.background='#f0fdf4'"
+          onmouseout="this.style.background='#f9fafb'"
+          onclick="loadPartsForModel('${esc(m.model)}')">
+          <div style="font-weight:600;color:#003D8F">${esc(m.model)}</div>
+          <div style="font-size:10px;color:#9ca3af;margin-top:3px">Click to view all parts for this model</div>
         </div>
       `).join('');
 
@@ -649,17 +648,60 @@ function setupModelAutocomplete() {
   });
 }
 
-function selectModel(model, partNumber, partDescription) {
-  document.getElementById('pm-model').value = model;
-  document.getElementById('pm-model-dropdown').style.display = 'none';
+// ── Load and display all parts for a model ──────────────────
+async function loadPartsForModel(modelName) {
+  const modelInput = document.getElementById('pm-model');
+  const dropdown = document.getElementById('pm-model-dropdown');
 
-  // Auto-fill part number and description if available
-  if (partNumber && !document.getElementById('pm-part-code').value) {
-    document.getElementById('pm-part-code').value = partNumber;
+  // Set model value
+  modelInput.value = modelName;
+  console.log('Loading parts for model:', modelName);
+
+  try {
+    const partsUrl = `${HEARTBEAT_URL}?action=parts_for_model&query=${encodeURIComponent(modelName)}`;
+    console.log('Fetching parts from:', partsUrl);
+
+    const resp = await fetch(partsUrl);
+    const data = await resp.json();
+    const parts = data.parts || [];
+
+    console.log(`Found ${parts.length} parts for model ${modelName}`);
+
+    if (parts.length === 0) {
+      dropdown.innerHTML = `<div style="padding:12px;color:#9ca3af;font-size:12px">No parts found for this model</div>`;
+      dropdown.style.display = 'block';
+      return;
+    }
+
+    // Show all parts for selection
+    dropdown.innerHTML = `
+      <div style="padding:8px 12px;background:#003D8F;color:white;font-size:11px;font-weight:600;border-bottom:1px solid #e5e7eb">
+        ${parts.length} parts available for ${modelName}
+      </div>
+    ` + parts.map((p) => `
+      <div style="padding:10px 12px;border-bottom:.5px solid #f0f0f0;cursor:pointer;font-size:12px;color:#374151;transition:.15s"
+        onmouseover="this.style.background='#E6F1FB'"
+        onmouseout="this.style.background='white'"
+        onclick="selectPart('${esc(p.partNumber)}','${esc(p.partDescription)}')">
+        <div style="font-weight:600;font-family:monospace;color:#003D8F">${esc(p.partNumber)}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">${esc(p.partDescription)}</div>
+      </div>
+    `).join('');
+
+    dropdown.style.display = 'block';
+  } catch (err) {
+    console.error('Parts lookup error:', err);
+    dropdown.innerHTML = `<div style="padding:8px 12px;color:#dc2626;font-size:12px">❌ Error loading parts: ${err.message}</div>`;
+    dropdown.style.display = 'block';
   }
-  if (partDescription && !document.getElementById('pm-part-name').value) {
-    document.getElementById('pm-part-name').value = partDescription;
-  }
+}
+
+// ── Select a part and auto-fill fields ──────────────────────
+function selectPart(partNumber, partDescription) {
+  document.getElementById('pm-part-code').value = partNumber;
+  document.getElementById('pm-part-name').value = partDescription;
+  document.getElementById('pm-model-dropdown').style.display = 'none';
+  console.log('Selected part:', { partNumber, partDescription });
 }
 
 // ── Get TO and CC emails from Access sheet ──────────────────
