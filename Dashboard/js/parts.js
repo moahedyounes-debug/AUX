@@ -591,25 +591,41 @@ function setupModelAutocomplete() {
   const partCodeInput = document.getElementById('pm-part-code');
   const partNameInput = document.getElementById('pm-part-name');
 
-  if (!modelInput || !dropdown) return;
+  if (!modelInput || !dropdown) {
+    console.error('setupModelAutocomplete: Missing elements', { modelInput: !!modelInput, dropdown: !!dropdown });
+    return;
+  }
+
+  console.log('setupModelAutocomplete: Attaching event listener to model input');
 
   modelInput.addEventListener('input', async (e) => {
     const query = e.target.value.trim();
+    console.log('Model input changed:', query);
+
     if (query.length < 2) {
       dropdown.style.display = 'none';
       return;
     }
 
     try {
-      const resp = await fetch(`${HEARTBEAT_URL}?action=models&query=${encodeURIComponent(query)}`);
+      const url = `${HEARTBEAT_URL}?action=models&query=${encodeURIComponent(query)}`;
+      console.log('Fetching models from:', url);
+
+      const resp = await fetch(url);
+      console.log('Model fetch response status:', resp.status, resp.ok);
+
       const data = await resp.json();
+      console.log('Model data received:', data);
+
       const models = data.models || [];
 
       if (models.length === 0) {
+        console.log('No models found for query:', query);
         dropdown.style.display = 'none';
         return;
       }
 
+      console.log('Rendering', models.length, 'models');
       dropdown.innerHTML = models.map((m, i) => `
         <div style="padding:8px 12px;border-bottom:.5px solid #f0f0f0;cursor:pointer;font-size:12px;color:#374151;font-family:monospace"
           onclick="selectModel('${esc(m.model)}','${esc(m.partNumber)}','${esc(m.partDescription)}')">
@@ -621,7 +637,8 @@ function setupModelAutocomplete() {
       dropdown.style.display = 'block';
     } catch (err) {
       console.error('Model lookup error:', err);
-      dropdown.style.display = 'none';
+      dropdown.innerHTML = `<div style="padding:8px 12px;color:#dc2626;font-size:12px">❌ Error loading models: ${err.message}</div>`;
+      dropdown.style.display = 'block';
     }
   });
 
@@ -662,6 +679,10 @@ async function submitPartsRequest() {
   const requestDate=new Date().toISOString().split('T')[0];
   logActivity(`Parts Request — Order:${orderNo} Part:${partName||partCode} Branch:${branch}`);
 
+  console.log('submitPartsRequest: Collected form data', {
+    orderNo, partName, partCode, qty, branch, notes, model, serialNum
+  });
+
   // Add to in-memory status board immediately
   PENDING_BOARD.unshift({
     id:      'REQ-'+Date.now().toString().slice(-4),
@@ -673,17 +694,29 @@ async function submitPartsRequest() {
 
   if(HEARTBEAT_URL){
     try{
-      await fetch(HEARTBEAT_URL,{method:'POST',mode:'no-cors',
+      const payload = {
+        action:'parts_request',sheet:CONFIG.PARTS_SHEET,
+        orderNumber:orderNo,partNumber:partCode,partDesc:partName,
+        awb:'',requestDate,finalStatus:'Pending',branch,qty,notes,
+        model:model,serialNumber:serialNum,
+        requestedBy:_currentEmail||'—',asc:_currentASC||'—',
+      };
+      console.log('Sending parts request to:', HEARTBEAT_URL, payload);
+
+      const resp = await fetch(HEARTBEAT_URL,{method:'POST',mode:'no-cors',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          action:'parts_request',sheet:CONFIG.PARTS_SHEET,
-          orderNumber:orderNo,partNumber:partCode,partDesc:partName,
-          awb:'',requestDate,finalStatus:'Pending',branch,qty,notes,
-          model:model,serialNumber:serialNum,
-          requestedBy:_currentEmail||'—',asc:_currentASC||'—',
-        })
+        body:JSON.stringify(payload)
       });
-    }catch(e){console.warn('Parts sheet write:',e.message);}
+
+      console.log('Parts request fetch response status:', resp.status, resp.type);
+      console.log('✅ Parts request sent to Google Apps Script');
+    }catch(e){
+      console.error('❌ Parts sheet write error:', e.message);
+      alert(`⚠️ Error sending to sheet: ${e.message}`);
+    }
+  } else {
+    console.error('❌ HEARTBEAT_URL not configured');
+    alert('⚠️ HEARTBEAT_URL not configured - cannot save to sheet');
   }
 
   // Email
