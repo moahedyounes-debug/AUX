@@ -45,7 +45,7 @@ function doGet(e) {
 }
 
 // ── GET Models from Parts Model sheet ────────────────────────
-// Column structure: A=Model Code, E=Accessory Code, G=Accessory Name
+// Column structure: J=Customer Model, E=Accessory Code, G=Accessory Name
 function getModelsList(query) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -56,11 +56,11 @@ function getModelsList(query) {
     const models = [];
 
     // Skip header row, collect unique models matching query
-    // Columns: A=Model Code, E=Accessory Code (Part Number), G=Accessory Name (Description)
+    // Columns: J=Customer Model, E=Accessory Code (Part Number), G=Accessory Name (Description)
     const seen = new Set();
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      const model = String(row[0] || '').trim();        // Column A: Model Code
+      const model = String(row[9] || '').trim();        // Column J: Customer Model
       const partNum = String(row[4] || '').trim();      // Column E: Accessory Code
       const partDesc = String(row[6] || '').trim();     // Column G: Accessory Name
 
