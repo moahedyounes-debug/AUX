@@ -653,9 +653,9 @@ async function loadPartsForModel(modelName) {
   const modelInput = document.getElementById('pm-model');
   const dropdown = document.getElementById('pm-model-dropdown');
 
-  // Set model value
-  modelInput.value = modelName;
-  console.log('Loading parts for model:', modelName);
+  // Clear and set exact model value from suggestion
+  modelInput.value = modelName.trim();
+  console.log('Loading parts for model:', modelName, 'Trimmed:', modelInput.value);
 
   try {
     const partsUrl = `${HEARTBEAT_URL}?action=parts_for_model&query=${encodeURIComponent(modelName)}`;
