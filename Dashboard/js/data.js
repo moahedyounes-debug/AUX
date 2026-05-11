@@ -313,67 +313,84 @@ function enrichRow(row) {
 
   // ── Ticket Status from Processing Phase (per spec) ──
   // Mapping: Processing Phase + Ticket Status → Final Status Label & Color
+  // Dynamic suffix: If Rescheduling date available → append " and appointment updated"
+  //                 Else if Reason/Remark available → append " and reason updated"
   r._ticketStatus = status;  // original Ticket Status field
   r._phase        = phase;   // original Processing Phase
 
   const phaseLowTrimmed = phaseLow.trim();
   const statusLowTrimmed = statusLow.trim();
+  let baseLabel = '';
+  let baseColor = 'gray';
 
   // 1. Headquarters Dispatch Network | Not assigned → Red
   if (phaseLowTrimmed.includes('dispatch network')) {
-    r._phaseLabel = 'Not assigned';
-    r._phaseColor = 'red';
+    baseLabel = 'Not assigned';
+    baseColor = 'red';
   }
   // 2. Branch dispatching workers | Dispatched work → amber
   else if (phaseLowTrimmed.includes('branch dispatching')) {
-    r._phaseLabel = 'Dispatched But Not Accepted By Technician';
-    r._phaseColor = 'amber';
+    baseLabel = 'Dispatched But Not Accepted By Technician';
+    baseColor = 'amber';
   }
   // 3. Accepting orders (workers) | Accepted → Orange
   else if (phaseLowTrimmed.includes('accepting orders')) {
-    r._phaseLabel = 'Accepted By Technician and appointment or pending reason updated';
-    r._phaseColor = 'orange';
+    baseLabel = 'Accepted By Technician';
+    baseColor = 'orange';
   }
   // 4a. Change of appointment time (branch) with Dispatched work → amber
   else if (phaseLowTrimmed.includes('change of appointment time') && statusLowTrimmed.includes('dispatched')) {
-    r._phaseLabel = 'Dispatched & appointment updated But Not Accepted By Technician';
-    r._phaseColor = 'amber';
+    baseLabel = 'Dispatched & appointment updated But Not Accepted By Technician';
+    baseColor = 'amber';
   }
   // 4b. Change of appointment time (branch) with Accepted → Green
   else if (phaseLowTrimmed.includes('change of appointment time') && statusLowTrimmed.includes('accepted')) {
-    r._phaseLabel = 'Accepted By Technician and appointment updated';
-    r._phaseColor = 'green';
+    baseLabel = 'Accepted By Technician';
+    baseColor = 'green';
   }
   // 5. Statement | Statement of account → Green
   else if (phaseLowTrimmed.includes('statement')) {
-    r._phaseLabel = 'Completed';
-    r._phaseColor = 'green';
+    baseLabel = 'Completed';
+    baseColor = 'green';
   }
   // 6. Change of schedule (workers) | Accepted → Green
   else if (phaseLowTrimmed.includes('change of schedule')) {
-    r._phaseLabel = 'Accepted By Technician but no appointment or pending reason';
-    r._phaseColor = 'green';
+    baseLabel = 'Accepted By Technician';
+    baseColor = 'green';
   }
   // 7. Completion Confirmation (Headquarters) | Completed → Green
   else if (phaseLowTrimmed.includes('completion confirmation')) {
-    r._phaseLabel = 'Completed';
-    r._phaseColor = 'green';
+    baseLabel = 'Completed';
+    baseColor = 'green';
   }
   // 8. Rejected upon review (repair) | Returned order → Red
   else if (phaseLowTrimmed.includes('rejected upon review')) {
-    r._phaseLabel = 'Rejected';
-    r._phaseColor = 'red';
+    baseLabel = 'Rejected';
+    baseColor = 'red';
   }
   // 9. Order Creation (Headquarters) | Not assigned → Red
   else if (phaseLowTrimmed.includes('order creation')) {
-    r._phaseLabel = 'Created but not assigned to SVC Center';
-    r._phaseColor = 'red';
+    baseLabel = 'Created but not assigned to SVC Center';
+    baseColor = 'red';
   }
   // Fallback
   else {
-    r._phaseLabel = phase || status || '—';
-    r._phaseColor = 'gray';
+    baseLabel = phase || status || '—';
+    baseColor = 'gray';
   }
+
+  // ── Dynamic suffix based on actual data ──
+  // If Rescheduling date available → append " and appointment updated"
+  // Else if Reason or Remark available → append " and reason updated"
+  let finalLabel = baseLabel;
+  if (r._rescheduled) {
+    finalLabel += ' and appointment updated';
+  } else if (r._hasRescheduleReason || r._rescheduleRemark) {
+    finalLabel += ' and reason updated';
+  }
+
+  r._phaseLabel = finalLabel;
+  r._phaseColor = baseColor;
 
   // _isDispatchedWork = ONLY "Branch dispatching workers"
   // _isNotAssigned    = "Dispatch Network" phase
