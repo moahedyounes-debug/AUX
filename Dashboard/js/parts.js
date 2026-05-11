@@ -681,7 +681,7 @@ function buildPendingBoard() {
   return all.slice(0,8).map((o,i)=>{
     const sm = sMap[o.status]||sMap.pending;
     const nextBtn = sm.nextLabel
-      ? `<button onclick="updateOrderStatus(${i},'${sm.next}')"
+      ? `<button onclick="updateOrderStatus('${o.id}','${sm.next}')"
            style="background:var(--gray-50);border:.5px solid var(--gray-200);border-radius:8px;
                   padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
            ${sm.nextLabel}</button>` : '';
@@ -706,9 +706,28 @@ function buildPendingBoard() {
   }).join('');
 }
 
-function updateOrderStatus(idx, newStatus) {
-  const o = PENDING_BOARD[idx];
-  if (!o) return;
+function updateOrderStatus(orderId, newStatus) {
+  // Find order by ID in merged board (could be from PENDING_BOARD or PARTS_REQUESTS)
+  let o = PENDING_BOARD.find(x => x.id === orderId);
+  if (!o) {
+    // Not in in-memory board, create temp object for sheet-sourced items
+    const r = PARTS_REQUESTS?.find(x => x['Order Number'] && x['Order Number'].slice(-4) === orderId.slice(-4));
+    if (!r) return;
+    o = {
+      id:      orderId,
+      orderNo: r['Order Number'] || '',
+      part:    r['Part Description'] || r['Part Number'] || '—',
+      code:    r['Part Number'] || '',
+      branch:  r['Branch'] || '—',
+      qty:     r['Qty'] || '1',
+      status:  (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
+               (r['Final Status']||'').toLowerCase().includes('sent')?'sent':'pending',
+      time:    r['Request Date'] || '—',
+      awb:     r['AWB'] || '',
+    };
+    // Add to in-memory board for future updates
+    PENDING_BOARD.push(o);
+  }
 
   // When moving to "sent" → ask for AWB (tracking number) first
   if (newStatus === 'sent') {
