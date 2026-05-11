@@ -56,7 +56,30 @@
       "Bash(node -e ' *)",
       "Bash(git commit -m 'Add Score \\(1-5\\) and Score column fallbacks to enrichEval *)",
       "Bash(git commit -m 'Improve enrichCall robustness for misaligned CSV column headers *)",
-      "Bash(git commit -m 'Fix AHT/THT time value detection and improve SLA column search *)"
+      "Bash(git commit -m 'Fix AHT/THT time value detection and improve SLA column search *)",
+      "Bash(git commit -m 'Improve enrichEval to handle percentage scores and unnamed columns *)",
+      "Bash(nFIRST DATA 'ROW: *)",
+      "Bash(powershell -Command ' *)",
+      "Bash(git commit -m 'Fix SLA Rate calculation to only count Answered IB calls *)",
+      "Bash(git commit -m 'Fix Abandon Rate calculation to only count IB calls *)",
+      "Bash(git commit -m 'Improve Within SLA detection to handle multiple value formats *)",
+      "Bash(git commit -m 'Add debug logging for SLA calculation troubleshooting *)",
+      "Bash(curl -s \"https://docs.google.com/spreadsheets/d/1U-GUCKqShHLkqg4FvCur-T0Tic0cMAP1ou9hvoSw_FI/gviz/tq?tqx=out:csv&sheet=Calls\")",
+      "Bash(git commit -m 'Fix Within SLA column detection for unnamed columns *)",
+      "Read(//tmp/**)",
+      "Bash(git commit -m 'Clean up debug logging - SLA calculation now working correctly *)",
+      "Bash(grep -n \"C\\\\\\\\.EVENT\\\\|C\\\\\\\\.STATUS\\\\|C\\\\\\\\.CALL_TYPE\\\\|C\\\\\\\\.WITHIN_SLA\" Dashboard/js/callcenter.js)",
+      "Bash(git commit -m 'Add column mapping and calculation summary documentation *)",
+      "Bash(curl -s \"https://docs.google.com/spreadsheets/d/1KDMVAKplmbNvfdd66Ha-TmJ3fm_6mD29F2AsT9UsqvE/gviz/tq?tqx=out:csv\")",
+      "Bash(node -c \"Dashboard\\\\js\\\\callcenter.js\")",
+      "Bash(git commit -m 'Improve enrichEval function with better column detection and unnamed column fallbacks *)",
+      "mcp__Claude_in_Chrome__select_browser",
+      "mcp__Claude_in_Chrome__read_page",
+      "Bash(curl -s \"https://docs.google.com/spreadsheets/d/1KDMVAKplmbNvfdd66Ha-TmJ3fm_6mD29F2AsT9UsqvE/gviz/tq?tqx=out:csv\" > /tmp/eval_data.csv && cat /tmp/eval_data.csv | head -30)",
+      "Bash(git commit -m 'Switch from gviz to direct CSV export for Google Sheets data sources *)",
+      "Bash(git commit -m 'Use direct CSV export only for Evaluation sheet, revert Calls/WhatsApp to gviz *)",
+      "Bash(git commit -m 'Fix '\\\\''Don'\\\\''t show again'\\\\'' persistence - properly store and use user email *)",
+      "Bash(git commit -m 'Fix Parts sheet column name mismatch and update Google Apps Script *)"
     ]
   }
 }

@@ -658,7 +658,7 @@ function buildPendingBoard() {
         all.push({
           id:      'REQ-'+id.slice(-4),
           orderNo: id,
-          part:    r['Part Description'] || r['Part Number'] || '—',
+          part:    r['Part Discerption'] || r['Part Number'] || '—',
           code:    r['Part Number'] || '',
           branch:  r['Branch'] || '—',
           qty:     r['Qty'] || '1',
@@ -719,7 +719,7 @@ function updateOrderStatus(orderId, newStatus) {
     o = {
       id:      orderId,
       orderNo: String(r['Order Number'] || '').trim(),
-      part:    r['Part Description'] || r['Part Number'] || '—',
+      part:    r['Part Discerption'] || r['Part Number'] || '—',
       code:    r['Part Number'] || '',
       branch:  r['Branch'] || '—',
       qty:     r['Qty'] || '1',
