@@ -779,15 +779,29 @@ async function submitPartsRequest() {
     alert('⚠️ HEARTBEAT_URL not configured - cannot save to sheet');
   }
 
-  // Email routing from Access sheet
+  // Email routing for spare parts request
+  // Logic: If sender is Arslan → TO branch team, CC ASC + Always CC
+  //        If sender is NOT Arslan → TO Arslan, CC ASC + Always CC
   const emailData = await getBranchEmailList(branch);
 
-  // TO: All people assigned to this branch (from "If Branch has pending" column)
-  const to = emailData.toEmails.length > 0
-    ? emailData.toEmails.join(';')
-    : 'arslan@auxair.com'; // Fallback if branch not found
+  const senderEmail = (_currentEmail || '').toLowerCase().trim();
+  const isArslaSender = senderEmail === 'arslan.s@auxair.com';
 
-  // CC: ASC CC team + Always CC team (remove duplicates)
+  let to;
+
+  if (isArslaSender) {
+    // Sender is Arslan → TO branch team, CC ASC CC + Always CC
+    to = emailData.toEmails.length > 0
+      ? emailData.toEmails.join(';')
+      : 'arslan.s@auxair.com'; // Fallback if branch not found
+    console.log('Parts routing: Sender is Arslan → TO branch team', {toEmails: to, ccEmails: emailData.ccEmails});
+  } else {
+    // Sender is NOT Arslan → TO Arslan, CC ASC CC + Always CC
+    to = 'arslan.s@auxair.com';
+    console.log('Parts routing: Sender is NOT Arslan → TO Arslan', {to, ccEmails: emailData.ccEmails});
+  }
+
+  // CC: ASC CC + Always CC team (remove duplicates)
   const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
   const cc = encodeURIComponent(uniqueCC.join(';'));
 
@@ -806,9 +820,28 @@ async function submitPartsRequest() {
 }
 
 // ── Reminder email (after request sent) ───────────────────────
-function sendPartsReminder(ticketNo, branch, partDesc) {
-  const to ='arslan@auxair.com;nawthah@auxair.com;nujud@auxair.com';
-  const cc =encodeURIComponent('moahed.younis@auxair.com');
+async function sendPartsReminder(ticketNo, branch, partDesc) {
+  // Apply same routing logic as spare parts request
+  const emailData = await getBranchEmailList(branch);
+
+  const senderEmail = (_currentEmail || '').toLowerCase().trim();
+  const isArslaSender = senderEmail === 'arslan.s@auxair.com';
+
+  let to;
+
+  if (isArslaSender) {
+    // Sender is Arslan → TO branch team, CC ASC CC + Always CC
+    to = emailData.toEmails.length > 0
+      ? emailData.toEmails.join(';')
+      : 'arslan.s@auxair.com'; // Fallback if branch not found
+  } else {
+    // Sender is NOT Arslan → TO Arslan, CC ASC CC + Always CC
+    to = 'arslan.s@auxair.com';
+  }
+
+  const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
+  const cc = encodeURIComponent(uniqueCC.join(';'));
+
   const sub=encodeURIComponent(`Parts Status Update Needed — ${ticketNo} — ${branch}`);
   const body=encodeURIComponent(
     `Dear Parts Team,\n\nFollow-up reminder for pending spare part request.\n\n`+

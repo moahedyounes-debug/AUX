@@ -170,7 +170,7 @@ function partsStatusCell(r) {
   } else {
     // No tracking → show reminder button
     const partDesc = (r[C.MAINTENANCE] || supp || 'Part required').substring(0, 40);
-    return `<button onclick="sendPartsReminder('${esc(ticketNo)}','${esc(branch)}','${esc(partDesc)}')"
+    return `<button onclick="handlePartsReminder('${esc(ticketNo)}','${esc(branch)}','${esc(partDesc)}')"
       style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;
              padding:4px 8px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;
              font-family:var(--font);transition:.15s"
@@ -196,26 +196,14 @@ function showPartsTrackingPopup(ticketNo, awb, partName) {
   }
 }
 
-// ── Send Parts Reminder Email ─────────────────────────────────
-function sendPartsReminder(ticketNo, branch, partDesc) {
-  // Recipients per spec
-  const to  = 'arslan@auxair.com;nawthah@auxair.com;nujud@auxair.com';
-  const cc  = 'moahed.younis@auxair.com';
-  const subject = encodeURIComponent(`Parts Pending — ${ticketNo} — ${branch}`);
-  const body = encodeURIComponent(
-    `Dear Parts Team,\n\n` +
-    `Please be advised that the following service order is pending due to a spare part requirement:\n\n` +
-    `Order Number  : ${ticketNo}\n` +
-    `Branch        : ${branch}\n` +
-    `Part Required : ${partDesc}\n` +
-    `Requested By  : ${_currentEmail || 'AUX ASC Dashboard'}\n` +
-    `Date          : ${new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'})}\n\n` +
-    `Please arrange for the spare part to be dispatched at the earliest convenience and provide a tracking number.\n\n` +
-    `Best regards,\nAUX ASC Dashboard\nCreated by Moahed Younes`
-  );
-  const mailto = `mailto:${to}?cc=${encodeURIComponent(cc)}&subject=${subject}&body=${body}`;
-  window.open(mailto, '_blank');
-  logActivity('Parts Reminder sent — Order: ' + ticketNo + ' Branch: ' + branch);
+// ── Handle Parts Reminder (wrapper for async function) ────────
+async function handlePartsReminder(ticketNo, branch, partDesc) {
+  try {
+    await sendPartsReminder(ticketNo, branch, partDesc);
+  } catch (err) {
+    console.error('Error sending parts reminder:', err);
+    alert('Error sending parts reminder: ' + err.message);
+  }
 }
 
 // ── PAGE 3: DAILY OPERATIONS ──────────────────────────────────
