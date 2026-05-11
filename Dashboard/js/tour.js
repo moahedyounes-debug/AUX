@@ -40,6 +40,7 @@
 
   let idx = 0;
   let dontShowAgain = false;
+  let currentUserEmail = '';
   function ensureLayer(){
     let l = document.getElementById('aux-tour');
     if (l) return l;
@@ -90,8 +91,8 @@
     `;
     document.head.appendChild(css);
     l.querySelector('.aux-tour-skip').onclick = ()=>{
-      if (l.querySelector('#aux-tour-dontshow-checkbox').checked) {
-        if (window._currentEmail) markSeen(window._currentEmail);
+      if (l.querySelector('#aux-tour-dontshow-checkbox').checked && currentUserEmail) {
+        markSeen(currentUserEmail);
       }
       end();
     };
@@ -100,8 +101,8 @@
       if(idx<STEPS.length-1){
         idx++; show();
       } else {
-        if (l.querySelector('#aux-tour-dontshow-checkbox').checked) {
-          if (window._currentEmail) markSeen(window._currentEmail);
+        if (l.querySelector('#aux-tour-dontshow-checkbox').checked && currentUserEmail) {
+          markSeen(currentUserEmail);
         }
         end();
       }
@@ -146,11 +147,12 @@
   function end(){
     const l = document.getElementById('aux-tour');
     if (l) l.remove();
-    if (window._currentEmail) markSeen(window._currentEmail);
   }
   // Public API
   window.startOnboardingTourIfFirstLogin = function(email){
     if (!email || seen(email)) return;
+    currentUserEmail = email;
+    window._currentEmail = email; // Also set global for compatibility
     setTimeout(()=>{ idx=0; show(); window.addEventListener('resize', show); }, 600);
   };
 })();
