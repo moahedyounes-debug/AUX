@@ -331,17 +331,17 @@ function enrichRow(row) {
   }
   // 3. Accepting orders (workers) | Accepted → Orange
   else if (phaseLowTrimmed.includes('accepting orders')) {
-    r._phaseLabel = 'Accepted By Technician but no appointment or pending reason';
+    r._phaseLabel = 'Accepted By Technician';
     r._phaseColor = 'orange';
   }
   // 4a. Change of appointment time (branch) with Dispatched work → amber
   else if (phaseLowTrimmed.includes('change of appointment time') && statusLowTrimmed.includes('dispatched')) {
-    r._phaseLabel = 'Dispatched & appointment updated But Not Accepted By Technician';
+    r._phaseLabel = 'Appointment updated — Not Accepted By Technician';
     r._phaseColor = 'amber';
   }
   // 4b. Change of appointment time (branch) with Accepted → Green
   else if (phaseLowTrimmed.includes('change of appointment time') && statusLowTrimmed.includes('accepted')) {
-    r._phaseLabel = 'Dispatched & appointment updated and Accepted By Technician';
+    r._phaseLabel = 'Accepted By Technician and appointment updated';
     r._phaseColor = 'green';
   }
   // 5. Statement | Statement of account → Green
@@ -351,7 +351,7 @@ function enrichRow(row) {
   }
   // 6. Change of schedule (workers) | Accepted → Green
   else if (phaseLowTrimmed.includes('change of schedule')) {
-    r._phaseLabel = 'Accepted By Technician and appointment or pending reason updated';
+    r._phaseLabel = 'Accepted By Technician';
     r._phaseColor = 'green';
   }
   // 7. Completion Confirmation (Headquarters) | Completed → Green
