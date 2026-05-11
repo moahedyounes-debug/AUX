@@ -932,24 +932,70 @@ function buildPendingBoard() {
 
 // ── Show status update modal with options ────────────────────
 function showStatusModal(orderId, orderNo) {
+  // Find the current status of the order
+  let currentStatus = 'pending';
+  let o = PENDING_BOARD.find(x => x.id === orderId);
+
+  if (!o && PARTS_REQUESTS) {
+    const r = PARTS_REQUESTS?.find(x => x['Order Number'] &&
+      String(x['Order Number']).trim().slice(-4) === orderId.slice(-4));
+    if (r) {
+      currentStatus = (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
+                     (r['Final Status']||'').toLowerCase().includes('dispatched')?'dispatched':
+                     (r['Final Status']||'').toLowerCase().includes('unavailable')?'unavailable':'pending';
+    }
+  } else if (o) {
+    currentStatus = o.status || 'pending';
+  }
+
   const overlay = document.createElement('div');
   overlay.id = 'status-modal-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9001;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  let buttonHTML = '';
+
+  // Show different buttons based on current status
+  if (currentStatus === 'pending') {
+    buttonHTML = `
+      <button onclick="updateOrderStatus('${orderId}','dispatched')"
+        style="background:#003D8F;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        📦 Dispatched<br><span style="font-size:11px;opacity:0.9">Parts shipped to branch</span>
+      </button>
+
+      <button onclick="updateOrderStatus('${orderId}','unavailable')"
+        style="background:#dc2626;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Close request - part unavailable</span>
+      </button>
+    `;
+  } else if (currentStatus === 'dispatched') {
+    buttonHTML = `
+      <button onclick="updateOrderStatus('${orderId}','received')"
+        style="background:#16a34a;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        ✅ Received<br><span style="font-size:11px;opacity:0.9">Parts received at branch</span>
+      </button>
+
+      <button onclick="updateOrderStatus('${orderId}','unavailable')"
+        style="background:#dc2626;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Close request - part unavailable</span>
+      </button>
+    `;
+  } else {
+    // For unavailable or received status, just show cancel option
+    buttonHTML = `
+      <div style="font-size:13px;color:#6b7280;padding:12px;background:#f3f4f6;border-radius:8px">
+        Current status: <strong>${currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}</strong><br>
+        <span style="font-size:11px">No further updates available for this status.</span>
+      </div>
+    `;
+  }
+
   overlay.innerHTML = `
     <div style="background:#fff;border-radius:12px;border:.5px solid #e5e7eb;padding:1.5rem;width:420px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2)">
       <div style="font-size:15px;font-weight:600;color:#111;margin-bottom:1rem">Update Part Request Status</div>
       <div style="font-size:13px;color:#6b7280;margin-bottom:1.5rem">Order: <span style="font-family:monospace;font-weight:600">${esc(orderNo)}</span></div>
 
       <div style="display:flex;flex-direction:column;gap:10px">
-        <button onclick="updateOrderStatus('${orderId}','dispatched')"
-          style="background:#003D8F;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
-          📦 Dispatched<br><span style="font-size:11px;opacity:0.9">Parts shipped to branch</span>
-        </button>
-
-        <button onclick="updateOrderStatus('${orderId}','unavailable')"
-          style="background:#dc2626;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
-          ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Close request - part unavailable</span>
-        </button>
+        ${buttonHTML}
       </div>
 
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;padding-top:1rem;border-top:.5px solid #f3f4f6">
