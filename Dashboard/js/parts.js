@@ -824,79 +824,20 @@ async function submitPartsRequest() {
     alert('⚠️ HEARTBEAT_URL not configured - cannot save to sheet');
   }
 
-  // Email routing for spare parts request
-  // Logic: If sender is Arslan → TO branch team, CC ASC + Always CC
-  //        If sender is NOT Arslan → TO Arslan, CC ASC + Always CC
-  const emailData = await getBranchEmailList(branch);
+  // Email routing is now handled server-side by Google Apps Script
+  // The backend (getEmailRouting function) automatically sends emails to:
+  // TO: Arslan (parts supervisor)
+  // CC: ASC team + Always CC team (based on Access sheet lookup)
 
-  const senderEmail = (_currentEmail || '').toLowerCase().trim();
-  const isArslaSender = senderEmail === 'arslan.s@auxair.com';
-
-  let to;
-
-  if (isArslaSender) {
-    // Sender is Arslan → TO branch team, CC ASC CC + Always CC
-    to = emailData.toEmails.length > 0
-      ? emailData.toEmails.join(';')
-      : 'arslan.s@auxair.com'; // Fallback if branch not found
-    console.log('Parts routing: Sender is Arslan → TO branch team', {toEmails: to, ccEmails: emailData.ccEmails});
-  } else {
-    // Sender is NOT Arslan → TO Arslan, CC ASC CC + Always CC
-    to = 'arslan.s@auxair.com';
-    console.log('Parts routing: Sender is NOT Arslan → TO Arslan', {to, ccEmails: emailData.ccEmails});
-  }
-
-  // CC: ASC CC + Always CC team (remove duplicates)
-  const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
-  const cc = encodeURIComponent(uniqueCC.join(';'));
-
-  const sub = encodeURIComponent(`Parts Request — ${orderNo} — ${branch}`);
-  const body = encodeURIComponent(
-    `Dear Parts Team,\n\nNew spare part request:\n\n`+
-    `Order Number : ${orderNo}\nBranch       : ${branch}\nASC          : ${emailData.ascName||'—'}\n`+
-    `Part Name    : ${partName}\nPart Number  : ${partCode}\nQuantity     : ${qty}\n`+
-    `Model        : ${model||'—'}\nSerial Number: ${serialNum||'—'}\nNotes        : ${notes||'—'}\n`+
-    `Requested By : ${_currentEmail||'AUX ASC Dashboard'}\nDate         : ${requestDate}\n\n`+
-    `Please process and update AWB in the Parts sheet.\n\nAUX ASC Dashboard — Created by Moahed Younes`
-  );
-  window.open(`mailto:${to}?cc=${cc}&subject=${sub}&body=${body}`,'_blank');
   document.getElementById('parts-modal-overlay')?.remove();
-  alert(`✅ Request submitted!\n\nOrder: ${orderNo}\nPart: ${partName||partCode}`);
+  alert(`✅ Request submitted!\n\nOrder: ${orderNo}\nPart: ${partName||partCode}\n\n📧 Email notification sent automatically`);
 }
 
 // ── Reminder email (after request sent) ───────────────────────
+// Note: Email reminders are now handled server-side by Google Apps Script
 async function sendPartsReminder(ticketNo, branch, partDesc) {
-  // Apply same routing logic as spare parts request
-  const emailData = await getBranchEmailList(branch);
-
-  const senderEmail = (_currentEmail || '').toLowerCase().trim();
-  const isArslaSender = senderEmail === 'arslan.s@auxair.com';
-
-  let to;
-
-  if (isArslaSender) {
-    // Sender is Arslan → TO branch team, CC ASC CC + Always CC
-    to = emailData.toEmails.length > 0
-      ? emailData.toEmails.join(';')
-      : 'arslan.s@auxair.com'; // Fallback if branch not found
-  } else {
-    // Sender is NOT Arslan → TO Arslan, CC ASC CC + Always CC
-    to = 'arslan.s@auxair.com';
-  }
-
-  const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
-  const cc = encodeURIComponent(uniqueCC.join(';'));
-
-  const sub=encodeURIComponent(`Parts Status Update Needed — ${ticketNo} — ${branch}`);
-  const body=encodeURIComponent(
-    `Dear Parts Team,\n\nFollow-up reminder for pending spare part request.\n\n`+
-    `Order Number : ${ticketNo}\nBranch       : ${branch}\nPart Required: ${partDesc}\n`+
-    `Requested By : ${_currentEmail||'AUX ASC Dashboard'}\n`+
-    `Date         : ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}\n\n`+
-    `Please provide a status update — has it been shipped? What is the AWB?\n\n`+
-    `AUX ASC Dashboard — Created by Moahed Younes`
-  );
-  window.open(`mailto:${to}?cc=${cc}&subject=${sub}&body=${body}`,'_blank');
+  // This function is kept for backward compatibility
+  // Actual email sending is now handled server-side via getEmailRouting() and sendPartsStatusUpdateEmail()
   logActivity(`Parts Reminder — ${ticketNo} · ${branch}`);
 }
 

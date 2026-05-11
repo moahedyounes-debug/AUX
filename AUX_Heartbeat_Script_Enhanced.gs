@@ -304,6 +304,9 @@ function writePartsRequest(data) {
 
         // Sync to Daily Operations if status changed
         syncPartStatusToDailyOps(data.orderNumber, data.finalStatus);
+
+        // Send email notification for status update
+        sendPartsStatusUpdateEmail(data);
         return;
       }
     }
@@ -328,6 +331,9 @@ function writePartsRequest(data) {
       data.asc          || '—',
     ]);
     Logger.log(`writePartsRequest: Successfully added row to sheet`);
+
+    // Send email notification for parts request
+    sendPartsRequestEmail(data);
   } catch(err) {
     const errMsg = err.toString();
     Logger.log(`writePartsRequest ERROR: ${errMsg}`);
@@ -417,5 +423,184 @@ function syncPartStatusToDailyOps(orderNumber, finalStatus) {
     Logger.log(`syncPartStatusToDailyOps: Order ${orderNumber} not found in Sheet1`);
   } catch(err) {
     Logger.log(`syncPartStatusToDailyOps ERROR: ${err.toString()}`);
+  }
+}
+
+// ── Get email routing from Access sheet ──────────────────────────
+function getEmailRouting(branch, asc, actionType) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const accessSheet = ss.getSheetByName('Access');
+    if (!accessSheet) {
+      Logger.log(`getEmailRouting: Access sheet not found`);
+      return { to: [], cc: [], branchPic: '' };
+    }
+
+    const data = accessSheet.getDataRange().getValues();
+    const headers = data[0];
+
+    // Find column indices
+    const branchCol = headers.findIndex(h => h && h.toString().toLowerCase().includes('branch'));
+    const emailCol = headers.findIndex(h => h && h.toString().toLowerCase() === 'email');
+    const ascCol = headers.findIndex(h => h && h.toString().toLowerCase() === 'asc');
+    const picCol = headers.findIndex(h => h && h.toString().toLowerCase().includes('pic'));
+
+    if (branchCol === -1 || emailCol === -1) {
+      Logger.log(`getEmailRouting: Required columns not found`);
+      return { to: [], cc: [], branchPic: '' };
+    }
+
+    let toEmails = [];
+    let ccEmails = [];
+    let branchPic = '';
+    let ascName = '';
+
+    // First pass: Get TO emails and extract ASC name for the specific branch
+    for (let i = 1; i < data.length; i++) {
+      const rowBranch = String(data[i][branchCol] || '').trim();
+      const email = String(data[i][emailCol] || '').trim();
+      const asc = String(data[i][ascCol] || '').trim();
+      const pic = picCol >= 0 ? String(data[i][picCol] || '').trim() : '';
+
+      // Match the specific branch (e.g., "Dammam - wiFEX")
+      if (rowBranch.toLowerCase() === branch.toLowerCase()) {
+        if (email) toEmails.push(email);
+        if (asc) ascName = asc;
+        if (pic) branchPic = pic;
+      }
+    }
+
+    // Second pass: Get CC emails (ASC CC group + Always CC group)
+    for (let i = 1; i < data.length; i++) {
+      const rowBranch = String(data[i][branchCol] || '').trim();
+      const email = String(data[i][emailCol] || '').trim();
+
+      if (email && !toEmails.includes(email)) {
+        // Check for ASC CC group (e.g., "wiFEX CC", "ZAM CC")
+        if (ascName && rowBranch.toLowerCase() === (ascName + ' CC').toLowerCase()) {
+          ccEmails.push(email);
+        }
+        // Check for Always CC group
+        else if (rowBranch.toLowerCase() === 'always cc') {
+          ccEmails.push(email);
+        }
+      }
+    }
+
+    Logger.log(`getEmailRouting: branch=${branch}, asc=${ascName}, to=${toEmails.join(',')}, cc=${ccEmails.join(',')}`);
+
+    return {
+      to: toEmails,
+      cc: ccEmails,
+      ascName: ascName,
+      branchPic: branchPic
+    };
+  } catch(err) {
+    Logger.log(`getEmailRouting ERROR: ${err.toString()}`);
+    return { to: [], cc: [], branchPic: '' };
+  }
+}
+
+// ── Send email for parts request ─────────────────────────────────
+function sendPartsRequestEmail(data) {
+  try {
+    const routing = getEmailRouting(data.branch, data.asc, 'parts_request');
+
+    // Logic: If part request from Daily Operations
+    // TO: Arslan + ASC CC + Always CC (as recipients)
+    // CC: rest of ASC CC + Always CC
+
+    const to = ['arslan.s@auxair.com'];
+    const cc = routing.cc || [];
+
+    Logger.log(`sendPartsRequestEmail: TO=${to.join(',')}, CC=${cc.join(',')}`);
+
+    const subject = `Parts Request — ${data.orderNumber} — ${data.branch}`;
+    const body = `Dear Parts Team,
+
+New spare part request:
+
+Order Number : ${data.orderNumber}
+Branch       : ${data.branch}
+ASC          : ${routing.ascName || '—'}
+Part Name    : ${data.partDesc}
+Part Number  : ${data.partNumber}
+Quantity     : ${data.qty}
+Model        : ${data.model || '—'}
+Serial Number: ${data.serialNumber || '—'}
+Notes        : ${data.notes || '—'}
+Requested By : ${data.requestedBy || 'AUX ASC Dashboard'}
+Date         : ${data.requestDate}
+
+Please process and update AWB in the Parts sheet.
+
+AUX ASC Dashboard — Created by Moahed Younes`;
+
+    // Send email using GmailApp
+    if (to.length > 0) {
+      GmailApp.sendEmail(to.join(','), subject, body, {
+        cc: cc.length > 0 ? cc.join(',') : null,
+        replyTo: 'arslan.s@auxair.com'
+      });
+      Logger.log(`sendPartsRequestEmail: Email sent successfully`);
+    }
+  } catch(err) {
+    Logger.log(`sendPartsRequestEmail ERROR: ${err.toString()}`);
+  }
+}
+
+// ── Send email for part status update ────────────────────────────
+function sendPartsStatusUpdateEmail(data) {
+  try {
+    const routing = getEmailRouting(data.branch, data.asc, 'parts_status');
+
+    // TO: Branch PIC, CC: ASC CC + Always CC
+    const to = routing.branchPic ? [routing.branchPic] : routing.to || [];
+    const cc = routing.cc || [];
+
+    Logger.log(`sendPartsStatusUpdateEmail: TO=${to.join(',')}, CC=${cc.join(',')}`);
+
+    const statusMap = {
+      'Dispatched': '📦 Dispatched',
+      'Received': '✅ Received',
+      'Part Not Available': '❌ Part Not Available',
+      'Pending': '⏳ Pending'
+    };
+
+    const statusLabel = statusMap[data.finalStatus] || data.finalStatus;
+    const subject = `Parts Status Update — ${data.orderNumber} — ${statusLabel}`;
+
+    const body = `Dear Branch Team,
+
+Parts request status update:
+
+Order Number : ${data.orderNumber}
+Branch       : ${data.branch}
+ASC          : ${routing.ascName || '—'}
+Status       : ${statusLabel}
+Part Name    : ${data.partDesc || '—'}
+Part Number  : ${data.partNumber || '—'}
+Quantity     : ${data.qty || '—'}
+AWB/Tracking : ${data.awb || '—'}
+${data.dispatchDate ? `Dispatch Date: ${data.dispatchDate}\n` : ''}${data.receivingDate ? `Receiving Date: ${data.receivingDate}\n` : ''}
+Updated By   : ${data.requestedBy || 'AUX ASC Dashboard'}
+Date         : ${new Date().toLocaleDateString('en-GB')}
+
+${data.finalStatus === 'Dispatched' ? 'Parts have been dispatched. Please track using the AWB provided above.' : ''}${data.finalStatus === 'Received' ? 'Parts have been received at the branch.' : ''}${data.finalStatus === 'Part Not Available' ? 'This part is not available. Please contact the parts supervisor for alternatives.' : ''}
+
+AUX ASC Dashboard — Created by Moahed Younes`;
+
+    // Send email using GmailApp
+    if (to.length > 0) {
+      GmailApp.sendEmail(to.join(','), subject, body, {
+        cc: cc.length > 0 ? cc.join(',') : null,
+        replyTo: 'arslan.s@auxair.com'
+      });
+      Logger.log(`sendPartsStatusUpdateEmail: Email sent successfully`);
+    } else {
+      Logger.log(`sendPartsStatusUpdateEmail: No TO recipients found`);
+    }
+  } catch(err) {
+    Logger.log(`sendPartsStatusUpdateEmail ERROR: ${err.toString()}`);
   }
 }

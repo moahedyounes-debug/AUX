@@ -85,7 +85,18 @@
       "Bash(git commit -m 'Fix Parts Model sheet column mapping in getModelsList *)",
       "Bash(git commit -m 'Correct Parts Model column mapping: use Customer Model \\(Column J\\) *)",
       "Bash(git commit -m 'Sync repository with deployed Google Apps Script *)",
-      "Bash(git commit -m 'Parts sheet schema complete - all 13 columns ready *)"
+      "Bash(git commit -m 'Parts sheet schema complete - all 13 columns ready *)",
+      "Bash(git commit -m 'Add debugging console logs for model autocomplete and parts request submission *)",
+      "Bash(git commit -m 'Add enhanced debugging version of Google Apps Script *)",
+      "Bash(git commit -m 'Enhanced email routing: Include ASC managers in CC for parts requests *)",
+      "Bash(git commit -m 'Fix email CC logic: Include ASC team + Always CC from Access sheet *)",
+      "Bash(git commit -m 'Correct email routing logic based on '\\\\''If Branch has pending'\\\\'' column *)",
+      "Bash(curl -s \"https://docs.google.com/spreadsheets/d/1x796CMZf8b3RUNkqsanO56F_Wmo75L2uLzIlgE65doY/gviz/tq?tqx=out:csv&sheet=Access\")",
+      "Bash(git commit -m 'refactor: Move Over 60 KM table from Daily Operations to Deep Insights *)",
+      "Bash(git commit -m 'fix: Simplify status labels to match actual phase and status *)",
+      "Bash(git commit -m 'fix: Reverse status labels for Accepting orders and Change of schedule phases *)",
+      "Bash(git commit -m 'feat: Implement dynamic status labels based on actual ticket data *)",
+      "Bash(git commit -m 'fix: Ensure model field is properly trimmed when loading parts *)"
     ]
   }
 }
