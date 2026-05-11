@@ -709,13 +709,16 @@ function buildPendingBoard() {
 function updateOrderStatus(orderId, newStatus) {
   // Find order by ID in merged board (could be from PENDING_BOARD or PARTS_REQUESTS)
   let o = PENDING_BOARD.find(x => x.id === orderId);
+  let isNewToMemory = false;
+
   if (!o) {
-    // Not in in-memory board, create temp object for sheet-sourced items
-    const r = PARTS_REQUESTS?.find(x => x['Order Number'] && x['Order Number'].slice(-4) === orderId.slice(-4));
+    // Not in in-memory board, look up by matching Order Number last-4 digits
+    const r = PARTS_REQUESTS?.find(x => x['Order Number'] &&
+      String(x['Order Number']).trim().slice(-4) === orderId.slice(-4));
     if (!r) return;
     o = {
       id:      orderId,
-      orderNo: r['Order Number'] || '',
+      orderNo: String(r['Order Number'] || '').trim(),
       part:    r['Part Description'] || r['Part Number'] || '—',
       code:    r['Part Number'] || '',
       branch:  r['Branch'] || '—',
@@ -725,8 +728,7 @@ function updateOrderStatus(orderId, newStatus) {
       time:    r['Request Date'] || '—',
       awb:     r['AWB'] || '',
     };
-    // Add to in-memory board for future updates
-    PENDING_BOARD.push(o);
+    isNewToMemory = true;
   }
 
   // When moving to "sent" → ask for AWB (tracking number) first
@@ -741,6 +743,11 @@ function updateOrderStatus(orderId, newStatus) {
 
   o.status = newStatus;
   o.time   = 'Just now';
+
+  // Add to in-memory board if newly created from sheet (so it takes priority in buildPendingBoard merge)
+  if (isNewToMemory) {
+    PENDING_BOARD.unshift(o);
+  }
 
   if (HEARTBEAT_URL && o.orderNo) {
     fetch(HEARTBEAT_URL,{method:'POST',mode:'no-cors',
