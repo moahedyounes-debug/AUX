@@ -81,7 +81,11 @@
       "Bash(git commit -m 'Fix '\\\\''Don'\\\\''t show again'\\\\'' persistence - properly store and use user email *)",
       "Bash(git commit -m 'Fix Parts sheet column name mismatch and update Google Apps Script *)",
       "Bash(git commit -m 'Fix column name to match actual Google Sheet: '\\\\''Part Description'\\\\'' *)",
-      "Bash(git commit -m 'Add Model Number and Serial Number to parts request with autocomplete *)"
+      "Bash(git commit -m 'Add Model Number and Serial Number to parts request with autocomplete *)",
+      "Bash(git commit -m 'Fix Parts Model sheet column mapping in getModelsList *)",
+      "Bash(git commit -m 'Correct Parts Model column mapping: use Customer Model \\(Column J\\) *)",
+      "Bash(git commit -m 'Sync repository with deployed Google Apps Script *)",
+      "Bash(git commit -m 'Parts sheet schema complete - all 13 columns ready *)"
     ]
   }
 }
