@@ -662,12 +662,12 @@ function selectModel(model, partNumber, partDescription) {
   }
 }
 
-// ── Get branch email and ASC managers from Access sheet ──────
+// ── Get branch email and ASC + Always CC managers from Access sheet ──────
 async function getBranchEmailAndASCManagers(branchName) {
   try {
     const url = sheetUrl(CONFIG.ACCESS_SHEET);
     const resp = await fetch(url);
-    if (!resp.ok) return { branchEmail: null, ascEmails: [] };
+    if (!resp.ok) return { branchEmail: null, ccEmails: [] };
     const csv = await resp.text();
     const rows = parseCSV(csv);
 
@@ -678,7 +678,7 @@ async function getBranchEmailAndASCManagers(branchName) {
 
     let branchEmail = null;
     let ascName = null;
-    let ascEmails = [];
+    let ccEmails = [];
 
     // First pass: find branch email and ASC name
     for (const row of rows) {
@@ -690,13 +690,18 @@ async function getBranchEmailAndASCManagers(branchName) {
       }
     }
 
-    // Second pass: if we found the ASC, get all emails for that ASC
-    if (ascName) {
-      for (const row of rows) {
-        const rowASC = (row[ascCol] || '').trim();
-        const email = (row[emailCol] || '').trim();
-        if (rowASC.toLowerCase() === ascName.toLowerCase() && email && email !== branchEmail) {
-          ascEmails.push(email);
+    // Second pass: get all emails for the ASC + Always CC (ASC = "All")
+    for (const row of rows) {
+      const rowASC = (row[ascCol] || '').trim();
+      const email = (row[emailCol] || '').trim();
+
+      // Include:
+      // 1. All people with same ASC (e.g., ZAM team)
+      // 2. All people with ASC = "All" (Always CC)
+      if (email && email !== branchEmail) {
+        if (rowASC.toLowerCase() === ascName.toLowerCase() ||
+            rowASC.toLowerCase() === 'all') {
+          ccEmails.push(email);
         }
       }
     }
@@ -704,11 +709,11 @@ async function getBranchEmailAndASCManagers(branchName) {
     return {
       branchEmail: branchEmail || null,
       ascName: ascName || null,
-      ascEmails: ascEmails
+      ccEmails: ccEmails
     };
   } catch (err) {
     console.error('getBranchEmailAndASCManagers error:', err);
-    return { branchEmail: null, ascEmails: [] };
+    return { branchEmail: null, ccEmails: [] };
   }
 }
 
@@ -769,19 +774,13 @@ async function submitPartsRequest() {
     alert('⚠️ HEARTBEAT_URL not configured - cannot save to sheet');
   }
 
-  // Email - Route to branch supervisor and CC ASC managers + AUX team
+  // Email - Route to branch supervisor and CC ASC team + Always CC list
   const emailData = await getBranchEmailAndASCManagers(branch);
   const to = emailData.branchEmail || 'arslan@auxair.com'; // Fallback if branch not found
 
-  // Build CC list: ASC managers + AUX team
-  const ccEmails = [
-    ...emailData.ascEmails,
-    'moahed.younis@auxair.com',
-    'Nawthah.Alqahtani@auxair.com',
-    'Nujud.Kaabi@auxair.com'
-  ];
-  // Remove duplicates
-  const uniqueCC = [...new Set(ccEmails)].filter(e => e && e !== to);
+  // Build CC list: ASC team + Always CC people (automatically fetched from Access sheet)
+  // Remove duplicates and exclude TO email
+  const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e && e !== to);
   const cc = encodeURIComponent(uniqueCC.join(';'));
 
   const sub = encodeURIComponent(`Parts Request — ${orderNo} — ${branch}`);
