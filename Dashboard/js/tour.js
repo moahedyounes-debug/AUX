@@ -39,6 +39,7 @@
   ];
 
   let idx = 0;
+  let dontShowAgain = false;
   function ensureLayer(){
     let l = document.getElementById('aux-tour');
     if (l) return l;
@@ -52,6 +53,10 @@
         <div class="aux-tour-title"></div>
         <div class="aux-tour-body"></div>
         <div class="aux-tour-dots"></div>
+        <div class="aux-tour-dontshow">
+          <input type="checkbox" id="aux-tour-dontshow-checkbox" style="cursor:pointer;margin-right:6px">
+          <label for="aux-tour-dontshow-checkbox" style="cursor:pointer;font-size:12px;color:#64748b">Don't show again</label>
+        </div>
         <div class="aux-tour-actions">
           <button class="aux-tour-skip">Skip</button>
           <div style="flex:1"></div>
@@ -74,6 +79,8 @@
       #aux-tour .aux-tour-dots{display:flex;gap:5px;margin:14px 0 12px}
       #aux-tour .aux-tour-dots span{width:7px;height:7px;border-radius:50%;background:#cbd5e1}
       #aux-tour .aux-tour-dots span.active{background:#003D8F;width:18px;border-radius:5px}
+      #aux-tour .aux-tour-dontshow{display:flex;align-items:center;margin:12px 0 12px;padding-top:10px;border-top:1px solid #f0f0f0}
+      #aux-tour .aux-tour-dontshow input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:#003D8F}
       #aux-tour .aux-tour-actions{display:flex;gap:8px;align-items:center}
       #aux-tour button{border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
       #aux-tour .aux-tour-skip{background:transparent;color:#64748b}
@@ -82,9 +89,23 @@
       #aux-tour .aux-tour-next:hover{background:#0056C7}
     `;
     document.head.appendChild(css);
-    l.querySelector('.aux-tour-skip').onclick = end;
+    l.querySelector('.aux-tour-skip').onclick = ()=>{
+      if (l.querySelector('#aux-tour-dontshow-checkbox').checked) {
+        if (window._currentEmail) markSeen(window._currentEmail);
+      }
+      end();
+    };
     l.querySelector('.aux-tour-prev').onclick = ()=>{ if(idx>0){idx--; show();} };
-    l.querySelector('.aux-tour-next').onclick = ()=>{ if(idx<STEPS.length-1){idx++; show();} else end(); };
+    l.querySelector('.aux-tour-next').onclick = ()=>{
+      if(idx<STEPS.length-1){
+        idx++; show();
+      } else {
+        if (l.querySelector('#aux-tour-dontshow-checkbox').checked) {
+          if (window._currentEmail) markSeen(window._currentEmail);
+        }
+        end();
+      }
+    };
     return l;
   }
   function show(){
