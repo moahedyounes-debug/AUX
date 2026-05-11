@@ -222,22 +222,27 @@ function writePartsRequest(data) {
     if (!sheet) {
       Logger.log(`writePartsRequest: Sheet "${SHEET}" not found, creating new sheet`);
       sheet = ss.insertSheet(SHEET);
-      sheet.appendRow(['Order Number','Part Number','Part Description','Model','Serial Number','AWB','Request Date','Final Status','Branch','Qty','Notes','Requested By','ASC']);
-      sheet.getRange(1,1,1,13).setFontWeight('bold');
+      sheet.appendRow(['Order Number','Part Number','Part Description','Model','Serial Number','AWB','Request Date','Dispatch Date','Receiving Date','Final Status','Branch','Qty','Notes','Requested By','ASC']);
+      sheet.getRange(1,1,1,15).setFontWeight('bold');
       sheet.setFrozenRows(1);
       Logger.log(`writePartsRequest: Created new sheet with headers`);
     }
 
-    // Check if order already exists — update AWB / status if so
+    // Check if order already exists — update AWB / status / dates if so
     const lastRow = sheet.getLastRow();
     if (lastRow > 1) {
       const orderCol = sheet.getRange(2,1,lastRow-1,1).getValues().flat();
       const existIdx = orderCol.findIndex(v => String(v).trim() === String(data.orderNumber||'').trim());
       if (existIdx >= 0) {
         const row = existIdx + 2;
-        Logger.log(`writePartsRequest: Order exists at row ${row}, updating AWB/status`);
+        Logger.log(`writePartsRequest: Order exists at row ${row}, updating AWB/status/dates`);
         if (data.awb) sheet.getRange(row, 6).setValue(data.awb);
-        if (data.finalStatus) sheet.getRange(row, 8).setValue(data.finalStatus);
+        if (data.dispatchDate) sheet.getRange(row, 8).setValue(data.dispatchDate);
+        if (data.receivingDate) sheet.getRange(row, 9).setValue(data.receivingDate);
+        if (data.finalStatus) sheet.getRange(row, 10).setValue(data.finalStatus);
+
+        // Sync to Daily Operations if status changed
+        syncPartStatusToDailyOps(data.orderNumber, data.finalStatus);
         return;
       }
     }
@@ -252,6 +257,8 @@ function writePartsRequest(data) {
       data.serialNumber || '',
       data.awb          || '',
       data.requestDate  || new Date().toLocaleDateString('en-GB'),
+      data.dispatchDate || '',
+      data.receivingDate || '',
       data.finalStatus  || 'Pending',
       data.branch       || '—',
       data.qty          || '1',
@@ -304,9 +311,9 @@ function logToSheet(data) {
 }
 
 // ── Sync part status back to daily operations ────────────────
-function syncPartStatusToDailyOps(data) {
+function syncPartStatusToDailyOps(orderNumber, finalStatus) {
   try {
-    if (!data.orderNumber || !data.finalStatus) return;
+    if (!orderNumber || !finalStatus) return;
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName('Sheet1');
@@ -316,22 +323,37 @@ function syncPartStatusToDailyOps(data) {
     }
 
     const dataRange = sheet.getDataRange().getValues();
-    const headers = dataRange[0];
 
-    // Find Ticket Number column (should be first column)
-    const ticketCol = 0; // Usually first column
+    // Find "Parts" column (used to track part status in Daily Operations)
+    let partsCol = -1;
+    for (let c = 0; c < dataRange[0].length; c++) {
+      const header = String(dataRange[0][c] || '').toLowerCase();
+      if (header.includes('parts') || header.includes('part')) {
+        partsCol = c;
+        break;
+      }
+    }
 
-    // Find the row matching the order number
+    if (partsCol === -1) {
+      Logger.log(`syncPartStatusToDailyOps: Parts column not found`);
+      return;
+    }
+
+    // Find Ticket Number column (usually first column, column A)
+    const ticketCol = 0;
+
+    // Find the row matching the order number and update status
     for (let i = 1; i < dataRange.length; i++) {
       const ticketNum = String(dataRange[i][ticketCol] || '').trim();
-      if (ticketNum === String(data.orderNumber || '').trim()) {
-        // Found matching row - update can be done here if needed
-        Logger.log(`syncPartStatusToDailyOps: Found order ${data.orderNumber} at row ${i+1}, status: ${data.finalStatus}`);
+      if (ticketNum === String(orderNumber || '').trim()) {
+        // Found matching row - update Parts column with status
+        sheet.getRange(i + 1, partsCol + 1).setValue(finalStatus);
+        Logger.log(`syncPartStatusToDailyOps: Updated order ${orderNumber} at row ${i+1} to status: ${finalStatus}`);
         return;
       }
     }
 
-    Logger.log(`syncPartStatusToDailyOps: Order ${data.orderNumber} not found in Sheet1`);
+    Logger.log(`syncPartStatusToDailyOps: Order ${orderNumber} not found in Sheet1`);
   } catch(err) {
     Logger.log(`syncPartStatusToDailyOps ERROR: ${err.toString()}`);
   }

@@ -752,6 +752,9 @@ async function submitPartsRequest() {
     model, serialNumber:serialNum,
   });
 
+  // Extract ASC code from branch name (e.g., "Dammam - ZAM" → "ZAM")
+  const ascCode = (branch || '').split('-').pop().trim();
+
   if(HEARTBEAT_URL){
     try{
       const payload = {
@@ -759,7 +762,7 @@ async function submitPartsRequest() {
         orderNumber:orderNo,partNumber:partCode,partDesc:partName,
         awb:'',requestDate,finalStatus:'Pending',branch,qty,notes,
         model:model,serialNumber:serialNum,
-        requestedBy:_currentEmail||'—',asc:_currentASC||'—',
+        requestedBy:_currentEmail||'—',asc:ascCode||'—',
       };
       console.log('Sending parts request to:', HEARTBEAT_URL, payload);
 
@@ -909,7 +912,10 @@ function buildPendingBoard() {
           ${esc(truncate(o.part,28))} · <span style="font-family:var(--mono);font-size:11px;color:var(--gray-400)">${esc(o.code)}</span>
         </div>
         <div style="font-size:11px;color:var(--gray-500);margin-top:3px">
-          ${esc(o.branch)} · Qty: ${o.qty} · ${esc(o.id)}
+          ${esc(o.branch)} · Qty: ${o.qty}
+        </div>
+        <div style="font-size:11px;color:var(--gray-600);font-family:monospace;margin-top:2px;font-weight:600">
+          ${esc(o.orderNo || o.id)}
         </div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
@@ -1001,13 +1007,34 @@ function updateOrderStatus(orderId, newStatus) {
     PENDING_BOARD.unshift(o);
   }
 
+  // Extract ASC code from branch name (e.g., "Dammam - ZAM" → "ZAM")
+  const ascCode = (o.branch || '').split('-').pop().trim();
+
+  // Determine status text and dates
+  const statusText = newStatus==='received'?'Received':newStatus==='dispatched'?'Dispatched':newStatus==='unavailable'?'Part Not Available':'Pending';
+  const today = new Date().toLocaleDateString('en-GB');
+  let dispatchDate = '';
+  let receivingDate = '';
+
+  if (newStatus === 'dispatched') {
+    dispatchDate = today;
+  } else if (newStatus === 'received') {
+    receivingDate = today;
+  }
+
   if (HEARTBEAT_URL && o.orderNo) {
     fetch(HEARTBEAT_URL,{method:'POST',mode:'no-cors',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'parts_request',sheet:CONFIG.PARTS_SHEET,
+      body:JSON.stringify({
+        action:'parts_request',sheet:CONFIG.PARTS_SHEET,
         orderNumber:o.orderNo, awb:o.awb||'',
-        finalStatus:newStatus==='received'?'Received':newStatus==='dispatched'?'Dispatched':newStatus==='unavailable'?'Part Not Available':'Pending',
-        requestedBy:_currentEmail||'—',asc:_currentASC||'—'})
+        finalStatus:statusText,
+        dispatchDate:dispatchDate,
+        receivingDate:receivingDate,
+        requestedBy:_currentEmail||'—',
+        asc:ascCode||'—',
+        branch:o.branch||'—'
+      })
     }).catch(()=>{});
   }
   const board=document.getElementById('parts-status-board');
