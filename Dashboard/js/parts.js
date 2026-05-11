@@ -824,20 +824,48 @@ async function submitPartsRequest() {
     alert('⚠️ HEARTBEAT_URL not configured - cannot save to sheet');
   }
 
-  // Email routing is now handled server-side by Google Apps Script
-  // The backend (getEmailRouting function) automatically sends emails to:
-  // TO: Arslan (parts supervisor)
-  // CC: ASC team + Always CC team (based on Access sheet lookup)
+  // Email routing for spare parts request
+  // Logic: Open mailto with TO: SVC Center email, CC: ASC + Always CC
+  const emailData = await getBranchEmailList(branch);
 
+  let to = emailData.svcEmail || 'arslan.s@auxair.com'; // Fallback to Arslan if SVC email not found
+  const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
+  const cc = encodeURIComponent(uniqueCC.join(';'));
+
+  const sub = encodeURIComponent(`Parts Request — ${orderNo} — ${branch}`);
+  const body = encodeURIComponent(
+    `Dear Parts Team,\n\nNew spare part request:\n\n`+
+    `Order Number : ${orderNo}\nBranch       : ${branch}\nASC          : ${emailData.ascName||'—'}\n`+
+    `Part Name    : ${partName}\nPart Number  : ${partCode}\nQuantity     : ${qty}\n`+
+    `Model        : ${model||'—'}\nSerial Number: ${serialNum||'—'}\nNotes        : ${notes||'—'}\n`+
+    `Requested By : ${_currentEmail||'AUX ASC Dashboard'}\nDate         : ${requestDate}\n\n`+
+    `Please process and update AWB in the Parts sheet.\n\nAUX ASC Dashboard — Created by Moahed Younes`
+  );
+
+  console.log('Parts request email:', {to, cc: uniqueCC, subject: `Parts Request — ${orderNo} — ${branch}`});
+  window.open(`mailto:${to}?cc=${cc}&subject=${sub}&body=${body}`,'_blank');
   document.getElementById('parts-modal-overlay')?.remove();
-  alert(`✅ Request submitted!\n\nOrder: ${orderNo}\nPart: ${partName||partCode}\n\n📧 Email notification sent automatically`);
+  alert(`✅ Request submitted!\n\nOrder: ${orderNo}\nPart: ${partName||partCode}`);
 }
 
 // ── Reminder email (after request sent) ───────────────────────
-// Note: Email reminders are now handled server-side by Google Apps Script
 async function sendPartsReminder(ticketNo, branch, partDesc) {
-  // This function is kept for backward compatibility
-  // Actual email sending is now handled server-side via getEmailRouting() and sendPartsStatusUpdateEmail()
+  const emailData = await getBranchEmailList(branch);
+
+  const to = emailData.svcEmail || 'arslan.s@auxair.com';
+  const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
+  const cc = encodeURIComponent(uniqueCC.join(';'));
+
+  const sub=encodeURIComponent(`Parts Status Update Needed — ${ticketNo} — ${branch}`);
+  const body=encodeURIComponent(
+    `Dear Parts Team,\n\nFollow-up reminder for pending spare part request.\n\n`+
+    `Order Number : ${ticketNo}\nBranch       : ${branch}\nASC          : ${emailData.ascName||'—'}\n`+
+    `Part Required: ${partDesc}\nRequested By : ${_currentEmail||'AUX ASC Dashboard'}\n`+
+    `Date         : ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}\n\n`+
+    `Please provide a status update — has it been shipped? What is the AWB?\n\n`+
+    `AUX ASC Dashboard — Created by Moahed Younes`
+  );
+  window.open(`mailto:${to}?cc=${cc}&subject=${sub}&body=${body}`,'_blank');
   logActivity(`Parts Reminder — ${ticketNo} · ${branch}`);
 }
 
@@ -1050,6 +1078,32 @@ function updateOrderStatus(orderId, newStatus) {
   } else if (newStatus === 'received') {
     receivingDate = today;
   }
+
+  // Send status update email
+  (async () => {
+    const emailData = await getBranchEmailList(o.branch);
+    const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
+    const cc = encodeURIComponent(uniqueCC.join(';'));
+
+    const to = emailData.svcEmail || 'arslan.s@auxair.com'; // TO: SVC Center
+    const sub = encodeURIComponent(`Parts Status Update — ${o.orderNo} — ${statusText}`);
+    const body = encodeURIComponent(
+      `Dear Branch Team,\n\nParts request status update:\n\n`+
+      `Order Number : ${o.orderNo}\nBranch       : ${o.branch}\nASC          : ${emailData.ascName||'—'}\n`+
+      `Status       : ${statusText}\nPart Name    : ${o.part}\nPart Number  : ${o.code}\n`+
+      `Quantity     : ${o.qty}\nAWB/Tracking : ${o.awb||'—'}\n`+
+      (dispatchDate ? `Dispatch Date: ${dispatchDate}\n` : '')+
+      (receivingDate ? `Receiving Date: ${receivingDate}\n` : '')+
+      `Updated By   : ${_currentEmail||'AUX ASC Dashboard'}\nDate         : ${new Date().toLocaleDateString('en-GB')}\n\n`+
+      (statusText === 'Dispatched' ? 'Parts have been dispatched. Please track using the AWB provided above.\n\n' : '')+
+      (statusText === 'Received' ? 'Parts have been received at the branch.\n\n' : '')+
+      (statusText === 'Part Not Available' ? 'This part is not available. Please contact the parts supervisor for alternatives.\n\n' : '')+
+      `AUX ASC Dashboard — Created by Moahed Younes`
+    );
+
+    console.log('Status update email:', {to, cc: uniqueCC});
+    window.open(`mailto:${to}?cc=${cc}&subject=${sub}&body=${body}`,'_blank');
+  })();
 
   if (HEARTBEAT_URL && o.orderNo) {
     fetch(HEARTBEAT_URL,{method:'POST',mode:'no-cors',
