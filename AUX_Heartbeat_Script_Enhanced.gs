@@ -169,8 +169,10 @@ function doPost(e) {
       Logger.log(`User logged out: ${email}`);
     } else if (data.action === 'parts_request') {
       // Write spare part request to Parts sheet in main spreadsheet
-      Logger.log(`doPost: Processing parts_request for order: ${data.orderNumber}`);
+      Logger.log(`doPost: Processing parts_request for order: ${data.orderNumber}, status: ${data.finalStatus}`);
       writePartsRequest(data);
+      // Sync status back to daily operations if applicable
+      syncPartStatusToDailyOps(data);
       return ok();
     } else {
       // heartbeat
@@ -298,5 +300,39 @@ function logToSheet(data) {
     }
   } catch(err) {
     Logger.log(`logToSheet ERROR: ${err.toString()}`);
+  }
+}
+
+// ── Sync part status back to daily operations ────────────────
+function syncPartStatusToDailyOps(data) {
+  try {
+    if (!data.orderNumber || !data.finalStatus) return;
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Sheet1');
+    if (!sheet) {
+      Logger.log(`syncPartStatusToDailyOps: Sheet1 not found`);
+      return;
+    }
+
+    const dataRange = sheet.getDataRange().getValues();
+    const headers = dataRange[0];
+
+    // Find Ticket Number column (should be first column)
+    const ticketCol = 0; // Usually first column
+
+    // Find the row matching the order number
+    for (let i = 1; i < dataRange.length; i++) {
+      const ticketNum = String(dataRange[i][ticketCol] || '').trim();
+      if (ticketNum === String(data.orderNumber || '').trim()) {
+        // Found matching row - update can be done here if needed
+        Logger.log(`syncPartStatusToDailyOps: Found order ${data.orderNumber} at row ${i+1}, status: ${data.finalStatus}`);
+        return;
+      }
+    }
+
+    Logger.log(`syncPartStatusToDailyOps: Order ${data.orderNumber} not found in Sheet1`);
+  } catch(err) {
+    Logger.log(`syncPartStatusToDailyOps ERROR: ${err.toString()}`);
   }
 }

@@ -662,6 +662,33 @@ function selectModel(model, partNumber, partDescription) {
   }
 }
 
+// ── Get branch email from Access sheet ────────────────────────
+async function getBranchEmail(branchName) {
+  try {
+    const url = sheetUrl(CONFIG.ACCESS_SHEET);
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const csv = await resp.text();
+    const rows = parseCSV(csv);
+
+    // Find row matching branch name in "If Branch has pending" column
+    const branchCol = 'If Branch has pending';
+    const emailCol = 'Email';
+
+    for (const row of rows) {
+      const rowBranch = (row[branchCol] || '').trim();
+      if (rowBranch.toLowerCase() === branchName.toLowerCase()) {
+        const email = (row[emailCol] || '').trim();
+        return email ? encodeURIComponent(email) : null;
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error('getBranchEmail error:', err);
+    return null;
+  }
+}
+
 // ── Submit request ─────────────────────────────────────────────
 async function submitPartsRequest() {
   const orderNo   =(document.getElementById('pm-order-no')?.value ||'').trim();
@@ -719,12 +746,13 @@ async function submitPartsRequest() {
     alert('⚠️ HEARTBEAT_URL not configured - cannot save to sheet');
   }
 
-  // Email
-  const to ='arslan@auxair.com;nawthah@auxair.com;nujud@auxair.com';
-  const cc =encodeURIComponent('moahed.younis@auxair.com');
-  const sub=encodeURIComponent(`Parts Request — ${orderNo} — ${branch}`);
-  const body=encodeURIComponent(
-    `Dear Parts Team,\n\nNew spare part request:\n\n`+
+  // Email - Route to branch team based on Access sheet lookup
+  const branchEmail = await getBranchEmail(branch);
+  const to = branchEmail || 'arslan@auxair.com;nawthah@auxair.com;nujud@auxair.com'; // Fallback if branch not found
+  const cc = encodeURIComponent('moahed.younis@auxair.com;Nawthah.Alqahtani@auxair.com;Nujud.Kaabi@auxair.com');
+  const sub = encodeURIComponent(`Parts Request — ${orderNo} — ${branch}`);
+  const body = encodeURIComponent(
+    `Dear Parts Supervisor,\n\nNew spare part request:\n\n`+
     `Order Number : ${orderNo}\nBranch       : ${branch}\nPart Name    : ${partName}\n`+
     `Part Number  : ${partCode}\nQuantity     : ${qty}\n`+
     `Model        : ${model||'—'}\nSerial Number: ${serialNum||'—'}\nNotes        : ${notes||'—'}\n`+
@@ -788,18 +816,19 @@ function buildPendingBoard() {
   if (!all.length) return '<div style="font-size:12px;color:var(--gray-400);padding:.5rem 0">No pending part requests</div>';
 
   const sMap = {
-    pending:  {cls:'badge-amber', lbl:'Pending',        nextLabel:'Mark Sent',     next:'sent'},
-    sent:     {cls:'badge-blue',  lbl:'Sent to branch', nextLabel:'Mark Received', next:'received'},
-    received: {cls:'badge-green', lbl:'Received',       nextLabel:null,            next:null},
+    pending:    {cls:'badge-amber', lbl:'Pending',            btnLabel:'Update Status', action:'pending'},
+    dispatched: {cls:'badge-blue',  lbl:'Dispatched',        btnLabel:'Mark Received', action:'received'},
+    unavailable:{cls:'badge-red',   lbl:'Part Not Available', btnLabel:null,           action:null},
+    received:   {cls:'badge-green', lbl:'Received',          btnLabel:null,           action:null},
   };
 
   return all.slice(0,8).map((o,i)=>{
     const sm = sMap[o.status]||sMap.pending;
-    const nextBtn = sm.nextLabel
-      ? `<button onclick="updateOrderStatus('${o.id}','${sm.next}')"
+    const nextBtn = sm.action
+      ? `<button onclick="showStatusModal('${o.id}','${o.orderNo}')"
            style="background:var(--gray-50);border:.5px solid var(--gray-200);border-radius:8px;
                   padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
-           ${sm.nextLabel}</button>` : '';
+           ${sm.btnLabel}</button>` : '';
     return `<div style="padding:10px 0;border-bottom:.5px solid var(--gray-100);display:flex;gap:10px;align-items:flex-start" id="board-row-${i}">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;line-height:1.3">
@@ -821,7 +850,40 @@ function buildPendingBoard() {
   }).join('');
 }
 
+// ── Show status update modal with options ────────────────────
+function showStatusModal(orderId, orderNo) {
+  const overlay = document.createElement('div');
+  overlay.id = 'status-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9001;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:12px;border:.5px solid #e5e7eb;padding:1.5rem;width:420px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+      <div style="font-size:15px;font-weight:600;color:#111;margin-bottom:1rem">Update Part Request Status</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:1.5rem">Order: <span style="font-family:monospace;font-weight:600">${esc(orderNo)}</span></div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button onclick="updateOrderStatus('${orderId}','dispatched')"
+          style="background:#003D8F;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+          📦 Dispatched<br><span style="font-size:11px;opacity:0.9">Parts shipped to branch</span>
+        </button>
+
+        <button onclick="updateOrderStatus('${orderId}','unavailable')"
+          style="background:#dc2626;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+          ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Close request - part unavailable</span>
+        </button>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;padding-top:1rem;border-top:.5px solid #f3f4f6">
+        <button onclick="document.getElementById('status-modal-overlay').remove()"
+          style="background:#f9fafb;border:.5px solid #d1d5db;border-radius:8px;padding:8px 18px;font-size:12px;cursor:pointer;color:#374151">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
 function updateOrderStatus(orderId, newStatus) {
+  // Close the modal
+  document.getElementById('status-modal-overlay')?.remove();
+
   // Find order by ID in merged board (could be from PENDING_BOARD or PARTS_REQUESTS)
   let o = PENDING_BOARD.find(x => x.id === orderId);
   let isNewToMemory = false;
@@ -839,20 +901,21 @@ function updateOrderStatus(orderId, newStatus) {
       branch:  r['Branch'] || '—',
       qty:     r['Qty'] || '1',
       status:  (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
-               (r['Final Status']||'').toLowerCase().includes('sent')?'sent':'pending',
+               (r['Final Status']||'').toLowerCase().includes('dispatched')?'dispatched':
+               (r['Final Status']||'').toLowerCase().includes('unavailable')?'unavailable':'pending',
       time:    r['Request Date'] || '—',
       awb:     r['AWB'] || '',
     };
     isNewToMemory = true;
   }
 
-  // When moving to "sent" → ask for AWB (tracking number) first
-  if (newStatus === 'sent') {
+  // When moving to "dispatched" → ask for AWB (tracking number)
+  if (newStatus === 'dispatched') {
     const current = o.awb || '';
-    const awb = prompt('Enter tracking number (AWB) before updating status:', current);
+    const awb = prompt('Enter tracking number (AWB):', current);
     if (awb === null) return;             // user cancelled
     const v = awb.trim();
-    if (!v) { alert('Tracking number (AWB) is required to mark as Sent.'); return; }
+    if (!v) { alert('Tracking number (AWB) is required.'); return; }
     o.awb = v;
   }
 
@@ -869,7 +932,7 @@ function updateOrderStatus(orderId, newStatus) {
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'parts_request',sheet:CONFIG.PARTS_SHEET,
         orderNumber:o.orderNo, awb:o.awb||'',
-        finalStatus:newStatus==='received'?'Received':newStatus==='sent'?'Sent to Branch':'Pending',
+        finalStatus:newStatus==='received'?'Received':newStatus==='dispatched'?'Dispatched':newStatus==='unavailable'?'Part Not Available':'Pending',
         requestedBy:_currentEmail||'—',asc:_currentASC||'—'})
     }).catch(()=>{});
   }
