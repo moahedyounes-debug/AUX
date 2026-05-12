@@ -1,0 +1,26 @@
+# ─── Core (Required) ──────────────────────────────────────────────────────────
+SpeechRecognition>=3.10.0      # Voice input
+pyttsx3>=2.90                  # Text-to-speech (offline, free)
+requests>=2.31.0               # HTTP requests (for Ollama, weather, home assistant)
+pyaudio>=0.2.13                # Microphone access (required by SpeechRecognition)
+
+# ─── Optional TTS ─────────────────────────────────────────────────────────────
+gTTS>=2.3.2                    # Google TTS (online, free) - fallback
+
+# ─── Optional Offline STT ─────────────────────────────────────────────────────
+# vosk>=0.3.45                 # Offline Arabic speech recognition
+# openai-whisper>=20231117     # Offline multilingual STT (large download)
+
+# ─── Computer Control ─────────────────────────────────────────────────────────
+pyautogui>=0.9.54              # Mouse/keyboard automation
+
+# ─── Web & Search ─────────────────────────────────────────────────────────────
+duckduckgo-search>=4.0         # Free web search (no API key)
+
+# ─── AI Engines (pick one) ────────────────────────────────────────────────────
+# Ollama is a local server - install from https://ollama.ai (no pip needed)
+anthropic>=0.40.0              # Claude API (optional, needs API key)
+# openai>=1.0.0                # OpenAI API (optional, needs API key)
+
+# ─── Audio Playback (for gTTS) ────────────────────────────────────────────────
+# mpg123 or ffmpeg must be installed via system package manager
