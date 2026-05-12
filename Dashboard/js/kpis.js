@@ -142,20 +142,17 @@ const KPI = {
     return Object.entries(m).map(([w,r])=>({worker:w,count:r.length})).sort((a,b)=>b.count-a.count);
   },
 
-  // ── TODAY's SCHEDULE: reads from Rescheduling column (date) ──
+  // ── TODAY's SCHEDULE: reads from Rescheduling column (date) ONLY ──
+  // Only shows PENDING tickets with a rescheduling date matching today
   todaySchedule(rows) {
     const t=new Date();
     const todayStr=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
     return rows.filter(r=>{
-      // Check Rescheduling date column first
+      // Only include PENDING tickets
+      if(!r._isPending) return false;
+      // Check ONLY Rescheduling date (not Appointed date)
       if(r._rescheduled){
         const d=r._rescheduled;
-        const dStr=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        if(dStr===todayStr) return true;
-      }
-      // Fallback to Appointed Date
-      if(r._appointed){
-        const d=r._appointed;
         const dStr=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         if(dStr===todayStr) return true;
       }
