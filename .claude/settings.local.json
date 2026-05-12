@@ -105,7 +105,8 @@
       "Bash(cd \"C:\\\\\\\\Users\\\\\\\\moahe\\\\\\\\OneDrive\\\\\\\\Desktop\\\\\\\\Dashboard\")",
       "Bash(node -c \"C:\\\\Users\\\\moahe\\\\OneDrive\\\\Desktop\\\\Dashboard\\\\Dashboard\\\\js\\\\parts.js\")",
       "Bash(cd \"C:\\\\Moahed Aux\\\\Saved Excel files\" && ls -lh \"Part Full Cycle.xlsx\")",
-      "mcp__22dc359b-eecd-4f3c-8c94-a99d23ccd473__generate-design"
+      "mcp__22dc359b-eecd-4f3c-8c94-a99d23ccd473__generate-design",
+      "Bash(node -c /c/Users/moahe/OneDrive/Desktop/Dashboard/Dashboard/js/parts.js)"
     ]
   }
 }

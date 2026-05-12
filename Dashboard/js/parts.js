@@ -588,6 +588,350 @@ function getFilteredTx() {
   return tx;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// PHASE 2: UI RENDERING FOR INVENTORY DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+// ── Render Inventory Overview (Main Stock + SVC Distribution) ────
+function renderInventoryOverview(el, tx) {
+  const mainStock = buildMainBranchStock(tx);
+  const svcStock = buildSvcCenterStock(tx);
+
+  const mainTotals = mainStock.reduce((sum, item) => ({
+    balance: sum.balance + (item.balance || 0),
+    consumed: sum.consumed + (item.consumed || 0)
+  }), { balance: 0, consumed: 0 });
+
+  const svcTotals = svcStock.reduce((sum, loc) => ({
+    skus: sum.skus + loc.skus,
+    balance: sum.balance + (loc.balance || 0),
+    consumed: sum.consumed + (loc.consumed || 0)
+  }), { skus: 0, balance: 0, consumed: 0 });
+
+  el.innerHTML += `
+  <!-- MAIN BRANCH STOCK -->
+  <div class="section-header" style="margin-top:20px">
+    <div class="section-title">Main Branch Stock (Warehouse)</div>
+    <span class="section-badge">${mainStock.length} SKUs</span>
+  </div>
+  <div class="table-card" style="margin-bottom:18px">
+    <div class="table-header">
+      <div class="table-title">Warehouse Inventory</div>
+      <div class="table-count">${fmt(mainTotals.balance)} units</div>
+    </div>
+    <div class="table-scroll"><table class="data-table">
+      <thead><tr>
+        <th style="text-align:left">Code</th>
+        <th style="text-align:left">Part Name</th>
+        <th class="text-mono">Current Balance</th>
+        <th class="text-mono">Consumed (Total)</th>
+        <th style="text-align:left">Last Received</th>
+      </tr></thead>
+      <tbody>
+        ${mainStock.length === 0 ? '<tr><td colspan="5" class="table-empty">No warehouse stock data</td></tr>' :
+          mainStock.slice(0, 50).map(p => `<tr>
+            <td class="text-mono fw-600">${esc(p.code || '—')}</td>
+            <td style="text-align:left">${esc(p.name || '—')}</td>
+            <td class="text-mono">${fmt(p.balance)}</td>
+            <td class="text-mono color-warning">${fmt(p.consumed)}</td>
+            <td style="font-size:12px">${p.lastReceived ? fmtDate(p.lastReceived) : '—'}</td>
+          </tr>`).join('')}
+        ${mainStock.length > 50 ? `<tr><td colspan="5" style="text-align:center;color:var(--gray-400);font-size:12px;padding:10px">Showing 50 of ${mainStock.length}</td></tr>` : ''}
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- SVC CENTER DISTRIBUTION -->
+  <div class="section-header">
+    <div class="section-title">Service Center Stock Distribution</div>
+    <span class="section-badge">${svcStock.length} branches</span>
+  </div>
+  <div class="table-card" style="margin-bottom:18px">
+    <div class="table-header">
+      <div class="table-title">Stock by Branch</div>
+      <div class="table-count">${fmt(svcTotals.balance)} total units</div>
+    </div>
+    <div class="table-scroll"><table class="data-table">
+      <thead><tr>
+        <th style="text-align:left">Branch - ASC</th>
+        <th class="text-mono">SKUs</th>
+        <th class="text-mono">Stock Balance</th>
+        <th class="text-mono">Consumption/Month</th>
+        <th style="text-align:left">Status</th>
+      </tr></thead>
+      <tbody>
+        ${svcStock.length === 0 ? '<tr><td colspan="5" class="table-empty">No service center stock data</td></tr>' :
+          svcStock.sort((a, b) => b.balance - a.balance).map(loc => {
+            const status = loc.lowStock ? '<span class="badge badge-red">⚠️ Low</span>' : '<span class="badge badge-green">✅ OK</span>';
+            return `<tr>
+              <td class="fw-600" style="text-align:left">${esc(loc.location)}</td>
+              <td class="text-mono">${loc.skus}</td>
+              <td class="text-mono ${loc.lowStock ? 'color-danger' : 'fw-600'}">${fmt(loc.balance)}</td>
+              <td class="text-mono">${fmt(loc.consumptionRate, 1)}</td>
+              <td>${status}</td>
+            </tr>`;
+          }).join('')}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+// ── Render Consumption Tracker (Sort 8 only) ────────────────────
+function renderInventoryConsumption(el, tx) {
+  const consumption = buildConsumptionByBranch(tx);
+  const consumptionTotals = consumption.reduce((sum, item) => ({
+    consumed: sum.consumed + (item.consumed || 0),
+    usageCount: sum.usageCount + (item.usageCount || 0)
+  }), { consumed: 0, usageCount: 0 });
+
+  el.innerHTML += `
+  <!-- CONSUMPTION TRACKER -->
+  <div class="section-header" style="margin-top:20px">
+    <div class="section-title">Part Consumption Tracker</div>
+    <span class="section-badge">Sort 8 - Part Used by Tech</span>
+  </div>
+  <div class="table-card" style="margin-bottom:18px">
+    <div class="table-header">
+      <div class="table-title">Consumption by Service Center</div>
+      <div class="table-count">${fmt(consumptionTotals.consumed)} total consumed</div>
+    </div>
+    <div class="table-scroll"><table class="data-table">
+      <thead><tr>
+        <th style="text-align:left">Code</th>
+        <th style="text-align:left">Part Name</th>
+        <th style="text-align:left">Branch</th>
+        <th class="text-mono">Consumed Count</th>
+        <th class="text-mono">Usage Events</th>
+        <th style="text-align:left">Last Used</th>
+      </tr></thead>
+      <tbody>
+        ${consumption.length === 0 ? '<tr><td colspan="6" class="table-empty">No consumption data</td></tr>' :
+          consumption.slice(0, 100).map(c => `<tr>
+            <td class="text-mono fw-600">${esc(c.code || '—')}</td>
+            <td style="text-align:left">${esc(truncate(c.name || '—', 40))}</td>
+            <td style="text-align:left">${esc(c.branch)}</td>
+            <td class="text-mono fw-600">${fmt(c.consumed)}</td>
+            <td class="text-mono">${c.usageCount}</td>
+            <td style="font-size:12px">${c.lastUsed ? fmtDate(c.lastUsed) : '—'}</td>
+          </tr>`).join('')}
+        ${consumption.length > 100 ? `<tr><td colspan="6" style="text-align:center;color:var(--gray-400);font-size:12px;padding:10px">Showing 100 of ${consumption.length}</td></tr>` : ''}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+// ── Render Return Management (Sort 9-12) ───────────────────────
+function renderInventoryReturns(el, tx) {
+  const returns = buildReturnSummaryByType(tx);
+
+  el.innerHTML += `
+  <!-- DEFECTIVE RETURNS -->
+  <div class="section-header" style="margin-top:20px">
+    <div class="section-title">Defective Parts Returns</div>
+    <span class="section-badge">Sort 9-10</span>
+  </div>
+  <div class="table-card" style="margin-bottom:18px">
+    <div class="table-header">
+      <div class="table-title">Return Requests & Receipts</div>
+      <div class="table-count">${returns.defective.length} items</div>
+    </div>
+    <div class="table-scroll"><table class="data-table">
+      <thead><tr>
+        <th style="text-align:left">Code</th>
+        <th style="text-align:left">Part Name</th>
+        <th style="text-align:left">Location</th>
+        <th class="text-mono">Requested</th>
+        <th class="text-mono">Received</th>
+        <th style="text-align:left">Status</th>
+        <th style="text-align:left">Days</th>
+      </tr></thead>
+      <tbody>
+        ${returns.defective.length === 0 ? '<tr><td colspan="7" class="table-empty">No defective returns</td></tr>' :
+          returns.defective.map(r => {
+            const days = r.requestDate && r.receivedDate
+              ? Math.floor((r.receivedDate - r.requestDate) / (1000 * 60 * 60 * 24))
+              : '—';
+            const statusBadge = r.status === 'Completed'
+              ? '<span class="badge badge-green">✓ Completed</span>'
+              : '<span class="badge badge-amber">⟳ Pending</span>';
+            return `<tr>
+              <td class="text-mono fw-600">${esc(r.code || '—')}</td>
+              <td style="text-align:left">${esc(truncate(r.name || '—', 35))}</td>
+              <td style="text-align:left">${esc(r.asc ? \`\${r.branch} - \${r.asc}\` : r.branch)}</td>
+              <td class="text-mono">${fmt(r.requested)}</td>
+              <td class="text-mono">${fmt(r.received)}</td>
+              <td>${statusBadge}</td>
+              <td class="text-mono">${days}</td>
+            </tr>`;
+          }).join('')}
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- NEW/UNUSED RETURNS -->
+  <div class="section-header">
+    <div class="section-title">New/Unused Parts Returns</div>
+    <span class="section-badge">Sort 11-12</span>
+  </div>
+  <div class="table-card" style="margin-bottom:18px">
+    <div class="table-header">
+      <div class="table-title">Unused Returns</div>
+      <div class="table-count">${returns.newParts.length} items</div>
+    </div>
+    <div class="table-scroll"><table class="data-table">
+      <thead><tr>
+        <th style="text-align:left">Code</th>
+        <th style="text-align:left">Part Name</th>
+        <th style="text-align:left">Location</th>
+        <th class="text-mono">Requested</th>
+        <th class="text-mono">Received</th>
+        <th style="text-align:left">Status</th>
+        <th style="text-align:left">Days</th>
+      </tr></thead>
+      <tbody>
+        ${returns.newParts.length === 0 ? '<tr><td colspan="7" class="table-empty">No new/unused returns</td></tr>' :
+          returns.newParts.map(r => {
+            const days = r.requestDate && r.receivedDate
+              ? Math.floor((r.receivedDate - r.requestDate) / (1000 * 60 * 60 * 24))
+              : '—';
+            const statusBadge = r.status === 'Completed'
+              ? '<span class="badge badge-green">✓ Completed</span>'
+              : '<span class="badge badge-amber">⟳ Pending</span>';
+            return `<tr>
+              <td class="text-mono fw-600">${esc(r.code || '—')}</td>
+              <td style="text-align:left">${esc(truncate(r.name || '—', 35))}</td>
+              <td style="text-align:left">${esc(r.asc ? \`\${r.branch} - \${r.asc}\` : r.branch)}</td>
+              <td class="text-mono">${fmt(r.requested)}</td>
+              <td class="text-mono">${fmt(r.received)}</td>
+              <td>${statusBadge}</td>
+              <td class="text-mono">${days}</td>
+            </tr>`;
+          }).join('')}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+// ── Render Part Tracking Lifecycle ────────────────────────────────
+function renderPartTracking(el, tx) {
+  if (!_inventoryState.selectedPartTracking) {
+    el.innerHTML += `
+    <div class="section-header" style="margin-top:20px">
+      <div class="section-title">Part Lifecycle Tracking</div>
+    </div>
+    <div class="insight-card" style="background:#f0fdf4;border-color:#bbf7d0">
+      <div class="insight-icon" style="background:#dcfce7;color:var(--success)">🔍</div>
+      <div class="insight-text">
+        <div class="insight-title">Select a part to view its 13-stage lifecycle</div>
+        <span style="color:var(--gray-600)">Search for a part code or name above to see its complete journey from procurement through consumption and returns.</span>
+      </div>
+    </div>`;
+    return;
+  }
+
+  const lifecycle = getPartLifecycle(_inventoryState.selectedPartTracking, tx);
+  const currentStage = lifecycle.find(s => s.status === 'completed');
+
+  el.innerHTML += `
+  <div class="section-header" style="margin-top:20px">
+    <div class="section-title">Part Lifecycle: ${esc(_inventoryState.selectedPartTracking)}</div>
+  </div>
+  <div class="lifecycle-container">
+    ${lifecycle.map((stage, idx) => {
+      const nextStage = lifecycle[idx + 1];
+      return `
+      <div class="lifecycle-stage ${stage.status} ${stage.status === 'completed' ? '' : ''}" title="${stage.description}">
+        <strong class="lifecycle-stage-label">${stage.sort}</strong>
+        <div>${stage.label}</div>
+        ${stage.date ? \`<span class="lifecycle-stage-date">\${fmtDate(stage.date)}</span>\` : ''}
+        ${stage.quantity > 0 ? \`<span class="lifecycle-stage-date">Qty: \${stage.quantity}</span>\` : ''}
+      </div>
+      \`;
+    }).join('')}
+  </div>`;
+}
+
+// ── Format Date Helper ──────────────────────────────────────────
+function fmtDate(date) {
+  if (!date) return '—';
+  if (typeof date === 'string') {
+    try { date = new Date(date); } catch(e) { return date; }
+  }
+  const d = new Date(date);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+}
+
+// ── Main Inventory Dashboard Renderer ────────────────────────────
+function renderInventoryDashboard(el, tx) {
+  // Header with tabs
+  const tabs = [
+    { id: 'overview', label: '📦 Overview', icon: '📦' },
+    { id: 'consumption', label: '🔧 Consumption', icon: '🔧' },
+    { id: 'returns', label: '↩️ Returns', icon: '↩️' },
+    { id: 'tracking', label: '🔍 Tracking', icon: '🔍' }
+  ];
+
+  el.innerHTML = `
+  <!-- INVENTORY DASHBOARD HEADER -->
+  <div class="insight-card" style="background:linear-gradient(135deg,#001A47,#003D8F);border:none;margin-bottom:18px">
+    <div class="insight-icon" style="background:rgba(255,255,255,.15);color:white;font-size:20px">📊</div>
+    <div class="insight-text" style="color:white">
+      <div class="insight-title" style="color:white;font-size:15px">Inventory & Part Tracking</div>
+      <span style="color:rgba(255,255,255,.75);font-size:12px">After Sales Department • Complete visibility of spare parts lifecycle</span>
+    </div>
+    <button onclick="PARTS_DB.loaded=false;renderParts()" style="background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px">⟳ Refresh</button>
+  </div>
+
+  <!-- TAB NAVIGATION -->
+  <div class="inventory-tabs">
+    ${tabs.map(tab => `
+      <button class="inventory-tab ${_inventoryState.activeView === tab.id ? 'active' : ''}"
+        onclick="updateInventoryFilter('activeView', '${tab.id}');renderParts()">
+        ${tab.icon} ${tab.label}
+      </button>
+    `).join('')}
+  </div>
+
+  <!-- SEARCH FILTERS -->
+  <div class="inventory-filters">
+    <div class="filter-group">
+      <label>Search Part Code / Name</label>
+      <input type="text" placeholder="e.g. 11220500000418"
+        value="${esc(_inventoryState.searchPartName)}"
+        oninput="updateInventoryFilter('searchPartName', this.value);renderParts()"
+        style="min-width:280px">
+    </div>
+    ${_inventoryState.activeView === 'tracking' ? `
+      <div class="filter-group">
+        <label>Select Part for Tracking</label>
+        <input type="text" placeholder="Enter part code"
+          value="${esc(_inventoryState.selectedPartTracking || '')}"
+          oninput="updateInventoryFilter('selectedPartTracking', this.value);renderParts()"
+          style="min-width:200px">
+      </div>
+    ` : ''}
+  </div>
+  `;
+
+  // Render content based on active view
+  switch(_inventoryState.activeView) {
+    case 'overview':
+      renderInventoryOverview(el, tx);
+      break;
+    case 'consumption':
+      renderInventoryConsumption(el, tx);
+      break;
+    case 'returns':
+      renderInventoryReturns(el, tx);
+      break;
+    case 'tracking':
+      renderPartTracking(el, tx);
+      break;
+    default:
+      renderInventoryOverview(el, tx);
+  }
+}
+
 // ── Render Spare Parts Page ────────────────────────────────────
 async function renderParts() {
   const el = document.getElementById('page-parts');
@@ -610,7 +954,13 @@ async function renderParts() {
   const stockMap   = calcStockMap(tx);
   const partsArr   = classifyABC(Object.values(stockMap));
 
-  // ── KPIs ──────────────────────────────────────────────────
+  // ── RENDER NEW INVENTORY DASHBOARD ─────────────────────────
+  // Initialize container for inventory dashboard
+  el.innerHTML = '';
+  renderInventoryDashboard(el, tx);
+
+  // ── Continue with classic view below (kept for backward compatibility) ───
+  // KPIs ──────────────────────────────────────────────────
   const totalSKUs    = partsArr.length;
   const totalStock   = partsArr.reduce((s,p)=>s+p.wh+p.svc, 0);
   const whStock      = partsArr.reduce((s,p)=>s+p.wh, 0);
@@ -670,7 +1020,11 @@ async function renderParts() {
     ? (partsReturnTotals.returned / partsReturnTotals.consumed * 100)
     : 0;
 
-  el.innerHTML=`
+  // ── APPEND CLASSIC PARTS VIEW ──────────────────────────────
+  el.innerHTML+=`
+  <!-- CLASSIC PARTS MANAGEMENT SECTION -->
+  <div style="margin-top:40px;padding-top:30px;border-top:2px solid var(--gray-100)">
+
   <!-- HEADER -->
   <div class="insight-card" style="background:linear-gradient(135deg,#001A47,#003D8F);border:none;margin-bottom:18px">
     <div class="insight-icon" style="background:rgba(255,255,255,.15);color:white;font-size:20px">🔩</div>
@@ -915,6 +1269,8 @@ async function renderParts() {
       ${partsArr.length>120?`<tr><td colspan="11" style="text-align:center;color:var(--gray-400);font-size:12px;padding:10px">Showing 120 of ${partsArr.length}</td></tr>`:''}
       </tbody>
     </table></div>
+  </div>
+
   </div>`;
 
   // ── Charts ──────────────────────────────────────────────
