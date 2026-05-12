@@ -776,7 +776,7 @@ function renderInventoryReturns(el, tx) {
             return `<tr>
               <td class="text-mono fw-600">${esc(r.code || '—')}</td>
               <td style="text-align:left">${esc(truncate(r.name || '—', 35))}</td>
-              <td style="text-align:left">${esc(r.asc ? \`\${r.branch} - \${r.asc}\` : r.branch)}</td>
+              <td style="text-align:left">${esc(r.asc ? r.branch + ' - ' + r.asc : r.branch)}</td>
               <td class="text-mono">${fmt(r.requested)}</td>
               <td class="text-mono">${fmt(r.received)}</td>
               <td>${statusBadge}</td>
@@ -819,7 +819,7 @@ function renderInventoryReturns(el, tx) {
             return `<tr>
               <td class="text-mono fw-600">${esc(r.code || '—')}</td>
               <td style="text-align:left">${esc(truncate(r.name || '—', 35))}</td>
-              <td style="text-align:left">${esc(r.asc ? \`\${r.branch} - \${r.asc}\` : r.branch)}</td>
+              <td style="text-align:left">${esc(r.asc ? r.branch + ' - ' + r.asc : r.branch)}</td>
               <td class="text-mono">${fmt(r.requested)}</td>
               <td class="text-mono">${fmt(r.received)}</td>
               <td>${statusBadge}</td>
@@ -858,14 +858,18 @@ function renderPartTracking(el, tx) {
   <div class="lifecycle-container">
     ${lifecycle.map((stage, idx) => {
       const nextStage = lifecycle[idx + 1];
-      return `
-      <div class="lifecycle-stage ${stage.status} ${stage.status === 'completed' ? '' : ''}" title="${stage.description}">
+      let stageHtml = `<div class="lifecycle-stage ${stage.status}" title="${stage.description}">
         <strong class="lifecycle-stage-label">${stage.sort}</strong>
-        <div>${stage.label}</div>
-        ${stage.date ? \`<span class="lifecycle-stage-date">\${fmtDate(stage.date)}</span>\` : ''}
-        ${stage.quantity > 0 ? \`<span class="lifecycle-stage-date">Qty: \${stage.quantity}</span>\` : ''}
-      </div>
-      \`;
+        <div>${stage.label}</div>`;
+
+      if (stage.date) {
+        stageHtml += `<span class="lifecycle-stage-date">${fmtDate(stage.date)}</span>`;
+      }
+      if (stage.quantity > 0) {
+        stageHtml += `<span class="lifecycle-stage-date">Qty: ${stage.quantity}</span>`;
+      }
+      stageHtml += `</div>`;
+      return stageHtml;
     }).join('')}
   </div>`;
 }
