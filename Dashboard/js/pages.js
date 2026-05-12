@@ -32,6 +32,56 @@ function filterTagHtml() {
   return '<div class="filter-tag">🔍 Filter: '+esc(_chartFilter.type)+' = '+esc(_chartFilter.value)+' <span class="filter-tag-x" onclick="clearChartFilter()">✕</span></div>';
 }
 
+// ── Table Sorting State ───────────────────────────────────────
+let _tableSort = {};  // {pageId: {column: 'ColName', direction: 'asc|desc'}}
+
+function setSortColumn(pageId, columnName) {
+  // Initialize if not exists
+  if (!_tableSort[pageId]) {
+    _tableSort[pageId] = {column: columnName, direction: 'asc'};
+  }
+  // Toggle direction if clicking same column
+  else if (_tableSort[pageId].column === columnName) {
+    _tableSort[pageId].direction = _tableSort[pageId].direction === 'asc' ? 'desc' : 'asc';
+  }
+  // New column: reset to ascending
+  else {
+    _tableSort[pageId] = {column: columnName, direction: 'asc'};
+  }
+  renderCurrentPage();
+}
+
+function getSortIndicator(pageId, columnName) {
+  if (!_tableSort[pageId]) return '';
+  if (_tableSort[pageId].column !== columnName) return '';
+  return _tableSort[pageId].direction === 'asc' ? ' ▲' : ' ▼';
+}
+
+function sortData(rows, columnName, direction) {
+  if (!columnName || !rows || rows.length === 0) return rows;
+
+  return [...rows].sort((a, b) => {
+    let aVal = a[columnName];
+    let bVal = b[columnName];
+
+    // Handle nulls/undefined
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return direction === 'asc' ? 1 : -1;
+    if (bVal == null) return direction === 'asc' ? -1 : 1;
+
+    // Auto-detect and sort by type
+    if (typeof aVal === 'number' && typeof bVal === 'number') {
+      return direction === 'asc' ? aVal - bVal : bVal - aVal;
+    } else if (aVal instanceof Date && bVal instanceof Date) {
+      return direction === 'asc' ? aVal - bVal : bVal - aVal;
+    } else {
+      // String comparison
+      const result = String(aVal).localeCompare(String(bVal));
+      return direction === 'asc' ? result : -result;
+    }
+  });
+}
+
 // ── PAGE 1: KPI OVERVIEW ─────────────────────────────────────
 function renderOverview(){
   const rows=DB.filtered, T=CONFIG.TARGETS;
