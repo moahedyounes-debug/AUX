@@ -102,7 +102,8 @@
       "mcp__Claude_in_Chrome__browser_batch",
       "Bash(git revert *)",
       "Bash(git commit *)",
-      "Bash(cd \"C:\\\\\\\\Users\\\\\\\\moahe\\\\\\\\OneDrive\\\\\\\\Desktop\\\\\\\\Dashboard\")"
+      "Bash(cd \"C:\\\\\\\\Users\\\\\\\\moahe\\\\\\\\OneDrive\\\\\\\\Desktop\\\\\\\\Dashboard\")",
+      "Bash(node -c \"C:\\\\Users\\\\moahe\\\\OneDrive\\\\Desktop\\\\Dashboard\\\\Dashboard\\\\js\\\\parts.js\")"
     ]
   }
 }

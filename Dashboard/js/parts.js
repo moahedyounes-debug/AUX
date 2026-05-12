@@ -50,7 +50,8 @@ function enrichTransaction(row) {
   const isWarehouse = warehouseName && (warehouseName.includes('warehouse') || warehouseName.includes('riyadh'));
 
   r._branch  = isWarehouse ? 'AUX Main WH Stock' : ((r[C.BRANCH] || r[C.BRANCH2] || '').trim() || 'Unknown');
-  r._asc     = (r[C.ASC]      || r[C.ASC2]    || '').trim();
+  // Warehouse transactions should not have ASC; clear it for warehouse
+  r._asc     = isWarehouse ? '' : ((r[C.ASC] || r[C.ASC2] || '').trim());
   // Part name: prefer Part Name, fallback to Second Part Name
   r._partName = ((r[C.PART_NAME]||'').trim() || (r[C.PART_NAME2]||'').trim() || (r[C.ACC_NAME]||'').trim());
   r._partCode = ((r[C.ACC_CODE]||'').trim()  || (r[C.CODE]||'').trim() || (r[C.CODE2]||'').trim());
@@ -135,6 +136,59 @@ function fmtMo(mk) {
   if (!mk) return '—';
   const [y,m]=mk.split('-');
   return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]+' '+y;
+}
+
+// ── Build Parts Return Summary (Consumed vs Returned) ───────────
+// Groups parts and tracks: consumed (Sort 8), returned (Sort 10,12), remaining
+function buildPartsReturnSummary(transactions) {
+  const partsMap = {};
+
+  transactions.forEach(tx => {
+    const key = tx._partCode || tx._partName;
+    if (!key) return;
+
+    if (!partsMap[key]) {
+      partsMap[key] = {
+        code: tx._partCode,
+        name: tx._partName,
+        branch: tx._branch,
+        asc: tx._asc,
+        consumed: 0,
+        returned: 0,
+      };
+    }
+
+    const p = partsMap[key];
+
+    // Sort 8 = Part Used By Tech → consumed
+    if (tx._sort === 8) {
+      p.consumed += tx._qty;
+      // Update branch/asc from consumed transaction (prioritize over initial values)
+      if (!p.branchFromConsumption) {
+        p.branch = tx._branch;
+        p.asc = tx._asc;
+        p.branchFromConsumption = true;
+      }
+    }
+    // Sort 10, 12 = Part Return Received → returned
+    else if (tx._sort === 10 || tx._sort === 12) {
+      p.returned += tx._qty;
+      // Update branch/asc from return transaction if we haven't gotten it from consumption yet
+      if (!p.branchFromConsumption) {
+        p.branch = tx._branch;
+        p.asc = tx._asc;
+      }
+    }
+  });
+
+  // Convert to array and calculate remaining
+  return Object.values(partsMap).map(p => {
+    delete p.branchFromConsumption; // Clean up temp flag
+    return {
+      ...p,
+      remaining: Math.max(0, p.consumed - p.returned)
+    };
+  });
 }
 
 // ── Filter transactions ────────────────────────────────────────
@@ -401,7 +455,15 @@ async function renderParts() {
       <thead><tr><th>Location (Branch - ASC)</th><th style="text-align:left">Part Code</th><th style="text-align:left">Part Name</th><th class="text-mono">Consumed</th><th class="text-mono">Returned</th><th class="text-mono">Remaining</th></tr></thead>
       <tbody>${partsWithRemaining.length === 0 ? '<tr><td colspan="6" class="table-empty">No outstanding parts</td></tr>' :
         partsWithRemaining.map(p=>{
-          const locationDisplay = p.branch && p.asc ? `${p.branch} - ${p.asc}` : (p.branch || '—');
+          // Location display logic:
+          // - Warehouse transactions: show "AUX Main WH Stock" only (no ASC)
+          // - Service center transactions: show "Branch - ASC" if both exist, else just "Branch"
+          let locationDisplay = '—';
+          if (p.branch === 'AUX Main WH Stock') {
+            locationDisplay = p.branch;  // Warehouse: no ASC suffix
+          } else if (p.branch) {
+            locationDisplay = p.asc ? `${p.branch} - ${p.asc}` : p.branch;
+          }
           return `<tr>
             <td class="fw-600 text-mono">${esc(locationDisplay)}</td>
             <td class="text-mono" style="text-align:left">${esc(p.code || '—')}</td>
