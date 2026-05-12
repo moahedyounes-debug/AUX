@@ -870,16 +870,6 @@ function renderPartTracking(el, tx) {
   </div>`;
 }
 
-// ── Format Date Helper ──────────────────────────────────────────
-function fmtDate(date) {
-  if (!date) return '—';
-  if (typeof date === 'string') {
-    try { date = new Date(date); } catch(e) { return date; }
-  }
-  const d = new Date(date);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
-}
-
 // ── Main Inventory Dashboard Renderer ────────────────────────────
 function renderInventoryDashboard(el, tx) {
   // Header with tabs
