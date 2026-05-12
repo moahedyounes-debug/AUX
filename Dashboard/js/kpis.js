@@ -272,3 +272,64 @@ function branchesWithPending(rows){
   return Object.entries(map).map(([branch,d])=>({branch,...d})).sort((a,b)=>b.count-a.count);
 }
 
+// ── PARTS RETURN SUMMARY (Loaner Model) ─────────────────
+// Tracks: Consumed (used by tech) vs Returned (by service provider)
+// Remaining = Consumed - Returned (with edge case handling)
+function buildPartsReturnSummary(transactions){
+  // Group by part key (code or name) + branch
+  const byPart={};
+
+  transactions.forEach(tx=>{
+    if(!tx._transactionType) return;
+    const key=`${tx._key}|${tx._branch}`;
+    if(!byPart[key]){
+      byPart[key]={
+        code: tx._partCode,
+        name: tx._partName,
+        branch: tx._branch,
+        asc: tx._asc,
+        consumed: 0,
+        returned: 0,
+        requested: 0,
+      };
+    }
+    const p=byPart[key];
+    if(tx._transactionType==='Part Used By Tech') p.consumed+=tx._qty;
+    else if(tx._transactionType==='Part Return Received') p.returned+=tx._qty;
+    else if(tx._transactionType==='Part Request By SVC') p.requested+=tx._qty;
+  });
+
+  // Calculate remaining and status
+  return Object.values(byPart).map(p=>{
+    // Remaining logic (matches Power BI model):
+    // If used=0 → blank; if no returned → show used; else → used - returned (min 0)
+    let remaining=null;
+    if(p.consumed>0){
+      if(p.returned===0) remaining=p.consumed;
+      else remaining=Math.max(0, p.consumed-p.returned);
+    }
+
+    const status=remaining===null?'unused':(remaining>0?'outstanding':'complete');
+
+    return{
+      code: p.code,
+      name: p.name,
+      branch: p.branch,
+      asc: p.asc,
+      consumed: p.consumed,
+      returned: p.returned,
+      remaining: remaining,
+      status: status,
+    };
+  }).sort((a,b)=>(a.branch+a.code).localeCompare(b.branch+b.code));
+}
+
+// Summary totals for parts return
+function partsReturnTotals(summary){
+  return{
+    consumed: summary.reduce((s,p)=>s+(p.consumed||0), 0),
+    returned: summary.reduce((s,p)=>s+(p.returned||0), 0),
+    outstanding: summary.reduce((s,p)=>s+(p.remaining||0), 0),
+  };
+}
+
