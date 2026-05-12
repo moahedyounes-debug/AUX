@@ -386,14 +386,14 @@ async function renderParts() {
   </div>
   <div class="table-card" style="margin-bottom:18px">
     <div class="table-header">
-      <div class="table-title">Parts by Branch &amp; Part Number</div>
-      <div class="table-count">${partsReturnSummary.length} parts</div>
+      <div class="table-title">Return Summary</div>
+      <div class="table-count">${partsReturnSummary.filter(p=>p.consumed>0).length} parts</div>
       <button class="export-btn excel" style="padding:4px 12px;font-size:11px" onclick="doExcelExportPartsReturn()">📥 Export</button>
     </div>
     <div class="table-scroll"><table class="data-table">
       <thead><tr><th>Code (Branch - ASC)</th><th style="text-align:left">Part Number</th><th style="text-align:left">Part Name</th><th class="text-mono">Consumed</th><th class="text-mono">Returned</th><th class="text-mono">Remaining</th></tr></thead>
-      <tbody>${partsReturnSummary.length === 0 ? '<tr><td colspan="6" class="table-empty">No parts with transactions</td></tr>' :
-        partsReturnSummary.map(p=>{
+      <tbody>${partsReturnSummary.filter(p=>p.consumed>0).length === 0 ? '<tr><td colspan="6" class="table-empty">No parts with consumption</td></tr>' :
+        partsReturnSummary.filter(p=>p.consumed>0).map(p=>{
           const remainingClass = p.remaining === null ? '' : (p.remaining > 0 ? 'color-danger fw-600' : 'color-success');
           const remainingText = p.remaining === null ? '—' : fmt(p.remaining);
           return `<tr>
@@ -960,9 +960,15 @@ async function doExcelExportPartsReturn(){
   };
   const returnRate = totals.consumed > 0 ? (totals.returned / totals.consumed * 100) : 0;
 
-  // Build Excel data
+  // Build Excel data (only parts with Consumed > 0)
   const headers=['Code (Branch - ASC)','Part Number','Part Name','Consumed','Returned','Remaining'];
-  const rows = summary.map(p=>[
+  const filteredSummary = summary.filter(p=>p.consumed>0);
+  const filteredTotals = {
+    consumed: filteredSummary.reduce((s,p)=>s+(p.consumed||0), 0),
+    returned: filteredSummary.reduce((s,p)=>s+(p.returned||0), 0),
+    outstanding: filteredSummary.reduce((s,p)=>s+(p.remaining||0), 0),
+  };
+  const rows = filteredSummary.map(p=>[
     p.branch || '',
     p.code || '',
     p.name || '',
@@ -972,7 +978,7 @@ async function doExcelExportPartsReturn(){
   ]);
 
   // Totals row
-  rows.push(['','','TOTAL',totals.consumed,totals.returned,totals.outstanding]);
+  rows.push(['','','TOTAL',filteredTotals.consumed,filteredTotals.returned,filteredTotals.outstanding]);
 
   const asc = DB.userASC || 'AUX';
   const dateStr = new Date().toISOString().split('T')[0];
