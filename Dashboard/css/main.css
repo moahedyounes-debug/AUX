@@ -298,6 +298,175 @@ body { font-family: var(--font); background: var(--gray-50); color: var(--gray-9
 .badge-gray   { background: var(--gray-100);   color: var(--gray-600); }
 
 /* ═══════════════════════════════════════════
+   INVENTORY DASHBOARD · TABS & FILTERS
+   ═══════════════════════════════════════════ */
+.inventory-tabs {
+  display: flex;
+  gap: 10px;
+  border-bottom: 2px solid var(--gray-100);
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.inventory-tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-weight: 500;
+  color: var(--gray-600);
+  font-size: 13px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.inventory-tab:hover {
+  color: var(--gray-800);
+}
+
+.inventory-tab.active {
+  border-bottom-color: var(--aux-blue);
+  color: var(--aux-blue);
+  font-weight: 600;
+}
+
+/* Search & Filter UI */
+.inventory-filters {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: var(--gray-50);
+  border-radius: var(--r-md);
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-group label {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--gray-700);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 8px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-sm);
+  background: white;
+  color: var(--gray-900);
+  font-family: var(--font);
+  font-size: 13px;
+  transition: border-color 0.2s ease;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--aux-blue);
+  box-shadow: 0 0 0 3px var(--aux-blue-mist);
+}
+
+/* Part Lifecycle Flowchart */
+.lifecycle-container {
+  display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  padding: 20px;
+  background: var(--gray-50);
+  border-radius: var(--r-md);
+  margin-bottom: 20px;
+}
+
+.lifecycle-stage {
+  min-width: 120px;
+  padding: 15px;
+  border-radius: var(--r-sm);
+  text-align: center;
+  font-size: 12px;
+  border: 2px solid var(--gray-200);
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.lifecycle-stage.completed {
+  background: var(--success-bg);
+  border-color: var(--success);
+  color: #1d6f42;
+}
+
+.lifecycle-stage.completed strong {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.lifecycle-stage.pending {
+  background: var(--warning-bg);
+  border-color: var(--warning);
+  color: #92400e;
+}
+
+.lifecycle-stage.current {
+  background: var(--aux-blue-mist);
+  border-color: var(--aux-blue);
+  color: var(--aux-blue);
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 61, 143, 0.15);
+}
+
+.lifecycle-stage-label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.lifecycle-stage-date {
+  font-size: 11px;
+  opacity: 0.75;
+  display: block;
+  margin-top: 4px;
+}
+
+/* Edit Mode for Requests */
+.edit-mode-row {
+  background: var(--warning-bg);
+  border-left: 4px solid var(--warning);
+}
+
+.edit-indicator {
+  display: inline-block;
+  background: var(--warning);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  margin-left: 5px;
+  font-weight: 600;
+}
+
+/* Low Stock Warning */
+.low-stock-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════
    AGING BARS
    ═══════════════════════════════════════════ */
 .aging-row      { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }

@@ -203,6 +203,379 @@ function buildPartsReturnSummary(transactions) {
     }));
 }
 
+// ═══════════════════════════════════════════════════════════════
+// INVENTORY & PART TRACKING DASHBOARD (Phase 1: Core Infrastructure)
+// ═══════════════════════════════════════════════════════════════
+
+// ── Inventory Dashboard State ────────────────────────────────────
+let _inventoryState = {
+  searchModel: '',           // Filter by Model
+  searchPartName: '',        // Filter by Part Name
+  selectedPartTracking: null, // Selected part for lifecycle view
+  editingRequestId: null,    // Supervisor edit mode for Pending Requests
+  activeView: 'overview'     // 'overview', 'consumption', 'returns', 'tracking'
+};
+
+function updateInventoryFilter(field, value) {
+  _inventoryState[field] = value;
+  renderParts(); // Re-render with new filters
+}
+
+// ── Check if transaction is warehouse-related ────────────────────
+// Reuses logic from enrichTransaction
+function isWarehouseTransaction(transaction) {
+  return transaction._branch === 'AUX Main WH Stock';
+}
+
+// ── Get only service center transactions (exclude warehouse) ──────
+function getServiceCenterTransactions(transactions) {
+  return transactions.filter(t => !isWarehouseTransaction(t));
+}
+
+// ── Build Main Branch Stock (aggregated warehouse inventory) ──────
+// Combines Sort 5 (inbound) + Sort 6 (distributed) for overall picture
+function buildMainBranchStock(transactions) {
+  const stockMap = {};
+
+  // Process all inbound and distributed transactions
+  transactions.forEach(tx => {
+    // Only process warehouse/inbound transactions (Sort 5, 6)
+    if (tx._sort !== 5 && tx._sort !== 6) return;
+    if (!isWarehouseTransaction(tx)) return; // Only warehouse
+
+    const code = tx._partCode;
+    const name = tx._partName;
+    const key = code || name;
+
+    if (!key) return;
+
+    if (!stockMap[key]) {
+      stockMap[key] = {
+        code: code,
+        name: name,
+        balance: 0,
+        consumed: 0,
+        lastReceived: null,
+        createdDate: null
+      };
+    }
+
+    const record = stockMap[key];
+
+    // Sort 5: inbound to warehouse
+    if (tx._sort === 5) {
+      record.balance += tx._qty;
+      record.lastReceived = tx._date;
+    }
+    // Sort 6: distributed from warehouse (decreases balance)
+    else if (tx._sort === 6) {
+      record.balance -= tx._qty;
+    }
+
+    // Track consumption from all service center usage
+    if (tx._sort === 8) {
+      record.consumed += tx._qty;
+    }
+
+    if (!record.createdDate && tx._date) {
+      record.createdDate = tx._date;
+    }
+  });
+
+  // Ensure non-negative balances
+  Object.values(stockMap).forEach(record => {
+    record.balance = Math.max(0, record.balance);
+  });
+
+  return Object.values(stockMap);
+}
+
+// ── Build SVC Center Distribution Stock (by Branch) ────────────────
+// Shows Sort 6 stock distributed to each branch/ASC
+function buildSvcCenterStock(transactions) {
+  const svcMap = {};
+
+  transactions.forEach(tx => {
+    // Only service center transactions (Sort 6 = distributed to SVC)
+    if (tx._sort !== 6) return;
+    if (isWarehouseTransaction(tx)) return;
+
+    const branch = tx._branch || 'Unknown';
+    const asc = tx._asc || 'N/A';
+    const locationKey = `${branch}|${asc}`;
+    const partKey = tx._partCode || tx._partName;
+
+    if (!partKey) return;
+
+    if (!svcMap[locationKey]) {
+      svcMap[locationKey] = {
+        branch: branch,
+        asc: asc,
+        location: asc ? `${branch} - ${asc}` : branch,
+        skus: new Set(),
+        balance: 0,
+        consumed: 0,
+        consumptionRate: 0,
+        lastUpdated: null
+      };
+    }
+
+    const location = svcMap[locationKey];
+    location.skus.add(partKey);
+    location.balance += tx._qty;
+    if (tx._date && (!location.lastUpdated || tx._date > location.lastUpdated)) {
+      location.lastUpdated = tx._date;
+    }
+  });
+
+  // Calculate consumption rate (consumed in last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  transactions.forEach(tx => {
+    // Sort 8 = consumption at SVC
+    if (tx._sort !== 8) return;
+    if (isWarehouseTransaction(tx)) return;
+
+    const branch = tx._branch || 'Unknown';
+    const asc = tx._asc || 'N/A';
+    const locationKey = `${branch}|${asc}`;
+
+    if (svcMap[locationKey] && tx._date && tx._date >= thirtyDaysAgo) {
+      svcMap[locationKey].consumptionRate += tx._qty;
+    }
+  });
+
+  return Object.values(svcMap).map(loc => ({
+    ...loc,
+    skus: loc.skus.size, // Convert Set to count
+    lowStock: loc.balance <= 3
+  }));
+}
+
+// ── Build Consumption Tracker (Sort 8 only from service centers) ────
+function buildConsumptionByBranch(transactions) {
+  const consumptionMap = {};
+
+  transactions.forEach(tx => {
+    // Only Sort 8 (consumption) from service centers
+    if (tx._sort !== 8) return;
+    if (isWarehouseTransaction(tx)) return;
+
+    const code = tx._partCode;
+    const name = tx._partName;
+    const key = code || name;
+    const branch = tx._branch || 'Unknown';
+    const locationKey = `${key}|${branch}`;
+
+    if (!key) return;
+
+    if (!consumptionMap[locationKey]) {
+      consumptionMap[locationKey] = {
+        code: code,
+        name: name,
+        branch: branch,
+        consumed: 0,
+        lastUsed: null,
+        usageCount: 0
+      };
+    }
+
+    const record = consumptionMap[locationKey];
+    record.consumed += tx._qty;
+    record.usageCount += 1;
+    if (tx._date && (!record.lastUsed || tx._date > record.lastUsed)) {
+      record.lastUsed = tx._date;
+    }
+  });
+
+  return Object.values(consumptionMap).sort((a, b) => b.consumed - a.consumed);
+}
+
+// ── Build Return Summary by Type (Defective vs New Parts) ──────────
+// Separates Sort 9-10 (defective) from Sort 11-12 (new/unused)
+function buildReturnSummaryByType(transactions) {
+  const defectiveMap = {};
+  const newPartMap = {};
+
+  // Process return request transactions (Sort 9 = defective request, Sort 11 = new request)
+  transactions.forEach(tx => {
+    if (tx._sort !== 9 && tx._sort !== 11) return;
+    if (isWarehouseTransaction(tx)) return;
+
+    const code = tx._partCode;
+    const name = tx._partName;
+    const key = code || name;
+    const branch = tx._branch || 'Unknown';
+    const asc = tx._asc || '';
+    const locationKey = `${key}|${branch}|${asc}`;
+
+    if (!key) return;
+
+    // Defective returns (Sort 9)
+    if (tx._sort === 9) {
+      if (!defectiveMap[locationKey]) {
+        defectiveMap[locationKey] = {
+          type: 'defective',
+          code: code,
+          name: name,
+          branch: branch,
+          asc: asc,
+          requested: 0,
+          received: 0,
+          status: 'Pending',
+          requestDate: null,
+          receivedDate: null
+        };
+      }
+      defectiveMap[locationKey].requested += tx._qty;
+      if (tx._date && !defectiveMap[locationKey].requestDate) {
+        defectiveMap[locationKey].requestDate = tx._date;
+      }
+    }
+
+    // New/unused returns (Sort 11)
+    if (tx._sort === 11) {
+      if (!newPartMap[locationKey]) {
+        newPartMap[locationKey] = {
+          type: 'new',
+          code: code,
+          name: name,
+          branch: branch,
+          asc: asc,
+          requested: 0,
+          received: 0,
+          status: 'Pending',
+          requestDate: null,
+          receivedDate: null
+        };
+      }
+      newPartMap[locationKey].requested += tx._qty;
+      if (tx._date && !newPartMap[locationKey].requestDate) {
+        newPartMap[locationKey].requestDate = tx._date;
+      }
+    }
+  });
+
+  // Process return received transactions (Sort 10 = defective received, Sort 12 = new received)
+  transactions.forEach(tx => {
+    if (tx._sort !== 10 && tx._sort !== 12) return;
+    if (isWarehouseTransaction(tx)) return;
+
+    const code = tx._partCode;
+    const name = tx._partName;
+    const key = code || name;
+    const branch = tx._branch || 'Unknown';
+    const asc = tx._asc || '';
+    const locationKey = `${key}|${branch}|${asc}`;
+
+    if (!key) return;
+
+    // Defective received (Sort 10)
+    if (tx._sort === 10) {
+      if (!defectiveMap[locationKey]) {
+        defectiveMap[locationKey] = {
+          type: 'defective',
+          code: code,
+          name: name,
+          branch: branch,
+          asc: asc,
+          requested: 0,
+          received: 0,
+          status: 'Completed',
+          requestDate: null,
+          receivedDate: null
+        };
+      }
+      defectiveMap[locationKey].received += tx._qty;
+      defectiveMap[locationKey].status = 'Completed';
+      if (tx._date && !defectiveMap[locationKey].receivedDate) {
+        defectiveMap[locationKey].receivedDate = tx._date;
+      }
+    }
+
+    // New received (Sort 12)
+    if (tx._sort === 12) {
+      if (!newPartMap[locationKey]) {
+        newPartMap[locationKey] = {
+          type: 'new',
+          code: code,
+          name: name,
+          branch: branch,
+          asc: asc,
+          requested: 0,
+          received: 0,
+          status: 'Completed',
+          requestDate: null,
+          receivedDate: null
+        };
+      }
+      newPartMap[locationKey].received += tx._qty;
+      newPartMap[locationKey].status = 'Completed';
+      if (tx._date && !newPartMap[locationKey].receivedDate) {
+        newPartMap[locationKey].receivedDate = tx._date;
+      }
+    }
+  });
+
+  return {
+    defective: Object.values(defectiveMap),
+    newParts: Object.values(newPartMap)
+  };
+}
+
+// ── Get Part Lifecycle (13 Sort stages) ──────────────────────────
+// Returns all transactions for a specific part code, showing progression
+function getPartLifecycle(partCode, allTransactions) {
+  if (!partCode) return [];
+
+  const partTransactions = allTransactions.filter(tx =>
+    tx._partCode === partCode || tx._partName === partCode
+  );
+
+  // Define all 13 sort stages
+  const stages = [
+    { sort: 1, label: 'PO Created', description: 'Purchase order initiated' },
+    { sort: 2, label: 'PO Received', description: 'Payment received' },
+    { sort: 3, label: 'In Transit', description: 'Shipment in transit' },
+    { sort: 4, label: 'Customs Cleared', description: 'Cleared customs' },
+    { sort: 5, label: 'Inbound WH', description: 'Received at main warehouse' },
+    { sort: 6, label: 'Distributed', description: 'Distributed to service centers' },
+    { sort: 7, label: 'Ready', description: 'Ready for issue' },
+    { sort: 8, label: 'Consumed', description: 'Used by technician' },
+    { sort: 9, label: 'Return Requested', description: 'Defective return requested' },
+    { sort: 10, label: 'Return Received', description: 'Defective return received at WH' },
+    { sort: 11, label: 'New Return Req', description: 'New/unused return requested' },
+    { sort: 12, label: 'New Received', description: 'New/unused return received at WH' },
+    { sort: 13, label: 'Damage Report', description: 'Damage/loss reported' }
+  ];
+
+  return stages.map(stage => {
+    const stageTx = partTransactions.find(tx => tx._sort === stage.sort);
+    return {
+      ...stage,
+      status: stageTx ? 'completed' : 'pending',
+      date: stageTx ? stageTx._date : null,
+      quantity: stageTx ? stageTx._qty : 0,
+      branch: stageTx ? stageTx._branch : null
+    };
+  });
+}
+
+// ── Filter Lifecycle by Search Criteria ──────────────────────────
+function filterInventoryBySearch(items, searchModel, searchPartName) {
+  return items.filter(item => {
+    const modelMatch = !searchModel ||
+      (item.model && item.model.toLowerCase().includes(searchModel.toLowerCase()));
+
+    const nameMatch = !searchPartName ||
+      (item.name && item.name.toLowerCase().includes(searchPartName.toLowerCase())) ||
+      (item.code && item.code.toLowerCase().includes(searchPartName.toLowerCase()));
+
+    return modelMatch && nameMatch;
+  });
+}
+
 // ── Filter transactions ────────────────────────────────────────
 function getFilteredTx() {
   let tx = PARTS_DB.transactions;
