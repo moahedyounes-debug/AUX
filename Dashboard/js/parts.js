@@ -140,12 +140,18 @@ function fmtMo(mk) {
 
 // ── Build Parts Return Summary (Consumed vs Returned) ───────────
 // Groups parts and tracks: consumed (Sort 8), returned (Sort 10,12), remaining
+// NOTE: Only tracks consumption at service centers (not AUX Main WH Stock - warehouse doesn't consume)
 function buildPartsReturnSummary(transactions) {
   const partsMap = {};
 
   transactions.forEach(tx => {
     const key = tx._partCode || tx._partName;
     if (!key) return;
+
+    // Skip warehouse transactions - warehouse doesn't consume parts (only service centers do)
+    if (tx._branch === 'AUX Main WH Stock' && tx._sort === 8) {
+      return;
+    }
 
     if (!partsMap[key]) {
       partsMap[key] = {
@@ -160,8 +166,8 @@ function buildPartsReturnSummary(transactions) {
 
     const p = partsMap[key];
 
-    // Sort 8 = Part Used By Tech → consumed
-    if (tx._sort === 8) {
+    // Sort 8 = Part Used By Tech → consumed (only from service centers, not warehouse)
+    if (tx._sort === 8 && tx._branch !== 'AUX Main WH Stock') {
       p.consumed += tx._qty;
       // Update branch/asc from consumed transaction (prioritize over initial values)
       if (!p.branchFromConsumption) {
@@ -170,8 +176,8 @@ function buildPartsReturnSummary(transactions) {
         p.branchFromConsumption = true;
       }
     }
-    // Sort 10, 12 = Part Return Received → returned
-    else if (tx._sort === 10 || tx._sort === 12) {
+    // Sort 10, 12 = Part Return Received → returned (only from service centers, not warehouse)
+    else if ((tx._sort === 10 || tx._sort === 12) && tx._branch !== 'AUX Main WH Stock') {
       p.returned += tx._qty;
       // Update branch/asc from return transaction if we haven't gotten it from consumption yet
       if (!p.branchFromConsumption) {
@@ -182,13 +188,16 @@ function buildPartsReturnSummary(transactions) {
   });
 
   // Convert to array and calculate remaining
-  return Object.values(partsMap).map(p => {
-    delete p.branchFromConsumption; // Clean up temp flag
-    return {
-      ...p,
-      remaining: Math.max(0, p.consumed - p.returned)
-    };
-  });
+  // Only return parts that actually have consumption (meaning they were used at service centers)
+  return Object.values(partsMap)
+    .filter(p => p.consumed > 0)
+    .map(p => {
+      delete p.branchFromConsumption; // Clean up temp flag
+      return {
+        ...p,
+        remaining: Math.max(0, p.consumed - p.returned)
+      };
+    });
 }
 
 // ── Filter transactions ────────────────────────────────────────
