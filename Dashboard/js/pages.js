@@ -61,8 +61,14 @@ function sortData(rows, columnName, direction) {
   if (!columnName || !rows || rows.length === 0) return rows;
 
   return [...rows].sort((a, b) => {
-    let aVal = a[columnName];
-    let bVal = b[columnName];
+    // Support nested properties (e.g., 'forecast.monthsLeft')
+    let aVal = a;
+    let bVal = b;
+    const parts = columnName.split('.');
+    for (const part of parts) {
+      aVal = aVal ? aVal[part] : null;
+      bVal = bVal ? bVal[part] : null;
+    }
 
     // Handle nulls/undefined
     if (aVal == null && bVal == null) return 0;
@@ -260,9 +266,9 @@ async function handlePartsReminder(ticketNo, branch, partDesc) {
 function renderDaily(){
   const allRows=DB.filtered, C=CONFIG.COLS;
   const rows=_chartFilter?getFilteredRows():allRows;
-  const today=KPI.todaySchedule(allRows), pending=KPI.pending(allRows);
+  let today=KPI.todaySchedule(allRows), pending=KPI.pending(allRows);
   const farDistance=allRows.filter(r=>r._farDistance);  // Tickets with Mileage > 60 KM
-  const cityLoad=KPI.byCity(allRows);  // Q'ty by City
+  let cityLoad=KPI.byCity(allRows);  // Q'ty by City
   const aging=KPI.agingDistribution(pending);
   const reasons=KPI.pendingByReason(allRows);
   const dispatchedWork=pending.filter(r=>r._isDispatchedWork).length;
@@ -270,7 +276,22 @@ function renderDaily(){
   const activeWorkers=[...new Set(today.map(r=>r[C.WORKER]).filter(Boolean))];
   const pivot=buildPendingPivot(allRows);
   const brAlerts=branchesWithPending(allRows);
-  const displayPending=_chartFilter?rows.filter(r=>r._isPending):pending;
+  let displayPending=_chartFilter?rows.filter(r=>r._isPending):pending;
+
+  // Apply sorting to Today's Visits table
+  if (_tableSort['daily-visits']) {
+    today = sortData(today, _tableSort['daily-visits'].column, _tableSort['daily-visits'].direction);
+  }
+
+  // Apply sorting to All Pending Tickets table
+  if (_tableSort['daily-pending']) {
+    displayPending = sortData(displayPending, _tableSort['daily-pending'].column, _tableSort['daily-pending'].direction);
+  }
+
+  // Apply sorting to Load by City table
+  if (_tableSort['daily-city']) {
+    cityLoad = sortData(cityLoad, _tableSort['daily-city'].column, _tableSort['daily-city'].direction);
+  }
 
   document.getElementById('page-daily').innerHTML=`
   ${filterTagHtml()}
@@ -288,7 +309,7 @@ function renderDaily(){
   <div class="table-card">
     <div class="table-header"><div class="table-title">Today's Visits (from Rescheduling date)</div><div class="table-count">${today.length} tickets</div></div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Ticket #</th><th>Branch</th><th>Worker</th><th>Ticket Status</th><th>Aging</th><th>Reason</th><th>Date</th><th>Remark</th><th>Parts</th></tr></thead>
+      <thead><tr><th onclick="setSortColumn('daily-visits','${C.TICKET_NUM}')">Ticket #${getSortIndicator('daily-visits',C.TICKET_NUM)}</th><th onclick="setSortColumn('daily-visits','_branch')">Branch${getSortIndicator('daily-visits','_branch')}</th><th onclick="setSortColumn('daily-visits','${C.WORKER}')">Worker${getSortIndicator('daily-visits',C.WORKER)}</th><th>Ticket Status</th><th onclick="setSortColumn('daily-visits','_agingHours')">Aging${getSortIndicator('daily-visits','_agingHours')}</th><th onclick="setSortColumn('daily-visits','_rescheduleReason')">Reason${getSortIndicator('daily-visits','_rescheduleReason')}</th><th onclick="setSortColumn('daily-visits','_rescheduled')">Date${getSortIndicator('daily-visits','_rescheduled')}</th><th onclick="setSortColumn('daily-visits','_rescheduleRemark')">Remark${getSortIndicator('daily-visits','_rescheduleRemark')}</th><th>Parts</th></tr></thead>
       <tbody>${today.length===0?'<tr><td colspan="9" class="table-empty">No visits scheduled for today</td></tr>':
         today.map(r=>'<tr>'+
           '<td class="ticket-id">'+esc(r[C.TICKET_NUM])+'</td><td>'+esc(r._branch)+'</td>'+
@@ -303,7 +324,7 @@ function renderDaily(){
   <div class="table-card">
     <div class="table-header"><div class="table-title">${_chartFilter?'Filtered Pending Tickets':'All Pending Tickets'}</div><div class="table-count">${displayPending.length} tickets</div></div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Ticket #</th><th>Branch</th><th>Worker</th><th>Ticket Status</th><th>Aging</th><th>Reason</th><th>Date</th><th>Remark</th><th>Parts</th></tr></thead>
+      <thead><tr><th onclick="setSortColumn('daily-pending','${C.TICKET_NUM}')">Ticket #${getSortIndicator('daily-pending',C.TICKET_NUM)}</th><th onclick="setSortColumn('daily-pending','_branch')">Branch${getSortIndicator('daily-pending','_branch')}</th><th onclick="setSortColumn('daily-pending','${C.WORKER}')">Worker${getSortIndicator('daily-pending',C.WORKER)}</th><th>Ticket Status</th><th onclick="setSortColumn('daily-pending','_agingHours')">Aging${getSortIndicator('daily-pending','_agingHours')}</th><th onclick="setSortColumn('daily-pending','_rescheduleReason')">Reason${getSortIndicator('daily-pending','_rescheduleReason')}</th><th onclick="setSortColumn('daily-pending','_rescheduleDate')">Date${getSortIndicator('daily-pending','_rescheduleDate')}</th><th onclick="setSortColumn('daily-pending','_rescheduleRemark')">Remark${getSortIndicator('daily-pending','_rescheduleRemark')}</th><th>Parts</th></tr></thead>
       <tbody>${displayPending.slice(0,80).map(r=>'<tr>'+
         '<td class="ticket-id">'+esc(r[C.TICKET_NUM])+'</td><td>'+esc(r._branch)+'</td>'+
         '<td>'+(r._hasWorker?esc(r[C.WORKER]):'<span class="badge badge-red">Unassigned</span>')+'</td>'+
@@ -331,7 +352,7 @@ function renderDaily(){
   <div class="table-card">
     <div class="table-header"><div class="table-title">Registration Q'ty &amp; Closed Q'ty by City</div><div class="table-count">${cityLoad.length} cities</div></div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>City</th><th class="text-mono">Registration</th><th class="text-mono">Closed</th><th class="text-mono">Pending</th><th class="text-mono">Pending %</th><th class="text-mono">48h Rate</th><th class="text-mono">72h Rate</th></tr></thead>
+      <thead><tr><th onclick="setSortColumn('daily-city','city')">City${getSortIndicator('daily-city','city')}</th><th class="text-mono" onclick="setSortColumn('daily-city','registration')">Registration${getSortIndicator('daily-city','registration')}</th><th class="text-mono" onclick="setSortColumn('daily-city','closed')">Closed${getSortIndicator('daily-city','closed')}</th><th class="text-mono" onclick="setSortColumn('daily-city','pending')">Pending${getSortIndicator('daily-city','pending')}</th><th class="text-mono" onclick="setSortColumn('daily-city','pendingRate')">Pending %${getSortIndicator('daily-city','pendingRate')}</th><th class="text-mono" onclick="setSortColumn('daily-city','rate48h')">48h Rate${getSortIndicator('daily-city','rate48h')}</th><th class="text-mono" onclick="setSortColumn('daily-city','rate72h')">72h Rate${getSortIndicator('daily-city','rate72h')}</th></tr></thead>
       <tbody>${cityLoad.length===0?'<tr><td colspan="7" class="table-empty">No data available</td></tr>':
         cityLoad.map(c=>'<tr>'+
           '<td class="fw-600">'+esc(c.city)+'</td>'+
@@ -369,13 +390,23 @@ function renderPending(){
   const pending=KPI.pending(rows), byBranch=KPI.pendingByBranch(rows);
   const byWorker=KPI.pendingByWorker(rows), byProduct=KPI.pendingByProduct(rows);
   const byReason=KPI.pendingByReason(rows), aging=KPI.agingDistribution(pending);
-  const causes=KPI.analyzeDelayReasons(rows);
+  let causes=KPI.analyzeDelayReasons(rows);
   const farCount=pending.filter(r=>r._farDistance).length;
   const pendNoReason=KPI.pendingNoReason(rows).length;
   // Category from Pending Reason sheet
   const catMap={};
   pending.forEach(r=>{const c=r._reasonCategory||'Unspecified';catMap[c]=(catMap[c]||0)+1;});
-  const categories=Object.entries(catMap).sort(([,a],[,b])=>b-a).map(([cat,count])=>({cat,count}));
+  let categories=Object.entries(catMap).sort(([,a],[,b])=>b-a).map(([cat,count])=>({cat,count}));
+
+  // Apply sorting to Category Summary table
+  if (_tableSort['pending-category']) {
+    categories = sortData(categories, _tableSort['pending-category'].column, _tableSort['pending-category'].direction);
+  }
+
+  // Apply sorting to Delay Reason Analysis table
+  if (_tableSort['pending-reasons']) {
+    causes = sortData(causes, _tableSort['pending-reasons'].column, _tableSort['pending-reasons'].direction);
+  }
 
   document.getElementById('page-pending').innerHTML=`
   ${filterTagHtml()}
@@ -390,14 +421,14 @@ function renderPending(){
   <div class="chart-grid two-thirds">
     <div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">By Category</div></div><div class="chart-wrap"><canvas id="ch-pend-cat"></canvas></div></div>
     <div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Category Summary</div></div>
-      <div class="table-scroll"><table class="data-table"><thead><tr><th>Category</th><th>Count</th><th>%</th></tr></thead>
+      <div class="table-scroll"><table class="data-table"><thead><tr><th onclick="setSortColumn('pending-category','cat')">Category${getSortIndicator('pending-category','cat')}</th><th onclick="setSortColumn('pending-category','count')">Count${getSortIndicator('pending-category','count')}</th><th>%</th></tr></thead>
       <tbody>${categories.map(c=>'<tr style="cursor:pointer" onclick="setChartFilter(\'category\',\''+esc(c.cat)+'\')"><td class="fw-600">'+esc(c.cat)+'</td><td class="text-mono">'+c.count+'</td><td class="text-mono">'+fmtPct(pending.length?c.count/pending.length*100:null)+'</td></tr>').join('')}</tbody></table></div>
     </div>
   </div>`:''}
   <div class="section-header"><div class="section-title">Delay Reason Analysis</div></div>
   <div class="table-card mb-20">
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Reason</th><th>Count</th><th>%</th><th>Avg Aging</th></tr></thead>
+      <thead><tr><th onclick="setSortColumn('pending-reasons','label')">Reason${getSortIndicator('pending-reasons','label')}</th><th onclick="setSortColumn('pending-reasons','count')">Count${getSortIndicator('pending-reasons','count')}</th><th>%</th><th onclick="setSortColumn('pending-reasons','avgAging')">Avg Aging${getSortIndicator('pending-reasons','avgAging')}</th></tr></thead>
       <tbody>${causes.map(c=>'<tr><td><span class="badge" style="background:'+c.badgeBg+';color:'+c.badge+'">'+esc(c.label)+'</span></td><td class="fw-600 text-mono">'+fmt(c.count)+'</td><td class="text-mono">'+fmtPct(pending.length?c.count/pending.length*100:null)+'</td><td class="text-mono">'+(c.avgAging!==null?fmt(c.avgAging,1)+'h':'—')+'</td></tr>').join('')}</tbody>
     </table></div>
   </div>
@@ -425,10 +456,15 @@ function renderPending(){
 // ── PAGE 5: BRANCH COMPARISON ─────────────────────────────────
 function renderBranches(){
   var rows=DB.filtered, branches=KPI.byBranch(rows), T=CONFIG.TARGETS;
+
+  // Apply sorting to Branch Ranking table
+  if (_tableSort['branches-ranking']) {
+    branches = sortData(branches, _tableSort['branches-ranking'].column, _tableSort['branches-ranking'].direction);
+  }
   document.getElementById('page-branches').innerHTML=
   '<div class="insight-card"><div class="insight-icon">📊</div><div class="insight-text"><div class="insight-title">Branch Ranking — '+esc(DB.userASC)+'</div>'+branches.length+' branches · Score = 40% 48h + 35% 72h + 25% Resolution</div></div>'+
   '<div class="chart-grid"><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">48h Rate</div><span class="section-badge">Target '+T.RATE_48H+'%</span></div><div class="chart-wrap tall"><canvas id="ch-br-48"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">72h Rate</div><span class="section-badge">Target '+T.RATE_72H+'%</span></div><div class="chart-wrap tall"><canvas id="ch-br-72"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Pending Rate</div></div><div class="chart-wrap"><canvas id="ch-br-pend"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Rescheduled</div></div><div class="chart-wrap"><canvas id="ch-br-rsch"></canvas></div></div></div>'+
-  '<div class="table-card"><div class="table-scroll"><table class="data-table"><thead><tr><th>Rank</th><th>Branch</th><th>Total</th><th>Pending</th><th>Pending Rate</th><th>48h Rate</th><th>72h Rate</th><th>Score</th></tr></thead><tbody>'+
+  '<div class="table-card"><div class="table-scroll"><table class="data-table"><thead><tr><th>Rank</th><th onclick="setSortColumn(\'branches-ranking\',\'branch\')">Branch${getSortIndicator('branches-ranking','branch')}</th><th onclick="setSortColumn(\'branches-ranking\',\'total\')">Total${getSortIndicator('branches-ranking','total')}</th><th onclick="setSortColumn(\'branches-ranking\',\'pending\')">Pending${getSortIndicator('branches-ranking','pending')}</th><th onclick="setSortColumn(\'branches-ranking\',\'pendingRate\')">Pending Rate${getSortIndicator('branches-ranking','pendingRate')}</th><th onclick="setSortColumn(\'branches-ranking\',\'rate48h\')">48h Rate${getSortIndicator('branches-ranking','rate48h')}</th><th onclick="setSortColumn(\'branches-ranking\',\'rate72h\')">72h Rate${getSortIndicator('branches-ranking','rate72h')}</th><th onclick="setSortColumn(\'branches-ranking\',\'score\')">Score${getSortIndicator('branches-ranking','score')}</th></tr></thead><tbody>'+
   branches.map(function(b,i){return '<tr onclick="setChartFilter(\'branch\',\''+esc(b.branch)+'\')" style="cursor:pointer"><td><div class="rank-num '+(i===0?'gold':i===1?'silver':i===2?'bronze':'other')+'" style="display:inline-flex">'+(i+1)+'</div></td><td class="fw-600">'+esc(b.branch)+'</td><td class="text-mono">'+fmt(b.total)+'</td><td class="text-mono">'+fmt(b.pending)+'</td><td>'+targetBadge(b.pendingRate,T.PENDING_RATE,false)+'</td><td>'+targetBadge(b.rate48h,T.RATE_48H)+'</td><td>'+targetBadge(b.rate72h,T.RATE_72H)+'</td><td><span class="badge '+(b.score>=80?'badge-green':b.score>=60?'badge-blue':'badge-amber')+'">'+fmt(b.score,1)+'</span></td></tr>';}).join('')+
   '</tbody></table></div></div>';
   var bl=branches.map(function(b){return truncate(b.branch,20);});
@@ -443,6 +479,11 @@ function renderRejected(){
   var rows=DB.filtered, C=CONFIG.COLS;
   var rej=KPI.rejectedOnly(rows), ret=KPI.returnedOnly(rows), obm=KPI.obmOnly(rows);
   var all=KPI.rejectedAll(rows);
+
+  // Apply sorting to Rejected/Returned/OBM table
+  if (_tableSort['rejected-records']) {
+    all = sortData(all, _tableSort['rejected-records'].column, _tableSort['rejected-records'].direction);
+  }
   var aging=KPI.agingDistribution(all);
   var byBr=KPI.rejectedByBranch(rows), byWk=KPI.rejectedByWorker(rows);
   document.getElementById('page-rejected').innerHTML=
@@ -452,7 +493,7 @@ function renderRejected(){
     '<div class="kpi-card blue"><div class="kpi-label">OBM Statement</div><div class="kpi-value">'+fmt(obm.length)+'</div><div class="kpi-delta">Cancel + OBM</div></div>'+
     '<div class="kpi-card gray"><div class="kpi-label">Combined</div><div class="kpi-value">'+fmt(all.length)+'</div><div class="kpi-delta">'+(rows.length?fmtPct(all.length/rows.length*100):'—')+' of total</div></div></div>'+
   '<div class="chart-grid"><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Type Breakdown</div></div><div class="chart-wrap"><canvas id="ch-rj-type"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Aging</div></div><div id="aging-rj" style="padding-top:8px"></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">By Branch</div></div><div class="chart-wrap"><canvas id="ch-rj-br"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">By Technician</div></div><div class="chart-wrap"><canvas id="ch-rj-wk"></canvas></div></div></div>'+
-  '<div class="table-card"><div class="table-header"><div class="table-title">Rejected / Returned / OBM</div><div class="table-count">'+all.length+' records</div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>Ticket #</th><th>Branch</th><th>Worker</th><th>Type</th><th>Phase</th><th>Result</th><th>Service Info</th><th>Aging</th></tr></thead><tbody>'+
+  '<div class="table-card"><div class="table-header"><div class="table-title">Rejected / Returned / OBM</div><div class="table-count">'+all.length+' records</div></div><div class="table-scroll"><table class="data-table"><thead><tr><th onclick="setSortColumn(\'rejected-records\',\''+C.TICKET_NUM+'\')">Ticket #${getSortIndicator('rejected-records',C.TICKET_NUM)}</th><th onclick="setSortColumn(\'rejected-records\',\'_branch\')">Branch${getSortIndicator('rejected-records','_branch')}</th><th onclick="setSortColumn(\'rejected-records\',\''+C.WORKER+'\')">Worker${getSortIndicator('rejected-records',C.WORKER)}</th><th>Type</th><th onclick="setSortColumn(\'rejected-records\',\''+C.PHASE+'\')">Phase${getSortIndicator('rejected-records',C.PHASE)}</th><th onclick="setSortColumn(\'rejected-records\',\''+C.COMPLETION_RESULT+'\')">Result${getSortIndicator('rejected-records',C.COMPLETION_RESULT)}</th><th onclick="setSortColumn(\'rejected-records\',\''+C.SERVICE_INFO+'\')">Service Info${getSortIndicator('rejected-records',C.SERVICE_INFO)}</th><th onclick="setSortColumn(\'rejected-records\',\'_agingHours\')">Aging${getSortIndicator('rejected-records','_agingHours')}</th></tr></thead><tbody>'+
   (all.length===0?'<tr><td colspan="8" class="table-empty">No records found</td></tr>':
   all.slice(0,60).map(function(r){return '<tr><td class="ticket-id">'+esc(r[C.TICKET_NUM])+'</td><td>'+esc(r._branch)+'</td><td>'+esc(r[C.WORKER]||'—')+'</td><td>'+statusBadge(r)+'</td><td>'+esc(r[C.PHASE]||'—')+'</td><td>'+esc(r[C.COMPLETION_RESULT]||'—')+'</td><td>'+esc(truncate(r[C.SERVICE_INFO]||r[C.SERVICE_TYPE]||'—',30))+'</td><td>'+agingBadge(r._agingHours)+'</td></tr>';}).join(''))+
   '</tbody></table></div></div>';
