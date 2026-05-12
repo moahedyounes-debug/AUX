@@ -381,16 +381,19 @@ function enrichRow(row) {
 
   // ── Dynamic suffix based on actual data ──
   // Check both appointment date AND reason/remark
+  // ONLY apply dynamic suffixes to PENDING tickets - completed tickets show base status only
   let finalLabel = baseLabel;
   const hasAppointment = r._rescheduled;
   const hasReason = r._hasRescheduleReason || r._rescheduleRemark;
 
-  if (hasAppointment && hasReason) {
-    finalLabel += ' and appointment and reason updated';
-  } else if (hasAppointment) {
-    finalLabel += ' and appointment updated';
-  } else if (hasReason) {
-    finalLabel += ' and reason updated';
+  if (r._isPending) {
+    if (hasAppointment && hasReason) {
+      finalLabel += ' and appointment and reason updated';
+    } else if (hasAppointment) {
+      finalLabel += ' and appointment updated';
+    } else if (hasReason) {
+      finalLabel += ' and reason updated';
+    }
   }
 
   r._phaseLabel = finalLabel;
