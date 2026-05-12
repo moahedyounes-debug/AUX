@@ -97,7 +97,8 @@
       "Bash(git commit -m 'fix: Reverse status labels for Accepting orders and Change of schedule phases *)",
       "Bash(git commit -m 'feat: Implement dynamic status labels based on actual ticket data *)",
       "Bash(git commit -m 'fix: Ensure model field is properly trimmed when loading parts *)",
-      "Bash(git commit -m 'fix: Correct status mapping for Part Not Available and Dispatched statuses *)"
+      "Bash(git commit -m 'fix: Correct status mapping for Part Not Available and Dispatched statuses *)",
+      "Bash(git commit -m 'fix: Correct dynamic status label logic to show both appointment and reason when available *)"
     ]
   }
 }

@@ -380,12 +380,16 @@ function enrichRow(row) {
   }
 
   // ── Dynamic suffix based on actual data ──
-  // If Rescheduling date available → append " and appointment updated"
-  // Else if Reason or Remark available → append " and reason updated"
+  // Check both appointment date AND reason/remark
   let finalLabel = baseLabel;
-  if (r._rescheduled) {
+  const hasAppointment = r._rescheduled;
+  const hasReason = r._hasRescheduleReason || r._rescheduleRemark;
+
+  if (hasAppointment && hasReason) {
+    finalLabel += ' and appointment and reason updated';
+  } else if (hasAppointment) {
     finalLabel += ' and appointment updated';
-  } else if (r._hasRescheduleReason || r._rescheduleRemark) {
+  } else if (hasReason) {
     finalLabel += ' and reason updated';
   }
 
