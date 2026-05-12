@@ -886,6 +886,14 @@ function buildPendingBoard() {
     PARTS_REQUESTS.forEach(r => {
       const id = r['Order Number'] || '';
       if (id && !all.find(x => x.orderNo === id)) {
+        // Map Final Status to status category
+        const finalStatus = (r['Final Status']||'Pending').toLowerCase();
+        let status = 'pending';
+        if (finalStatus.includes('receiv')) status = 'received';
+        else if (finalStatus.includes('dispatched')) status = 'dispatched';
+        else if (finalStatus.includes('unavailable') || finalStatus.includes('not available')) status = 'unavailable';
+        else if (finalStatus.includes('sent')) status = 'sent';
+
         all.push({
           id:      'REQ-'+id.slice(-4),
           orderNo: id,
@@ -893,8 +901,7 @@ function buildPendingBoard() {
           code:    r['Part Number'] || '',
           branch:  r['Branch'] || '—',
           qty:     r['Qty'] || '1',
-          status:  (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
-                   (r['Final Status']||'').toLowerCase().includes('sent')?'sent':'pending',
+          status:  status,
           time:    r['Request Date'] || '—',
           awb:     r['AWB'] || '',
         });
