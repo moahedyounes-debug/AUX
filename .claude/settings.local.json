@@ -101,7 +101,8 @@
       "Bash(git commit -m 'fix: Correct dynamic status label logic to show both appointment and reason when available *)",
       "mcp__Claude_in_Chrome__browser_batch",
       "Bash(git revert *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(cd \"C:\\\\\\\\Users\\\\\\\\moahe\\\\\\\\OneDrive\\\\\\\\Desktop\\\\\\\\Dashboard\")"
     ]
   }
 }

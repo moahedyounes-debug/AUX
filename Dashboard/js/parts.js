@@ -44,7 +44,12 @@ function enrichTransaction(row) {
   r._sort    = parseInt(r[C.SORT] || r['Sort'] || '0') || 0;
   r._qty     = Math.abs(parseFloat(r[C.QTY]) || 0);
   r._date    = parseDate(r[C.CREATED]);
-  r._branch  = (r[C.BRANCH]   || r[C.BRANCH2] || '').trim() || 'Unknown';
+
+  // Detect if this is warehouse stock (has Warehouse Name field = central AUX warehouse)
+  const warehouseName = (r[C.WAREHOUSE] || '').trim().toLowerCase();
+  const isWarehouse = warehouseName && (warehouseName.includes('warehouse') || warehouseName.includes('riyadh'));
+
+  r._branch  = isWarehouse ? 'AUX Main WH Stock' : ((r[C.BRANCH] || r[C.BRANCH2] || '').trim() || 'Unknown');
   r._asc     = (r[C.ASC]      || r[C.ASC2]    || '').trim();
   // Part name: prefer Part Name, fallback to Second Part Name
   r._partName = ((r[C.PART_NAME]||'').trim() || (r[C.PART_NAME2]||'').trim() || (r[C.ACC_NAME]||'').trim());
@@ -393,12 +398,12 @@ async function renderParts() {
       <button class="export-btn excel" style="padding:4px 12px;font-size:11px" onclick="doExcelExportPartsReturn()">📥 Export CSV</button>
     </div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Code</th><th style="text-align:left">Part Number</th><th style="text-align:left">Part Name</th><th class="text-mono">Consumed</th><th class="text-mono">Returned</th><th class="text-mono">Remaining</th></tr></thead>
+      <thead><tr><th>Location (Branch - ASC)</th><th style="text-align:left">Part Code</th><th style="text-align:left">Part Name</th><th class="text-mono">Consumed</th><th class="text-mono">Returned</th><th class="text-mono">Remaining</th></tr></thead>
       <tbody>${partsWithRemaining.length === 0 ? '<tr><td colspan="6" class="table-empty">No outstanding parts</td></tr>' :
         partsWithRemaining.map(p=>{
-          const codeDisplay = p.branch && p.code ? `${p.branch} - ${p.code}` : (p.code || '—');
+          const locationDisplay = p.branch && p.asc ? `${p.branch} - ${p.asc}` : (p.branch || '—');
           return `<tr>
-            <td class="fw-600 text-mono">${esc(codeDisplay)}</td>
+            <td class="fw-600 text-mono">${esc(locationDisplay)}</td>
             <td class="text-mono" style="text-align:left">${esc(p.code || '—')}</td>
             <td style="text-align:left">${esc(p.name || '—')}</td>
             <td class="text-mono">${fmt(p.consumed)}</td>
