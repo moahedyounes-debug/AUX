@@ -215,10 +215,12 @@ async function renderParts() {
   // ── Parts Return Summary (Loaner Model) ─────────────────
   // Track: Consumed (used by tech) vs Returned (by service provider)
   const partsReturnSummary = buildPartsReturnSummary(tx);
+  // Calculate totals ONLY for parts with remaining > 0 (matches table display)
+  const partsWithRemaining = partsReturnSummary.filter(p => p.remaining > 0);
   const partsReturnTotals = {
-    consumed: partsReturnSummary.reduce((s,p)=>s+(p.consumed||0), 0),
-    returned: partsReturnSummary.reduce((s,p)=>s+(p.returned||0), 0),
-    outstanding: partsReturnSummary.reduce((s,p)=>s+(p.remaining||0), 0),
+    consumed: partsWithRemaining.reduce((s,p)=>s+(p.consumed||0), 0),
+    returned: partsWithRemaining.reduce((s,p)=>s+(p.returned||0), 0),
+    outstanding: partsWithRemaining.reduce((s,p)=>s+(p.remaining||0), 0),
   };
   const returnRate = partsReturnTotals.consumed > 0
     ? (partsReturnTotals.returned / partsReturnTotals.consumed * 100)
@@ -339,11 +341,11 @@ async function renderParts() {
     </div>
   </div>
 
-  <!-- BRANCH STOCK SUMMARY -->
-  <div class="section-header"><div class="section-title">Branch Stock Summary</div></div>
+  <!-- BRANCH STOCK SUMMARY (SVC = Service Center stock, WH = Warehouse stock) -->
+  <div class="section-header"><div class="section-title">Branch Stock Summary</div><span class="section-badge" style="font-size:11px;font-weight:400">SVC = Service Center Stock</span></div>
   <div class="table-card" style="margin-bottom:18px">
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th style="text-align:left">BRANCH</th><th>SKUs</th><th>BALANCE</th><th>LOW</th><th>ZERO</th><th>USAGE</th><th>HEALTH</th></tr></thead>
+      <thead><tr><th style="text-align:left">BRANCH / WAREHOUSE</th><th>SKUs</th><th>SVC Stock</th><th>Low (≤3)</th><th>Out of Stock</th><th>Consumed</th><th>HEALTH</th></tr></thead>
       <tbody>${branchSummary.map(b=>{
         const cls=b.zero>5?'badge-red':b.low>3?'badge-amber':'badge-green';
         const lbl=b.zero>5?'⚠️ Critical':b.low>3?'🟡 Watch':'✅ Good';
@@ -360,8 +362,8 @@ async function renderParts() {
     </table></div>
   </div>
 
-  <!-- DEFECTIVE PARTS RETURN SUMMARY (Loaner Model) -->
-  <div class="section-header"><div class="section-title">Defective Parts Return Summary — Loaner Model</div><span class="section-badge">${partsReturnSummary.length} parts</span></div>
+  <!-- DEFECTIVE PARTS RETURN SUMMARY -->
+  <div class="section-header"><div class="section-title">Defective Parts Return Summary</div><span class="section-badge">${partsWithRemaining.length} outstanding</span></div>
   <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     <div class="kpi-card blue">
       <div class="kpi-label">Total Consumed</div>
@@ -387,22 +389,21 @@ async function renderParts() {
   <div class="table-card" style="margin-bottom:18px">
     <div class="table-header">
       <div class="table-title">Return Summary</div>
-      <div class="table-count">${partsReturnSummary.filter(p=>p.consumed>0).length} parts</div>
-      <button class="export-btn excel" style="padding:4px 12px;font-size:11px" onclick="doExcelExportPartsReturn()">📥 Export</button>
+      <div class="table-count">${partsWithRemaining.length} outstanding</div>
+      <button class="export-btn excel" style="padding:4px 12px;font-size:11px" onclick="doExcelExportPartsReturn()">📥 Export CSV</button>
     </div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Code (Branch - ASC)</th><th style="text-align:left">Part Number</th><th style="text-align:left">Part Name</th><th class="text-mono">Consumed</th><th class="text-mono">Returned</th><th class="text-mono">Remaining</th></tr></thead>
-      <tbody>${partsReturnSummary.filter(p=>p.consumed>0).length === 0 ? '<tr><td colspan="6" class="table-empty">No parts with consumption</td></tr>' :
-        partsReturnSummary.filter(p=>p.consumed>0).map(p=>{
-          const remainingClass = p.remaining === null ? '' : (p.remaining > 0 ? 'color-danger fw-600' : 'color-success');
-          const remainingText = p.remaining === null ? '—' : fmt(p.remaining);
+      <thead><tr><th>Code</th><th style="text-align:left">Part Number</th><th style="text-align:left">Part Name</th><th class="text-mono">Consumed</th><th class="text-mono">Returned</th><th class="text-mono">Remaining</th></tr></thead>
+      <tbody>${partsWithRemaining.length === 0 ? '<tr><td colspan="6" class="table-empty">No outstanding parts</td></tr>' :
+        partsWithRemaining.map(p=>{
+          const codeDisplay = p.branch && p.code ? `${p.branch} - ${p.code}` : (p.code || '—');
           return `<tr>
-            <td class="fw-600">${esc(p.branch)}</td>
+            <td class="fw-600 text-mono">${esc(codeDisplay)}</td>
             <td class="text-mono" style="text-align:left">${esc(p.code || '—')}</td>
             <td style="text-align:left">${esc(p.name || '—')}</td>
             <td class="text-mono">${fmt(p.consumed)}</td>
             <td class="text-mono">${fmt(p.returned)}</td>
-            <td class="text-mono ${remainingClass}">${remainingText}</td>
+            <td class="text-mono color-danger fw-600">${fmt(p.remaining)}</td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -947,120 +948,57 @@ async function sendPartsReminder(ticketNo, branch, partDesc) {
   logActivity(`Parts Reminder — ${ticketNo} · ${branch}`);
 }
 
-// ── EXPORT: Parts Return Summary to Excel ───────────────
+// ── EXPORT: Parts Return Summary to CSV ────────────────
 async function doExcelExportPartsReturn(){
   // Ensure data is loaded
   if(!PARTS_DB.loaded) await loadPartsData();
   const tx = getFilteredTx();
   const summary = buildPartsReturnSummary(tx);
-  const totals = {
-    consumed: summary.reduce((s,p)=>s+(p.consumed||0), 0),
-    returned: summary.reduce((s,p)=>s+(p.returned||0), 0),
-    outstanding: summary.reduce((s,p)=>s+(p.remaining||0), 0),
-  };
-  const returnRate = totals.consumed > 0 ? (totals.returned / totals.consumed * 100) : 0;
 
-  // Build Excel data (only parts with Consumed > 0)
-  const headers=['Code (Branch - ASC)','Part Number','Part Name','Consumed','Returned','Remaining'];
-  const filteredSummary = summary.filter(p=>p.consumed>0);
+  // Export only parts with remaining > 0
+  const filteredSummary = summary.filter(p=>p.remaining>0);
   const filteredTotals = {
     consumed: filteredSummary.reduce((s,p)=>s+(p.consumed||0), 0),
     returned: filteredSummary.reduce((s,p)=>s+(p.returned||0), 0),
     outstanding: filteredSummary.reduce((s,p)=>s+(p.remaining||0), 0),
   };
-  const rows = filteredSummary.map(p=>[
-    p.branch || '',
-    p.code || '',
-    p.name || '',
-    p.consumed || 0,
-    p.returned || 0,
-    p.remaining !== null ? p.remaining : '',
-  ]);
-
-  // Totals row
-  rows.push(['','','TOTAL',filteredTotals.consumed,filteredTotals.returned,filteredTotals.outstanding]);
 
   const asc = DB.userASC || 'AUX';
   const dateStr = new Date().toISOString().split('T')[0];
 
-  // Build XLSX (using same pattern as doExcelExport in pages.js)
-  let sx = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-    <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-    <sheetData>`;
-
-  // Summary section
-  sx += `<row r="1"><c t="str"><v>DEFECTIVE PARTS RETURN SUMMARY — LOANER MODEL</v></c></row>
-         <row r="2"><c t="str"><v></v></c></row>
-         <row r="3"><c t="str"><v>Service Center (ASC)</v></c><c t="str"><v>${esc(asc)}</v></c></row>
-         <row r="4"><c t="str"><v>Report Date</v></c><c t="str"><v>${dateStr}</v></c></row>
-         <row r="5"><c t="str"><v></v></c></row>
-         <row r="6"><c t="str"><v>Key Metrics</v></c></row>
-         <row r="7"><c t="str"><v>Total Consumed</v></c><c><v>${totals.consumed}</v></c><c t="str"><v>(Parts used by technicians)</v></c></row>
-         <row r="8"><c t="str"><v>Total Returned</v></c><c><v>${totals.returned}</v></c><c t="str"><v>(Parts returned by service providers)</v></c></row>
-         <row r="9"><c t="str"><v>Outstanding</v></c><c><v>${totals.outstanding}</v></c><c t="str"><v>(Not yet returned)</v></c></row>
-         <row r="10"><c t="str"><v>Return Rate</v></c><c><v>${returnRate.toFixed(2)}</v></c><c t="str"><v>%</v></c></row>
-         <row r="11"><c t="str"><v></v></c></row>`;
-
-  // Table headers
-  let r = 12;
-  sx += `<row r="${r}">`;
-  headers.forEach((h,i)=>{
-    sx += `<c t="str"><v>${esc(h)}</v></c>`;
-  });
-  sx += `</row>`;
+  // Build CSV with summary header
+  let csv = `"DEFECTIVE PARTS RETURN SUMMARY"\n`;
+  csv += `"Service Center (ASC)","${asc}"\n`;
+  csv += `"Report Date","${dateStr}"\n`;
+  csv += `"Key Metrics"\n`;
+  csv += `"Total Consumed",${filteredTotals.consumed}\n`;
+  csv += `"Total Returned",${filteredTotals.returned}\n`;
+  csv += `"Outstanding",${filteredTotals.outstanding}\n`;
+  csv += `\n"Code (Branch)","Part Code","Part Name","Consumed","Returned","Remaining"\n`;
 
   // Data rows
-  rows.forEach(row=>{
-    r++;
-    sx += `<row r="${r}">`;
-    row.forEach((val,i)=>{
-      const t = typeof val === 'number' ? 'n' : 'str';
-      sx += `<c t="${t}"><v>${esc(String(val))}</v></c>`;
-    });
-    sx += `</row>`;
+  filteredSummary.forEach(p=>{
+    const branch = p.branch || '—';
+    const code = p.code || '—';
+    const name = p.name || '—';
+    csv += `"${branch} - ${code}","${code}","${name}",${p.consumed},${p.returned},${p.remaining}\n`;
   });
 
-  sx += `</sheetData></worksheet>`;
+  // Totals row
+  csv += `"","TOTAL","",${filteredTotals.consumed},${filteredTotals.returned},${filteredTotals.outstanding}\n`;
 
-  // Build XLSX structure
-  const files={
-    '!.gitkeep':true,
-    '[Content_Types].xml':
-      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`,
-    '_rels/.rels':
-      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
-    'xl/workbook.xml':
-      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets><sheet name="Parts Return" sheetId="1" r:id="rId1" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/></sheets></workbook>`,
-    'xl/_rels/workbook.xml.rels':
-      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`,
-    'xl/worksheets/sheet1.xml': sx,
-  };
-
-  // Create ZIP (simplified - using data URL approach)
-  const blob = new Blob([
-    await buildZipFromFiles(files)
-  ], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-
+  // Download CSV
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `AUX_${asc}_Parts_Return_${dateStr}.xlsx`;
+  a.download = `AUX_${asc}_Parts_Return_${dateStr}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 
-  logActivity(`Excel Export — Parts Return Summary · ${asc}`);
-}
-
-// Helper to build ZIP from files (reuse existing pattern or use simple concatenation)
-async function buildZipFromFiles(files){
-  // Fallback: create CSV instead if ZIP is too complex
-  const csv = buildPartsReturnSummary(getFilteredTx()).map(p=>
-    [p.branch,p.code,p.name,p.consumed,p.returned,p.remaining||''].join(',')
-  ).join('\\n');
-  const header = 'Code (Branch - ASC),Part Number,Part Name,Consumed,Returned,Remaining\\n';
-  return new Blob([header+csv], {type:'text/csv'});
+  logActivity(`CSV Export — Parts Return Summary · ${asc}`);
 }
 
 // ── req-btn style ──────────────────────────────────────────────
