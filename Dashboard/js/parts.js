@@ -144,14 +144,13 @@ function fmtMo(mk) {
 function buildPartsReturnSummary(transactions) {
   const partsMap = {};
 
+  // First pass: collect consumption data (Sort 8) from service centers only
   transactions.forEach(tx => {
+    if (tx._sort !== 8) return; // Only process consumed transactions
+    if (tx._branch === 'AUX Main WH Stock') return; // Skip warehouse
+
     const key = tx._partCode || tx._partName;
     if (!key) return;
-
-    // Skip warehouse transactions - warehouse doesn't consume parts (only service centers do)
-    if (tx._branch === 'AUX Main WH Stock' && tx._sort === 8) {
-      return;
-    }
 
     if (!partsMap[key]) {
       partsMap[key] = {
@@ -165,39 +164,43 @@ function buildPartsReturnSummary(transactions) {
     }
 
     const p = partsMap[key];
+    p.consumed += tx._qty;
+    // Update branch/asc from this consumption transaction
+    p.branch = tx._branch;
+    p.asc = tx._asc;
+  });
 
-    // Sort 8 = Part Used By Tech → consumed (only from service centers, not warehouse)
-    if (tx._sort === 8 && tx._branch !== 'AUX Main WH Stock') {
-      p.consumed += tx._qty;
-      // Update branch/asc from consumed transaction (prioritize over initial values)
-      if (!p.branchFromConsumption) {
-        p.branch = tx._branch;
-        p.asc = tx._asc;
-        p.branchFromConsumption = true;
-      }
+  // Second pass: collect return data (Sort 10, 12) from service centers only
+  // and update branch/asc if part wasn't in first pass
+  transactions.forEach(tx => {
+    if (tx._sort !== 10 && tx._sort !== 12) return; // Only process return transactions
+    if (tx._branch === 'AUX Main WH Stock') return; // Skip warehouse
+
+    const key = tx._partCode || tx._partName;
+    if (!key) return;
+
+    if (!partsMap[key]) {
+      partsMap[key] = {
+        code: tx._partCode,
+        name: tx._partName,
+        branch: tx._branch,
+        asc: tx._asc,
+        consumed: 0,
+        returned: 0,
+      };
     }
-    // Sort 10, 12 = Part Return Received → returned (only from service centers, not warehouse)
-    else if ((tx._sort === 10 || tx._sort === 12) && tx._branch !== 'AUX Main WH Stock') {
-      p.returned += tx._qty;
-      // Update branch/asc from return transaction if we haven't gotten it from consumption yet
-      if (!p.branchFromConsumption) {
-        p.branch = tx._branch;
-        p.asc = tx._asc;
-      }
-    }
+
+    const p = partsMap[key];
+    p.returned += tx._qty;
   });
 
   // Convert to array and calculate remaining
-  // Only return parts that actually have consumption (meaning they were used at service centers)
+  // Only return parts that have consumption (from service centers only)
   return Object.values(partsMap)
-    .filter(p => p.consumed > 0)
-    .map(p => {
-      delete p.branchFromConsumption; // Clean up temp flag
-      return {
-        ...p,
-        remaining: Math.max(0, p.consumed - p.returned)
-      };
-    });
+    .map(p => ({
+      ...p,
+      remaining: Math.max(0, p.consumed - p.returned)
+    }));
 }
 
 // ── Filter transactions ────────────────────────────────────────
