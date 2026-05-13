@@ -211,6 +211,8 @@ function buildPartsReturnSummary(transactions) {
 let _inventoryState = {
   searchModel: '',           // Filter by Model
   searchPartName: '',        // Filter by Part Name
+  filterBranch: '',          // Smart filter by Branch
+  filterPartCode: '',        // Smart filter by Part Code
   selectedPartTracking: null, // Selected part for lifecycle view
   editingRequestId: null,    // Supervisor edit mode for Pending Requests
   activeView: 'overview'     // 'overview', 'consumption', 'returns', 'tracking'
@@ -219,6 +221,31 @@ let _inventoryState = {
 function updateInventoryFilter(field, value) {
   _inventoryState[field] = value;
   renderParts(); // Re-render with new filters
+}
+
+// ── Smart Filter: Click on Branch or Part Code
+function applySmartFilter(type, value) {
+  if (type === 'branch') {
+    _inventoryState.filterBranch = _inventoryState.filterBranch === value ? '' : value;
+    _inventoryState.filterPartCode = '';
+  } else if (type === 'partCode') {
+    _inventoryState.filterPartCode = _inventoryState.filterPartCode === value ? '' : value;
+    _inventoryState.filterBranch = '';
+  }
+  renderParts();
+}
+
+// ── Helper: Make value clickable for smart filtering
+function makeClickable(value, type) {
+  const isActive = type === 'branch'
+    ? _inventoryState.filterBranch === value
+    : _inventoryState.filterPartCode === value;
+
+  const style = isActive
+    ? 'style="background:#003D8F;color:white;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:600"'
+    : 'style="background:#E6F1FB;color:#003D8F;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:500;transition:.2s" onmouseover="this.style.background=\'#003D8F\';this.style.color=\'white\'" onmouseout="this.style.background=\'#E6F1FB\';this.style.color=\'#003D8F\'"';
+
+  return `<span ${style} onclick="applySmartFilter('${type}', '${esc(value)}')">${esc(value)}</span>`;
 }
 
 // ── Check if transaction is warehouse-related ────────────────────
@@ -1193,7 +1220,12 @@ async function renderParts() {
     <div class="table-scroll"><table class="data-table">
       <thead><tr><th>Location (Branch - ASC)</th><th style="text-align:left">Part Code</th><th style="text-align:left">Part Name</th><th class="text-mono">Consumed</th><th class="text-mono">Returned</th><th class="text-mono">Remaining</th></tr></thead>
       <tbody>${partsWithRemaining.length === 0 ? '<tr><td colspan="6" class="table-empty">No outstanding parts</td></tr>' :
-        partsWithRemaining.map(p=>{
+        partsWithRemaining.filter(p => {
+          // Apply smart filters
+          if (_inventoryState.filterBranch && p.branch !== _inventoryState.filterBranch) return false;
+          if (_inventoryState.filterPartCode && p.code !== _inventoryState.filterPartCode) return false;
+          return true;
+        }).map(p=>{
           // Location display logic:
           // - Warehouse transactions: show "AUX Main WH Stock" only (no ASC)
           // - Service center transactions: show "Branch - ASC" if both exist, else just "Branch"
@@ -1204,8 +1236,8 @@ async function renderParts() {
             locationDisplay = p.asc ? `${p.branch} - ${p.asc}` : p.branch;
           }
           return `<tr>
-            <td class="fw-600 text-mono">${esc(locationDisplay)}</td>
-            <td class="text-mono" style="text-align:left">${esc(p.code || '—')}</td>
+            <td class="fw-600 text-mono">${makeClickable(p.branch, 'branch')}</td>
+            <td class="text-mono" style="text-align:left">${makeClickable(p.code || '—', 'partCode')}</td>
             <td style="text-align:left">${esc(p.name || '—')}</td>
             <td class="text-mono">${fmt(p.consumed)}</td>
             <td class="text-mono">${fmt(p.returned)}</td>
@@ -1229,7 +1261,7 @@ async function renderParts() {
         const ac=p.abc==='A'?'badge-red':p.abc==='B'?'badge-amber':'badge-gray';
         return`<tr>
           <td><span class="badge ${ac}">${p.abc}</span></td>
-          <td class="text-mono text-sm">${esc(p.code)}</td>
+          <td class="text-mono text-sm">${makeClickable(p.code || '—', 'partCode')}</td>
           <td class="fw-600" style="text-align:left">${esc(truncate(p.name,35))}</td>
           <td class="text-mono ${p.svc<=3?'color-danger':'fw-600'}">${p.svc}</td>
           <td class="text-mono">${fmt(f.avgMonthly,1)}</td>
@@ -1255,9 +1287,9 @@ async function renderParts() {
         return`<tr>
           <td><button class="req-btn" onclick="showPartsRequestModal({code:'${esc(p.code)}',name:'${esc(p.name)}'})">+ Request</button></td>
           <td><span class="badge ${ac}">${p.abc}</span></td>
-          <td class="text-mono text-sm">${esc(p.code)}</td>
+          <td class="text-mono text-sm">${makeClickable(p.code || '—', 'partCode')}</td>
           <td class="fw-600" style="text-align:left">${esc(truncate(p.name,32))}</td>
-          <td class="text-sm">${esc(p.branch)}</td>
+          <td class="text-sm">${makeClickable(p.branch || '—', 'branch')}</td>
           <td class="text-mono ${wc}">${fmt(p.wh)}</td>
           <td class="text-mono ${sc}">${fmt(p.svc)}</td>
           <td class="text-mono">${fmt(p.consumed)}</td>
