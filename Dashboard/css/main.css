@@ -297,6 +297,12 @@ body { font-family: var(--font); background: var(--gray-50); color: var(--gray-9
 .badge-orange { background: var(--orange-bg);  color: var(--orange); }
 .badge-gray   { background: var(--gray-100);   color: var(--gray-600); }
 
+/* Return Status Badges (Part Return Tracking) */
+.badge-returned       { background: #dcfce7; color: #16a34a; } /* Green */
+.badge-in-transit     { background: #fef3c7; color: #d97706; } /* Amber */
+.badge-pending-return { background: #fee2e2; color: #dc2626; } /* Red */
+.badge-in-use         { background: #eaf3ff; color: #003D8F; } /* Blue */
+
 /* ═══════════════════════════════════════════
    AGING BARS
    ═══════════════════════════════════════════ */

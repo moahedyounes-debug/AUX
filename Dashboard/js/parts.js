@@ -203,6 +203,90 @@ function buildPartsReturnSummary(transactions) {
     }));
 }
 
+// ── Build Part Return Status (Sort 6 → Sort 10 tracking) ────────
+// Tracks each part's return journey through SVC for each location
+function buildPartReturnStatus(transactions) {
+  const statusMap = new Map();
+
+  // Group transactions by Location (Branch-ASC) + Part Code
+  transactions.forEach(tx => {
+    // Skip warehouse transactions - only track SVC centers
+    if (tx._branch === 'AUX Main WH Stock') return;
+
+    // Create composite key: Branch-ASC + Part Code
+    const key = `${tx._branch}|${tx._asc}|${tx._partCode || tx._partName}`;
+
+    if (!statusMap.has(key)) {
+      statusMap.set(key, {
+        code: tx._partCode || '—',
+        name: tx._partName || '—',
+        branch: tx._branch,
+        asc: tx._asc || '—',
+        sortStages: { 6: false, 7: false, 8: false, 9: false, 10: false },
+        dates: {
+          requestedDate: null,      // Sort 6
+          usedDate: null,           // Sort 8
+          returnRequestedDate: null, // Sort 9
+          returnReceivedDate: null   // Sort 10
+        },
+        reference: {
+          returnRequestId: null,    // Sort 9 reference
+          returnReceiptId: null     // Sort 10 reference
+        }
+      });
+    }
+
+    const entry = statusMap.get(key);
+
+    // Track which Sort stages are present and extract metadata
+    if (tx._sort === 6) {
+      entry.sortStages[6] = true;
+      entry.dates.requestedDate = entry.dates.requestedDate || tx._date;
+    }
+    if (tx._sort === 7) {
+      entry.sortStages[7] = true;
+    }
+    if (tx._sort === 8) {
+      entry.sortStages[8] = true;
+      entry.dates.usedDate = tx._date; // Latest use date
+    }
+    if (tx._sort === 9) {
+      entry.sortStages[9] = true;
+      entry.dates.returnRequestedDate = entry.dates.returnRequestedDate || tx._date;
+      entry.reference.returnRequestId = entry.reference.returnRequestId || tx._awb;
+    }
+    if (tx._sort === 10) {
+      entry.sortStages[10] = true;
+      entry.dates.returnReceivedDate = tx._date;
+      entry.reference.returnReceiptId = tx._awb;
+    }
+  });
+
+  // Determine status and convert to array
+  return Array.from(statusMap.values()).map(p => {
+    const has = p.sortStages;
+
+    // Status determination logic:
+    if (has[10]) {
+      // Complete return cycle: has 6,7,8,9,10
+      p.status = 'RETURNED';
+    } else if (has[9]) {
+      // Return requested but not received: has 6,7,8,9
+      p.status = 'IN_TRANSIT';
+    } else if (has[8]) {
+      // Used but not returned: has 6,7,8 (or 6,7,8 only)
+      p.status = 'PENDING_RETURN';
+    } else if (has[6]) {
+      // Requested but not yet used: has 6 (or 6,7 only)
+      p.status = 'PENDING_USE';
+    } else {
+      p.status = 'UNKNOWN';
+    }
+
+    return p;
+  });
+}
+
 // ── Filter transactions ────────────────────────────────────────
 function getFilteredTx() {
   let tx = PARTS_DB.transactions;
@@ -296,6 +380,11 @@ async function renderParts() {
   const returnRate = partsReturnTotals.consumed > 0
     ? (partsReturnTotals.returned / partsReturnTotals.consumed * 100)
     : 0;
+
+  // ── Part Return Status Tracking (Sort 6 → 10) ──────────
+  // Track detailed return status for each part at each SVC center
+  const returnStatusList = buildPartReturnStatus(tx)
+    .filter(p => p.status !== 'UNKNOWN' && p.status !== 'PENDING_USE'); // Only show parts that are in use or returning
 
   el.innerHTML=`
   <!-- HEADER -->
@@ -483,6 +572,38 @@ async function renderParts() {
             <td class="text-mono">${fmt(p.consumed)}</td>
             <td class="text-mono">${fmt(p.returned)}</td>
             <td class="text-mono color-danger fw-600">${fmt(p.remaining)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- PART RETURN STATUS TRACKING (Sort 6 → Sort 10) -->
+  <div class="section-header"><div class="section-title">📦 Part Return Status Tracking</div><span class="section-badge">SVC Centers Return Cycle</span></div>
+  <div class="table-card" style="margin-bottom:18px">
+    <div class="table-scroll"><table class="data-table">
+      <thead><tr><th>Location (Branch - ASC)</th><th style="text-align:left">Part Code</th><th style="text-align:left">Part Name</th><th>Status</th><th style="font-size:11px">Request Date</th><th style="font-size:11px">Used Date</th><th style="font-size:11px">Return Requested</th><th style="font-size:11px">Return Received</th><th style="font-size:11px">Return Ref</th></tr></thead>
+      <tbody>${returnStatusList.length === 0 ? '<tr><td colspan="9" class="table-empty">No parts in return tracking</td></tr>' :
+        returnStatusList.map(p=>{
+          const fmtDate = (d) => {
+            if (!d) return '—';
+            if (typeof d === 'string') return d;
+            try { return d.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
+            catch(e) { return '—'; }
+          };
+          let locationDisplay = p.asc ? `${p.branch} - ${p.asc}` : p.branch;
+          const statusColor = p.status === 'RETURNED' ? '#1D9E75' : p.status === 'IN_TRANSIT' ? '#EF9F27' : p.status === 'PENDING_RETURN' ? '#E24B4A' : '#6B7280';
+          const statusBadge = `<span style="background:${statusColor};color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600">${p.status}</span>`;
+          return `<tr>
+            <td class="fw-600 text-mono">${esc(locationDisplay)}</td>
+            <td class="text-mono" style="text-align:left">${esc(p.code)}</td>
+            <td style="text-align:left">${esc(p.name)}</td>
+            <td>${statusBadge}</td>
+            <td style="font-size:11px;color:var(--gray-600)">${fmtDate(p.dates.requestedDate)}</td>
+            <td style="font-size:11px;color:var(--gray-600)">${fmtDate(p.dates.usedDate)}</td>
+            <td style="font-size:11px;color:var(--gray-600)">${fmtDate(p.dates.returnRequestedDate)}</td>
+            <td style="font-size:11px;color:var(--gray-600)">${fmtDate(p.dates.returnReceivedDate)}</td>
+            <td style="font-size:11px;font-family:var(--mono);color:var(--aux-blue);font-weight:600">${p.reference.returnRequestId || '—'}</td>
           </tr>`;
         }).join('')}
       </tbody>
