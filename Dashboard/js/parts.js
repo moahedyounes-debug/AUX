@@ -327,6 +327,43 @@ function getFilteredTx() {
   return tx;
 }
 
+// ── Populate branch filter dropdown ─────────────────────────────
+function populateBranchFilter() {
+  const select = document.getElementById('filter-branch');
+  if (!select) return;
+
+  // Get all unique branches from transactions
+  const branches = new Set();
+  PARTS_DB.transactions.forEach(tx => {
+    if (tx._branch) branches.add(tx._branch);
+  });
+
+  // Sort branches (warehouse first, then others)
+  const sortedBranches = Array.from(branches).sort((a, b) => {
+    if (a === 'AUX Main WH Stock') return -1;
+    if (b === 'AUX Main WH Stock') return 1;
+    return a.localeCompare(b);
+  });
+
+  // Keep the first option (All Branches)
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">All Branches</option>';
+
+  sortedBranches.forEach(br => {
+    const opt = document.createElement('option');
+    opt.value = br;
+    opt.textContent = br;
+    select.appendChild(opt);
+  });
+
+  select.value = currentValue;
+}
+
+// ── Apply filters and re-render ────────────────────────────────
+function applyFilters() {
+  renderParts();
+}
+
 // ── Render Spare Parts Page ────────────────────────────────────
 async function renderParts() {
   const el = document.getElementById('page-parts');
@@ -345,6 +382,7 @@ async function renderParts() {
     return;
   }
 
+  populateBranchFilter();
   const tx = getFilteredTx();
   const stockMap   = calcStockMap(tx);
   const partsArr   = classifyABC(Object.values(stockMap));
@@ -587,7 +625,7 @@ async function renderParts() {
   <div class="section-header"><div class="section-title">🚨 Reorder Alert — Parts Needing Restock</div><span class="section-badge">${reorderList.length} parts</span></div>
   <div class="table-card" style="margin-bottom:18px">
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>ABC</th><th>Code</th><th style="text-align:left">Part Name</th><th>SVC Stock</th><th>Avg/Month</th><th>Months Left</th><th>Reorder Qty</th><th>Priority</th><th></th></tr></thead>
+      <thead><tr><th>ABC</th><th>Code</th><th style="text-align:left">Part Name</th><th>Branch</th><th>SVC Stock</th><th>Avg/Month</th><th>Months Left</th><th>Reorder Qty</th><th>Priority</th><th></th></tr></thead>
       <tbody>${reorderList.map(p=>{
         const f=p.forecast; const ml=f.monthsLeft;
         const urg=ml<1?'🔴 Urgent':ml<2?'🟠 High':'🟡 Medium';
@@ -597,6 +635,7 @@ async function renderParts() {
           <td><span class="badge ${ac}">${p.abc}</span></td>
           <td class="text-mono text-sm">${esc(p.code)}</td>
           <td class="fw-600" style="text-align:left">${esc(truncate(p.name,35))}</td>
+          <td class="text-sm">${p.branch==='AUX Main WH Stock'?'AUX main warehouse stock':esc(p.branch)}</td>
           <td class="text-mono ${p.svc<=3?'color-danger':'fw-600'}">${p.svc}</td>
           <td class="text-mono">${fmt(f.avgMonthly,1)}</td>
           <td><span class="badge ${cls}">${fmt(ml,1)}mo</span></td>
@@ -623,7 +662,7 @@ async function renderParts() {
           <td><span class="badge ${ac}">${p.abc}</span></td>
           <td class="text-mono text-sm">${esc(p.code)}</td>
           <td class="fw-600" style="text-align:left">${esc(truncate(p.name,32))}</td>
-          <td class="text-sm">${esc(p.branch)}</td>
+          <td class="text-sm">${p.branch==='AUX Main WH Stock'?'AUX main warehouse stock':esc(p.branch)}</td>
           <td class="text-mono ${wc}">${fmt(p.wh)}</td>
           <td class="text-mono ${sc}">${fmt(p.svc)}</td>
           <td class="text-mono">${fmt(p.consumed)}</td>
@@ -1212,7 +1251,18 @@ function buildPendingBoard() {
       }
     });
   }
-  if (!all.length) return '<div style="font-size:12px;color:var(--gray-400);padding:.5rem 0">No pending part requests</div>';
+
+  // ── Filter by user's ASC if not admin ──────────────────────
+  let filtered = all;
+  if (!DB.isAdmin && DB.userASC && DB.userASC !== 'All') {
+    filtered = all.filter(item => {
+      // Extract ASC code from branch (e.g., "Dammam - ZAM" → "ZAM")
+      const ascFromBranch = (item.branch || '').split('-').pop().trim();
+      return ascFromBranch === DB.userASC;
+    });
+  }
+
+  if (!filtered.length) return '<div style="font-size:12px;color:var(--gray-400);padding:.5rem 0">No pending part requests</div>';
 
   const sMap = {
     pending:    {cls:'badge-amber', lbl:'Pending',            btnLabel:'Update Status', action:'pending'},
@@ -1221,7 +1271,7 @@ function buildPendingBoard() {
     received:   {cls:'badge-green', lbl:'Received',          btnLabel:null,           action:null},
   };
 
-  return all.slice(0,8).map((o,i)=>{
+  return filtered.slice(0,8).map((o,i)=>{
     const sm = sMap[o.status]||sMap.pending;
     const nextBtn = sm.action
       ? `<button onclick="showStatusModal('${o.id}','${o.orderNo}')"
