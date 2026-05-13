@@ -57,6 +57,7 @@ function enrichTransaction(row) {
   r._partCode = ((r[C.ACC_CODE]||'').trim()  || (r[C.CODE]||'').trim() || (r[C.CODE2]||'').trim());
   r._key     = r._partCode || r._partName;
   r._awb     = (r[C.REF] || '').trim();
+  r._orderNo = (r[C.ORDER_NO] || '').trim();
   r._monthKey = r._date
     ? `${r._date.getFullYear()}-${String(r._date.getMonth()+1).padStart(2,'0')}` : '';
 
@@ -276,7 +277,7 @@ function buildPartReturnStatus(transactions) {
         // This is the return receipt for a part that was requested (has Sort 9)
         entry.sortStages[10] = true;
         entry.dates.returnReceivedDate = tx._date;
-        entry.reference.returnReceiptId = tx._awb;
+        entry.reference.returnReceiptId = tx._orderNo; // Use Associated Order Number for Sort 10
         break; // Found the match, stop searching
       }
     }
@@ -539,62 +540,6 @@ async function renderParts() {
           <td><span class="badge ${cls}">${lbl}</span></td>
         </tr>`;
       }).join('')}</tbody>
-    </table></div>
-  </div>
-
-  <!-- DEFECTIVE PARTS RETURN SUMMARY -->
-  <div class="section-header"><div class="section-title">Defective Parts Return Summary</div><span class="section-badge">${partsWithRemaining.length} outstanding</span></div>
-  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
-    <div class="kpi-card blue">
-      <div class="kpi-label">Total Consumed</div>
-      <div class="kpi-value">${fmt(partsReturnTotals.consumed)}</div>
-      <div class="kpi-delta">Used by technicians</div>
-    </div>
-    <div class="kpi-card green">
-      <div class="kpi-label">Total Returned</div>
-      <div class="kpi-value">${fmt(partsReturnTotals.returned)}</div>
-      <div class="kpi-delta">Received from SVC</div>
-    </div>
-    <div class="kpi-card ${partsReturnTotals.outstanding>0?'red':'green'}">
-      <div class="kpi-label">Outstanding</div>
-      <div class="kpi-value">${fmt(partsReturnTotals.outstanding)}</div>
-      <div class="kpi-delta">Not yet returned</div>
-    </div>
-    <div class="kpi-card accent">
-      <div class="kpi-label">Return Rate</div>
-      <div class="kpi-value">${fmtPct(returnRate)}</div>
-      <div class="kpi-delta">Returned ÷ Consumed</div>
-    </div>
-  </div>
-  <div class="table-card" style="margin-bottom:18px">
-    <div class="table-header">
-      <div class="table-title">Return Summary</div>
-      <div class="table-count">${partsWithRemaining.length} outstanding</div>
-      <button class="export-btn excel" style="padding:4px 12px;font-size:11px" onclick="doExcelExportPartsReturn()">📥 Export CSV</button>
-    </div>
-    <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Location (Branch - ASC)</th><th style="text-align:left">Part Code</th><th style="text-align:left">Part Name</th><th class="text-mono">Consumed</th><th class="text-mono">Returned</th><th class="text-mono">Remaining</th></tr></thead>
-      <tbody>${partsWithRemaining.length === 0 ? '<tr><td colspan="6" class="table-empty">No outstanding parts</td></tr>' :
-        partsWithRemaining.map(p=>{
-          // Location display logic:
-          // - Warehouse transactions: show "AUX Main WH Stock" only (no ASC)
-          // - Service center transactions: show "Branch - ASC" if both exist, else just "Branch"
-          let locationDisplay = '—';
-          if (p.branch === 'AUX Main WH Stock') {
-            locationDisplay = p.branch;  // Warehouse: no ASC suffix
-          } else if (p.branch) {
-            locationDisplay = p.asc ? `${p.branch} - ${p.asc}` : p.branch;
-          }
-          return `<tr>
-            <td class="fw-600 text-mono">${esc(locationDisplay)}</td>
-            <td class="text-mono" style="text-align:left">${esc(p.code || '—')}</td>
-            <td style="text-align:left">${esc(p.name || '—')}</td>
-            <td class="text-mono">${fmt(p.consumed)}</td>
-            <td class="text-mono">${fmt(p.returned)}</td>
-            <td class="text-mono color-danger fw-600">${fmt(p.remaining)}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
     </table></div>
   </div>
 
