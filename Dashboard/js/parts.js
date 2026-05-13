@@ -205,60 +205,80 @@ function buildPartsReturnSummary(transactions) {
 
 // ── Build Part Return Status (Sort 6 → Sort 10 tracking) ────────
 // Tracks each part's return journey through SVC for each location
+// Two-pass approach: Sort 6-9 from SVC centers, Sort 10 from any location (warehouse)
 function buildPartReturnStatus(transactions) {
   const statusMap = new Map();
 
-  // Group transactions by Location (Branch-ASC) + Part Code
+  // ── FIRST PASS: Sort 6-9 from SVC centers only ──────────────────
   transactions.forEach(tx => {
-    // Skip warehouse transactions - only track SVC centers
-    if (tx._branch === 'AUX Main WH Stock') return;
+    // Skip warehouse for Sort 6-9 - only track SVC centers requesting/using parts
+    if (tx._branch === 'AUX Main WH Stock' && tx._sort >= 6 && tx._sort <= 9) return;
+    if (tx._sort < 6 || tx._sort > 10) return; // Only care about Sort 6-10
 
-    // Create composite key: Branch-ASC + Part Code
-    const key = `${tx._branch}|${tx._asc}|${tx._partCode || tx._partName}`;
+    // For Sort 6-9: Use original SVC branch-ASC location
+    // For Sort 10: Will match by part code in second pass
+    if (tx._sort >= 6 && tx._sort <= 9) {
+      if (tx._branch === 'AUX Main WH Stock') return; // Skip warehouse for 6-9
 
-    if (!statusMap.has(key)) {
-      statusMap.set(key, {
-        code: tx._partCode || '—',
-        name: tx._partName || '—',
-        branch: tx._branch,
-        asc: tx._asc || '—',
-        sortStages: { 6: false, 7: false, 8: false, 9: false, 10: false },
-        dates: {
-          requestedDate: null,      // Sort 6
-          usedDate: null,           // Sort 8
-          returnRequestedDate: null, // Sort 9
-          returnReceivedDate: null   // Sort 10
-        },
-        reference: {
-          returnRequestId: null,    // Sort 9 reference
-          returnReceiptId: null     // Sort 10 reference
-        }
-      });
-    }
+      const key = `${tx._branch}|${tx._asc}|${tx._partCode || tx._partName}`;
 
-    const entry = statusMap.get(key);
+      if (!statusMap.has(key)) {
+        statusMap.set(key, {
+          code: tx._partCode || '—',
+          name: tx._partName || '—',
+          branch: tx._branch,
+          asc: tx._asc || '—',
+          sortStages: { 6: false, 7: false, 8: false, 9: false, 10: false },
+          dates: {
+            requestedDate: null,      // Sort 6
+            usedDate: null,           // Sort 8
+            returnRequestedDate: null, // Sort 9
+            returnReceivedDate: null   // Sort 10
+          },
+          reference: {
+            returnRequestId: null,    // Sort 9 reference
+            returnReceiptId: null     // Sort 10 reference
+          }
+        });
+      }
 
-    // Track which Sort stages are present and extract metadata
-    if (tx._sort === 6) {
-      entry.sortStages[6] = true;
-      entry.dates.requestedDate = entry.dates.requestedDate || tx._date;
+      const entry = statusMap.get(key);
+
+      // Track Sort 6-9 stages
+      if (tx._sort === 6) {
+        entry.sortStages[6] = true;
+        entry.dates.requestedDate = entry.dates.requestedDate || tx._date;
+      }
+      if (tx._sort === 7) {
+        entry.sortStages[7] = true;
+      }
+      if (tx._sort === 8) {
+        entry.sortStages[8] = true;
+        entry.dates.usedDate = tx._date;
+      }
+      if (tx._sort === 9) {
+        entry.sortStages[9] = true;
+        entry.dates.returnRequestedDate = entry.dates.returnRequestedDate || tx._date;
+        entry.reference.returnRequestId = entry.reference.returnRequestId || tx._awb;
+      }
     }
-    if (tx._sort === 7) {
-      entry.sortStages[7] = true;
-    }
-    if (tx._sort === 8) {
-      entry.sortStages[8] = true;
-      entry.dates.usedDate = tx._date; // Latest use date
-    }
-    if (tx._sort === 9) {
-      entry.sortStages[9] = true;
-      entry.dates.returnRequestedDate = entry.dates.returnRequestedDate || tx._date;
-      entry.reference.returnRequestId = entry.reference.returnRequestId || tx._awb;
-    }
-    if (tx._sort === 10) {
-      entry.sortStages[10] = true;
-      entry.dates.returnReceivedDate = tx._date;
-      entry.reference.returnReceiptId = tx._awb;
+  });
+
+  // ── SECOND PASS: Sort 10 from warehouse - match by part code ────
+  transactions.forEach(tx => {
+    if (tx._sort !== 10) return;
+
+    const partCode = tx._partCode || tx._partName;
+
+    // Find matching entries by part code (may be at warehouse but matches SVC part request)
+    for (const [key, entry] of statusMap.entries()) {
+      if ((entry.code === partCode || entry.name === partCode) && entry.sortStages[9]) {
+        // This is the return receipt for a part that was requested (has Sort 9)
+        entry.sortStages[10] = true;
+        entry.dates.returnReceivedDate = tx._date;
+        entry.reference.returnReceiptId = tx._awb;
+        break; // Found the match, stop searching
+      }
     }
   });
 
