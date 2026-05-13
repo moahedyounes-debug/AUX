@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS - مساعدك الذكي</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #0a0e1a;
+    color: #e0e6f0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, #0d1b3e, #1a2f6e);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #1e3a8a;
+    box-shadow: 0 2px 20px rgba(0,100,255,0.2);
+  }
+  .logo { font-size: 28px; }
+  header h1 { font-size: 20px; color: #60a5fa; letter-spacing: 2px; }
+  header p { font-size: 12px; color: #64748b; }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #22c55e;
+    animation: pulse 2s infinite;
+    margin-right: auto;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    background: #0d1525;
+    border-bottom: 1px solid #1e3a8a;
+  }
+  .tab {
+    flex: 1; padding: 12px; text-align: center;
+    cursor: pointer; font-size: 13px; color: #64748b;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active { color: #60a5fa; border-bottom-color: #60a5fa; }
+  .tab:hover { color: #93c5fd; background: #0f1e38; }
+
+  /* Panels */
+  .panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .panel.active { display: flex; }
+
+  /* Chat Panel */
+  #chat-messages {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    scroll-behavior: smooth;
+  }
+  .msg {
+    max-width: 80%; padding: 12px 16px;
+    border-radius: 16px; font-size: 14px; line-height: 1.6;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .msg.user {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+    align-self: flex-start;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.bot {
+    background: #1e293b;
+    align-self: flex-end;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #334155;
+    white-space: pre-wrap;
+  }
+  .msg-time { font-size: 10px; color: #475569; margin-top: 4px; }
+  .typing { display: flex; gap: 4px; align-items: center; padding: 12px 16px; }
+  .typing span {
+    width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100% { transform: scale(0.6); } 40% { transform: scale(1); } }
+
+  /* Input Area */
+  .input-area {
+    padding: 12px 16px;
+    background: #0d1525;
+    border-top: 1px solid #1e3a8a;
+    display: flex; gap: 8px; align-items: flex-end;
+  }
+  textarea {
+    flex: 1; background: #1e293b; border: 1px solid #334155;
+    border-radius: 12px; color: #e0e6f0; padding: 12px 14px;
+    font-size: 14px; resize: none; max-height: 120px;
+    font-family: inherit; direction: rtl;
+    outline: none; transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: #3b82f6; }
+  .btn {
+    border: none; border-radius: 50%; width: 44px; height: 44px;
+    cursor: pointer; font-size: 18px; display: flex;
+    align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  #send-btn { background: #1d4ed8; }
+  #send-btn:hover { background: #2563eb; transform: scale(1.05); }
+  #voice-btn { background: #0f172a; border: 1px solid #334155; }
+  #voice-btn.listening { background: #dc2626; animation: pulse-red 1s infinite; }
+  @keyframes pulse-red {
+    0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
+  }
+
+  /* Home Control Panel */
+  #home-panel { padding: 16px; overflow-y: auto; }
+  .room-card {
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 12px; padding: 16px; margin-bottom: 12px;
+  }
+  .room-title {
+    font-size: 14px; color: #60a5fa; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .devices-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .device-btn {
+    background: #0f172a; border: 1px solid #334155;
+    border-radius: 10px; padding: 14px 10px;
+    cursor: pointer; text-align: center;
+    transition: all 0.2s; color: #94a3b8; font-size: 13px;
+  }
+  .device-btn:hover { border-color: #3b82f6; color: #60a5fa; }
+  .device-btn.on { background: #1e3a8a; border-color: #3b82f6; color: #93c5fd; }
+  .device-icon { font-size: 24px; margin-bottom: 6px; }
+
+  /* Quick Actions Panel */
+  #quick-panel { padding: 16px; overflow-y: auto; }
+  .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .quick-btn {
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 12px; padding: 18px 12px;
+    cursor: pointer; text-align: center;
+    transition: all 0.2s; color: #94a3b8;
+    display: flex; flex-direction: column; gap: 8px; align-items: center;
+  }
+  .quick-btn:hover { border-color: #3b82f6; color: #60a5fa; background: #0f1e38; }
+  .quick-btn:active { transform: scale(0.97); }
+  .quick-icon { font-size: 28px; }
+  .quick-label { font-size: 12px; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: #1e3a8a; color: #93c5fd; padding: 10px 20px;
+    border-radius: 20px; font-size: 13px; opacity: 0;
+    transition: opacity 0.3s; pointer-events: none; z-index: 999;
+    border: 1px solid #3b82f6;
+  }
+  #toast.show { opacity: 1; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🤖</div>
+  <div>
+    <h1>JARVIS</h1>
+    <p>مساعدك الذكي</p>
+  </div>
+  <div class="status-dot"></div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('chat')">💬 المحادثة</div>
+  <div class="tab" onclick="showTab('home')">🏠 البيت</div>
+  <div class="tab" onclick="showTab('quick')">⚡ سريع</div>
+</div>
+
+<!-- Chat Panel -->
+<div class="panel active" id="chat-panel">
+  <div id="chat-messages">
+    <div class="msg bot">
+      مرحباً! أنا جارفيس 🤖<br>
+      تكلّم أو اكتب أمرك، وأنا سأنفّذه فوراً!
+      <div class="msg-time">الآن</div>
+    </div>
+  </div>
+  <div class="input-area">
+    <button class="btn" id="voice-btn" onclick="toggleVoice()" title="صوت">🎤</button>
+    <textarea id="text-input" placeholder="اكتب أمرك هنا..." rows="1"
+      onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="btn" id="send-btn" onclick="sendCommand()" title="إرسال">➤</button>
+  </div>
+</div>
+
+<!-- Home Panel -->
+<div class="panel" id="home-panel">
+  <div id="rooms-container">
+    <div style="color:#475569;text-align:center;padding:40px">جاري تحميل الأجهزة...</div>
+  </div>
+</div>
+
+<!-- Quick Actions Panel -->
+<div class="panel" id="quick-panel">
+  <div class="quick-grid">
+    <div class="quick-btn" onclick="quickCommand('كم الساعة')">
+      <div class="quick-icon">🕐</div>
+      <div class="quick-label">الوقت</div>
+    </div>
+    <div class="quick-btn" onclick="quickCommand('كيف الطقس')">
+      <div class="quick-icon">🌤️</div>
+      <div class="quick-label">الطقس</div>
+    </div>
+    <div class="quick-btn" onclick="quickCommand('أخبار اليوم')">
+      <div class="quick-icon">📰</div>
+      <div class="quick-label">الأخبار</div>
+    </div>
+    <div class="quick-btn" onclick="quickCommand('افتح يوتيوب')">
+      <div class="quick-icon">▶️</div>
+      <div class="quick-label">يوتيوب</div>
+    </div>
+    <div class="quick-btn" onclick="quickCommand('التقط لقطة شاشة')">
+      <div class="quick-icon">📸</div>
+      <div class="quick-label">لقطة شاشة</div>
+    </div>
+    <div class="quick-btn" onclick="quickCommand('افتح المتصفح')">
+      <div class="quick-icon">🌐</div>
+      <div class="quick-label">متصفح</div>
+    </div>
+    <div class="quick-btn" onclick="askTimer()">
+      <div class="quick-icon">⏱️</div>
+      <div class="quick-label">مؤقت</div>
+    </div>
+    <div class="quick-btn" onclick="quickCommand('قفّل الشاشة')">
+      <div class="quick-icon">🔒</div>
+      <div class="quick-label">قفل الشاشة</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = window.location.origin;
+let recognition = null;
+let isListening = false;
+let deviceStates = {};
+
+// ── Tab Management ─────────────────────────────────────────
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['chat','home','quick'][i] === tab);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(tab + '-panel').classList.add('active');
+  if (tab === 'home') loadDevices();
+}
+
+// ── Chat ───────────────────────────────────────────────────
+function addMsg(text, role) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const now = new Date().toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'});
+  div.innerHTML = text.replace(/\n/g, '<br>') + `<div class="msg-time">${now}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'msg bot typing-msg';
+  div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+async function sendCommand(text) {
+  const input = document.getElementById('text-input');
+  const cmd = text || input.value.trim();
+  if (!cmd) return;
+
+  addMsg(cmd, 'user');
+  input.value = '';
+  input.style.height = 'auto';
+  showTab('chat');
+
+  const typing = showTyping();
+  try {
+    const res = await fetch(`${API}/api/command`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text: cmd})
+    });
+    const data = await res.json();
+    typing.remove();
+    addMsg(data.response || 'تم التنفيذ ✓', 'bot');
+  } catch(e) {
+    typing.remove();
+    addMsg('تعذّر الاتصال بالخادم', 'bot');
+  }
+}
+
+function quickCommand(cmd) {
+  showTab('chat');
+  sendCommand(cmd);
+}
+
+function askTimer() {
+  const min = prompt('كم دقيقة للمؤقت؟', '5');
+  if (min) quickCommand(`ضع مؤقت لمدة ${min} دقيقة`);
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendCommand();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ── Voice Input (Web Speech API - Free, built-in browser) ──
+function toggleVoice() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showToast('المتصفح لا يدعم الصوت - استخدم Chrome');
+    return;
+  }
+  if (isListening) {
+    recognition.stop();
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'ar-SA';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('voice-btn').classList.add('listening');
+    document.getElementById('voice-btn').textContent = '🔴';
+    showToast('أنا أستمع...');
+  };
+  recognition.onresult = (e) => {
+    const text = e.results[0][0].transcript;
+    document.getElementById('text-input').value = text;
+    sendCommand(text);
+  };
+  recognition.onerror = () => showToast('تعذّر التعرف على الصوت');
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('voice-btn').classList.remove('listening');
+    document.getElementById('voice-btn').textContent = '🎤';
+  };
+  recognition.start();
+}
+
+// ── Home Control ───────────────────────────────────────────
+const deviceIcons = {
+  'ضوء': '💡', 'مروحة': '🌀', 'تكييف': '❄️',
+  'تلفزيون': '📺', 'ستائر': '🪟', 'بوابة': '🚪',
+  'default': '🔌'
+};
+
+async function loadDevices() {
+  try {
+    const res = await fetch(`${API}/api/devices`);
+    const devices = await res.json();
+    renderRooms(devices);
+  } catch(e) {
+    document.getElementById('rooms-container').innerHTML =
+      '<div style="color:#ef4444;text-align:center;padding:20px">تعذّر تحميل الأجهزة</div>';
+  }
+}
+
+function renderRooms(devices) {
+  const container = document.getElementById('rooms-container');
+  container.innerHTML = '';
+  for (const [room, devs] of Object.entries(devices)) {
+    const card = document.createElement('div');
+    card.className = 'room-card';
+    const icons = {'غرفة_النوم':'🛏️','الصالة':'🛋️','المطبخ':'🍳','الحمام':'🚿','الخارج':'🏡'};
+    card.innerHTML = `<div class="room-title">${icons[room]||'🏠'} ${room.replace('_',' ')}</div>
+      <div class="devices-grid">${
+        Object.entries(devs).map(([dev]) => `
+          <div class="device-btn" id="dev-${room}-${dev}"
+               onclick="toggleDevice('${room}','${dev}')">
+            <div class="device-icon">${deviceIcons[dev]||deviceIcons.default}</div>
+            ${dev}
+          </div>`).join('')
+      }</div>`;
+    container.appendChild(card);
+  }
+}
+
+async function toggleDevice(room, device) {
+  const key = `${room}-${device}`;
+  const btn = document.getElementById(`dev-${key}`);
+  const isOn = btn.classList.contains('on');
+  btn.classList.toggle('on', !isOn);
+
+  try {
+    const res = await fetch(`${API}/api/home/toggle`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({room, device, state: !isOn})
+    });
+    const data = await res.json();
+    showToast(data.response);
+  } catch(e) {
+    btn.classList.toggle('on', isOn); // revert
+    showToast('تعذّر التحكم في الجهاز');
+  }
+}
+
+// ── Toast ──────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Init
+document.getElementById('text-input').focus();
+</script>
+</body>
+</html>

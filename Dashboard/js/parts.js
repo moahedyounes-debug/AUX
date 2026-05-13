@@ -260,14 +260,14 @@ function getServiceCenterTransactions(transactions) {
 }
 
 // ── Build Main Branch Stock (aggregated warehouse inventory) ──────
-// Combines Sort 5 (inbound) + Sort 6 (distributed) for overall picture
+// Combines Sort 5 (inbound) + Sort 6 (distributed) + Sort 10,12 (returns)
 function buildMainBranchStock(transactions) {
   const stockMap = {};
 
-  // Process all inbound and distributed transactions
+  // First pass: process warehouse stock movements (Sort 5, 6, 10, 12)
   transactions.forEach(tx => {
-    // Only process warehouse/inbound transactions (Sort 5, 6)
-    if (tx._sort !== 5 && tx._sort !== 6) return;
+    // Only process relevant sorts: 5 (inbound), 6 (distribution), 10 & 12 (returns)
+    if (![5, 6, 10, 12].includes(tx._sort)) return;
     if (!isWarehouseTransaction(tx)) return; // Only warehouse
 
     const code = tx._partCode;
@@ -283,35 +283,54 @@ function buildMainBranchStock(transactions) {
         balance: 0,
         consumed: 0,
         lastReceived: null,
-        createdDate: null
+        createdDate: null,
+        dateList: [] // Track all transaction dates
       };
     }
 
     const record = stockMap[key];
 
-    // Sort 5: inbound to warehouse
+    // Sort 5: inbound to warehouse (add to balance)
     if (tx._sort === 5) {
       record.balance += tx._qty;
       record.lastReceived = tx._date;
     }
-    // Sort 6: distributed from warehouse (decreases balance)
+    // Sort 6: distributed from warehouse (subtract from balance)
     else if (tx._sort === 6) {
       record.balance -= tx._qty;
     }
-
-    // Track consumption from all service center usage
-    if (tx._sort === 8) {
-      record.consumed += tx._qty;
+    // Sort 10, 12: returns received (add back to balance)
+    else if (tx._sort === 10 || tx._sort === 12) {
+      record.balance += tx._qty;
     }
 
-    if (!record.createdDate && tx._date) {
-      record.createdDate = tx._date;
+    if (tx._date) {
+      record.dateList.push(tx._date);
+      if (!record.createdDate) {
+        record.createdDate = tx._date;
+      }
     }
   });
 
-  // Ensure non-negative balances
+  // Second pass: count consumed items for this part (Sort 8)
+  transactions.forEach(tx => {
+    if (tx._sort !== 8) return; // Only consumption
+
+    const code = tx._partCode;
+    const name = tx._partName;
+    const key = code || name;
+
+    if (!key) return;
+
+    if (stockMap[key]) {
+      stockMap[key].consumed += tx._qty;
+    }
+  });
+
+  // Ensure non-negative balances and clean up
   Object.values(stockMap).forEach(record => {
     record.balance = Math.max(0, record.balance);
+    delete record.dateList; // Remove temporary array
   });
 
   return Object.values(stockMap);
@@ -784,7 +803,7 @@ function renderInventoryReturns(el, tx) {
             return `<tr>
               <td class="text-mono fw-600">${esc(r.code || '—')}</td>
               <td style="text-align:left">${esc(truncate(r.name || '—', 35))}</td>
-              <td style="text-align:left">${esc(r.asc ? \`\${r.branch} - \${r.asc}\` : r.branch)}</td>
+              <td style="text-align:left">${esc(r.asc ? r.branch + ' - ' + r.asc : r.branch)}</td>
               <td class="text-mono">${fmt(r.requested)}</td>
               <td class="text-mono">${fmt(r.received)}</td>
               <td>${statusBadge}</td>
@@ -827,7 +846,7 @@ function renderInventoryReturns(el, tx) {
             return `<tr>
               <td class="text-mono fw-600">${esc(r.code || '—')}</td>
               <td style="text-align:left">${esc(truncate(r.name || '—', 35))}</td>
-              <td style="text-align:left">${esc(r.asc ? \`\${r.branch} - \${r.asc}\` : r.branch)}</td>
+              <td style="text-align:left">${esc(r.asc ? r.branch + ' - ' + r.asc : r.branch)}</td>
               <td class="text-mono">${fmt(r.requested)}</td>
               <td class="text-mono">${fmt(r.received)}</td>
               <td>${statusBadge}</td>
@@ -866,26 +885,20 @@ function renderPartTracking(el, tx) {
   <div class="lifecycle-container">
     ${lifecycle.map((stage, idx) => {
       const nextStage = lifecycle[idx + 1];
-      return `
-      <div class="lifecycle-stage ${stage.status} ${stage.status === 'completed' ? '' : ''}" title="${stage.description}">
+      let stageHtml = `<div class="lifecycle-stage ${stage.status}" title="${stage.description}">
         <strong class="lifecycle-stage-label">${stage.sort}</strong>
-        <div>${stage.label}</div>
-        ${stage.date ? \`<span class="lifecycle-stage-date">\${fmtDate(stage.date)}</span>\` : ''}
-        ${stage.quantity > 0 ? \`<span class="lifecycle-stage-date">Qty: \${stage.quantity}</span>\` : ''}
-      </div>
-      \`;
+        <div>${stage.label}</div>`;
+
+      if (stage.date) {
+        stageHtml += `<span class="lifecycle-stage-date">${fmtDate(stage.date)}</span>`;
+      }
+      if (stage.quantity > 0) {
+        stageHtml += `<span class="lifecycle-stage-date">Qty: ${stage.quantity}</span>`;
+      }
+      stageHtml += `</div>`;
+      return stageHtml;
     }).join('')}
   </div>`;
-}
-
-// ── Format Date Helper ──────────────────────────────────────────
-function fmtDate(date) {
-  if (!date) return '—';
-  if (typeof date === 'string') {
-    try { date = new Date(date); } catch(e) { return date; }
-  }
-  const d = new Date(date);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
 }
 
 // ── Main Inventory Dashboard Renderer ────────────────────────────
