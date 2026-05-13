@@ -1,0 +1,25 @@
+# Claude Code settings and worktrees
+.claude/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node modules (if used)
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.log
