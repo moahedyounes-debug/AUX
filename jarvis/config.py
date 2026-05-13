@@ -85,6 +85,19 @@ APPS = {
 # Screenshot save path
 SCREENSHOT_PATH = os.path.expanduser("~/Pictures/jarvis_screenshots/")
 
+# ─── Telegram Bot ─────────────────────────────────────────────────────────────
+# Get token from @BotFather on Telegram (free)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+
+# Allowed Telegram user IDs (leave empty to allow everyone)
+# Find your ID by messaging @userinfobot on Telegram
+TELEGRAM_ALLOWED_USERS: list[int] = []
+
+# ─── Web Interface ─────────────────────────────────────────────────────────────
+WEB_HOST = "0.0.0.0"     # Listen on all interfaces (accessible from phone)
+WEB_PORT = 5000
+WEB_DEBUG = False
+
 # ─── General Settings ─────────────────────────────────────────────────────────
 DEBUG = False
 LOG_FILE = os.path.expanduser("~/.jarvis/jarvis.log")

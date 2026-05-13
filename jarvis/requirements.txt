@@ -17,6 +17,13 @@ pyautogui>=0.9.54              # Mouse/keyboard automation
 # ─── Web & Search ─────────────────────────────────────────────────────────────
 duckduckgo-search>=4.0         # Free web search (no API key)
 
+# ─── Web Interface ────────────────────────────────────────────────────────────
+flask>=3.0.0                   # Web server for mobile access
+flask-cors>=4.0.0              # Cross-origin for mobile browsers
+
+# ─── Telegram Bot ─────────────────────────────────────────────────────────────
+python-telegram-bot>=20.0      # Telegram bot (free)
+
 # ─── AI Engines (pick one) ────────────────────────────────────────────────────
 # Ollama is a local server - install from https://ollama.ai (no pip needed)
 anthropic>=0.40.0              # Claude API (optional, needs API key)

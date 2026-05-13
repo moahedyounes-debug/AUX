@@ -280,6 +280,21 @@ def parse_args():
         help="تشغيل في وضع النص فقط (بدون ميكروفون)",
     )
     parser.add_argument(
+        "--web", "-w",
+        action="store_true",
+        help="تشغيل واجهة الويب (للجوال والمتصفح)",
+    )
+    parser.add_argument(
+        "--telegram",
+        action="store_true",
+        help="تشغيل بوت تيليجرام",
+    )
+    parser.add_argument(
+        "--ha-setup",
+        action="store_true",
+        help="دليل إعداد Home Assistant",
+    )
+    parser.add_argument(
         "--check",
         action="store_true",
         help="فحص المكتبات المثبّتة",
@@ -304,6 +319,28 @@ if __name__ == "__main__":
 
     if args.check:
         print_dependency_report()
+        sys.exit(0)
+
+    if args.ha_setup:
+        from commands.home_assistant_setup import print_setup_guide
+        print_setup_guide()
+        sys.exit(0)
+
+    if args.web:
+        from web_interface.app import app
+        import socket
+        try:
+            local_ip = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            local_ip = "127.0.0.1"
+        print(f"\n🌐 واجهة الويب: http://localhost:{CONFIG.WEB_PORT}")
+        print(f"📱 من الجوال:  http://{local_ip}:{CONFIG.WEB_PORT}\n")
+        app.run(host=CONFIG.WEB_HOST, port=CONFIG.WEB_PORT, debug=CONFIG.WEB_DEBUG)
+        sys.exit(0)
+
+    if args.telegram:
+        from telegram_bot.bot import run_bot
+        run_bot()
         sys.exit(0)
 
     # Override config from CLI args
