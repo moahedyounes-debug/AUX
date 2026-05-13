@@ -315,6 +315,65 @@ function buildPartReturnStatus(transactions) {
   });
 }
 
+// ── Build inventory table rows with WH stock lookup ─────────────
+function buildInventoryTableRows(partsArr, transactions) {
+  // Create warehouse stock map for quick lookup
+  const whStockMap = {};
+  transactions.forEach(tx => {
+    if (tx._branch === 'AUX Main WH Stock' && tx._sort === 5) {
+      const key = tx._key;
+      if (!whStockMap[key]) whStockMap[key] = 0;
+      whStockMap[key] += tx._qty;
+    }
+  });
+
+  const searchTerm = document.getElementById('search-model')?.value.toLowerCase() || '';
+  let filtered = partsArr;
+  if (searchTerm) {
+    filtered = partsArr.filter(p =>
+      (p.name && p.name.toLowerCase().includes(searchTerm)) ||
+      (p.code && p.code.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  return filtered.slice(0,120).map(p=>{
+    const f=calcForecast(p);
+    const ac=p.abc==='A'?'badge-red':p.abc==='B'?'badge-amber':'badge-gray';
+    // WH stock for this part from warehouse inventory
+    const whQty = whStockMap[p.code] || 0;
+    const wc=whQty<5?'color-danger':whQty<20?'color-warning':'';
+    const sc=p.svc<=0?'color-danger':p.svc<3?'color-warning':'';
+    return`<tr>
+      <td><button class="req-btn" onclick="showPartsRequestModal({code:'${esc(p.code)}',name:'${esc(p.name)}'})">+ Request</button></td>
+      <td><span class="badge ${ac}">${p.abc}</span></td>
+      <td class="text-mono text-sm">${esc(p.code)}</td>
+      <td class="fw-600" style="text-align:left">${esc(truncate(p.name,32))}</td>
+      <td class="text-sm">${p.branch==='AUX Main WH Stock'?'AUX main warehouse stock':esc(p.branch)}</td>
+      <td class="text-mono ${wc}">${fmt(whQty)}</td>
+      <td class="text-mono ${sc}">${fmt(p.svc)}</td>
+      <td class="text-mono">${fmt(p.consumed)}</td>
+      <td class="text-mono">${fmt(p.returnedWH)}</td>
+      <td class="text-mono">${f?fmt(f.avgMonthly,1):'—'}</td>
+      <td>${f?`<span class="badge ${f.monthsLeft<1?'badge-red':f.monthsLeft<3?'badge-amber':'badge-green'}">${fmt(f.monthsLeft,1)}mo</span>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Filter inventory by model search ────────────────────────────
+function filterInventoryByModel() {
+  // This will be called from the search input
+  // We need to re-render just the table body
+  const tableBody = document.getElementById('inventory-table-body');
+  if (!tableBody) return;
+
+  // Find the current partsArr and tx from PARTS_DB
+  const tx = getFilteredTx();
+  const stockMap = calcStockMap(tx);
+  const partsArr = classifyABC(Object.values(stockMap));
+
+  tableBody.innerHTML = buildInventoryTableRows(partsArr, tx);
+}
+
 // ── Filter transactions ────────────────────────────────────────
 function getFilteredTx() {
   let tx = PARTS_DB.transactions;
@@ -649,29 +708,16 @@ async function renderParts() {
 
   <!-- FULL INVENTORY -->
   <div class="section-header"><div class="section-title">Full Inventory — ABC Analysis</div><span class="section-badge">${totalSKUs} SKUs</span></div>
+  <div style="margin-bottom:15px">
+    <input type="text" id="search-model" class="filter-input" placeholder="🔍 Search by Model..."
+           style="width:100%;padding:10px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-family:inherit"
+           oninput="filterInventoryByModel()">
+  </div>
   <div class="table-card">
     <div class="table-scroll"><table class="data-table">
       <thead><tr><th></th><th>ABC</th><th>Code</th><th style="text-align:left">Part Name</th><th>Branch</th><th>WH Stock</th><th>SVC Stock</th><th>Consumed</th><th>Returned</th><th>Avg/Mo</th><th>Months Left</th></tr></thead>
-      <tbody>${partsArr.slice(0,120).map(p=>{
-        const f=calcForecast(p);
-        const ac=p.abc==='A'?'badge-red':p.abc==='B'?'badge-amber':'badge-gray';
-        const wc=p.wh<5?'color-danger':p.wh<20?'color-warning':'';
-        const sc=p.svc<=0?'color-danger':p.svc<3?'color-warning':'';
-        return`<tr>
-          <td><button class="req-btn" onclick="showPartsRequestModal({code:'${esc(p.code)}',name:'${esc(p.name)}'})">+ Request</button></td>
-          <td><span class="badge ${ac}">${p.abc}</span></td>
-          <td class="text-mono text-sm">${esc(p.code)}</td>
-          <td class="fw-600" style="text-align:left">${esc(truncate(p.name,32))}</td>
-          <td class="text-sm">${p.branch==='AUX Main WH Stock'?'AUX main warehouse stock':esc(p.branch)}</td>
-          <td class="text-mono ${wc}">${fmt(p.wh)}</td>
-          <td class="text-mono ${sc}">${fmt(p.svc)}</td>
-          <td class="text-mono">${fmt(p.consumed)}</td>
-          <td class="text-mono">${fmt(p.returnedWH)}</td>
-          <td class="text-mono">${f?fmt(f.avgMonthly,1):'—'}</td>
-          <td>${f?`<span class="badge ${f.monthsLeft<1?'badge-red':f.monthsLeft<3?'badge-amber':'badge-green'}">${fmt(f.monthsLeft,1)}mo</span>`:'—'}</td>
-        </tr>`;
-      }).join('')}
-      ${partsArr.length>120?`<tr><td colspan="11" style="text-align:center;color:var(--gray-400);font-size:12px;padding:10px">Showing 120 of ${partsArr.length}</td></tr>`:''}
+      <tbody id="inventory-table-body">
+      ${buildInventoryTableRows(partsArr, tx)}
       </tbody>
     </table></div>
   </div>`;
