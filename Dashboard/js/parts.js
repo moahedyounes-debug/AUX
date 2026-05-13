@@ -291,17 +291,24 @@ function buildPartReturnStatus(transactions) {
     if (has[10]) {
       // Complete return cycle: has 6,7,8,9,10
       p.status = 'RETURNED';
+      // For RETURNED: Show Associated Order Number (Sort 10 receipt reference)
+      p.displayRef = p.reference.returnReceiptId;
     } else if (has[9]) {
       // Return requested but not received: has 6,7,8,9
       p.status = 'IN_TRANSIT';
+      // For IN_TRANSIT: Show the return request reference (Sort 9)
+      p.displayRef = p.reference.returnRequestId;
     } else if (has[8]) {
       // Used but not returned: has 6,7,8 (or 6,7,8 only)
       p.status = 'PENDING_RETURN';
+      p.displayRef = null; // No reference yet
     } else if (has[6]) {
       // Requested but not yet used: has 6 (or 6,7 only)
       p.status = 'PENDING_USE';
+      p.displayRef = null; // No reference yet
     } else {
       p.status = 'UNKNOWN';
+      p.displayRef = null;
     }
 
     return p;
@@ -568,7 +575,7 @@ async function renderParts() {
             <td style="font-size:11px;color:var(--gray-600)">${fmtDate(p.dates.usedDate)}</td>
             <td style="font-size:11px;color:var(--gray-600)">${fmtDate(p.dates.returnRequestedDate)}</td>
             <td style="font-size:11px;color:var(--gray-600)">${fmtDate(p.dates.returnReceivedDate)}</td>
-            <td style="font-size:11px;font-family:var(--mono);color:var(--aux-blue);font-weight:600">${p.reference.returnRequestId || '—'}</td>
+            <td style="font-size:11px;font-family:var(--mono);color:var(--aux-blue);font-weight:600">${p.displayRef || '—'}</td>
           </tr>`;
         }).join('')}
       </tbody>
