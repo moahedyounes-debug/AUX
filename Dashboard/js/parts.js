@@ -49,7 +49,12 @@ function enrichTransaction(row) {
   const warehouseName = (r[C.WAREHOUSE] || '').trim().toLowerCase();
   const isWarehouse = warehouseName && (warehouseName.includes('warehouse') || warehouseName.includes('riyadh'));
 
-  r._branch  = isWarehouse ? 'AUX Main WH Stock' : ((r[C.BRANCH] || r[C.BRANCH2] || '').trim() || 'Unknown');
+  let branchName = isWarehouse ? 'AUX Main WH Stock' : ((r[C.BRANCH] || r[C.BRANCH2] || '').trim() || 'Unknown');
+  // Normalize city name if not warehouse
+  if (!isWarehouse && branchName !== 'Unknown') {
+    branchName = normalizeCityName(branchName);
+  }
+  r._branch  = branchName;
   // Warehouse transactions should not have ASC; clear it for warehouse
   r._asc     = isWarehouse ? '' : ((r[C.ASC] || r[C.ASC2] || '').trim());
   // Part name: prefer Part Name, fallback to Second Part Name
@@ -709,7 +714,7 @@ async function renderParts() {
   <!-- FULL INVENTORY -->
   <div class="section-header"><div class="section-title">Full Inventory — ABC Analysis</div><span class="section-badge">${totalSKUs} SKUs</span></div>
   <div style="margin-bottom:15px">
-    <input type="text" id="search-model" class="filter-input" placeholder="🔍 Search by Model..."
+    <input type="text" id="search-model" class="filter-input" placeholder="🔍 Search by Model or Part Number..."
            style="width:100%;padding:10px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-family:inherit"
            oninput="filterInventoryByModel()">
   </div>
@@ -1311,10 +1316,13 @@ function buildPendingBoard() {
   if (!filtered.length) return '<div style="font-size:12px;color:var(--gray-400);padding:.5rem 0">No pending part requests</div>';
 
   const sMap = {
-    pending:    {cls:'badge-amber', lbl:'Pending',            btnLabel:'Update Status', action:'pending'},
-    dispatched: {cls:'badge-blue',  lbl:'Dispatched',        btnLabel:'Mark Received', action:'received'},
-    unavailable:{cls:'badge-red',   lbl:'Part Not Available', btnLabel:null,           action:null},
-    received:   {cls:'badge-green', lbl:'Received',          btnLabel:null,           action:null},
+    pending:      {cls:'badge-amber', lbl:'Pending',              btnLabel:'Update Status', action:'pending'},
+    under_process:{cls:'badge-blue',  lbl:'Under process',        btnLabel:'Update Status', action:'under_process'},
+    dispatched:   {cls:'badge-cyan',  lbl:'Dispatched',          btnLabel:'Mark Received', action:'dispatched'},
+    available_svc:{cls:'badge-green', lbl:'Available in SVC stock', btnLabel:null,           action:null},
+    unavailable:  {cls:'badge-red',   lbl:'Part Not Available',    btnLabel:null,           action:null},
+    received:     {cls:'badge-teal',  lbl:'Received',            btnLabel:null,           action:null},
+    modify:       {cls:'badge-purple',lbl:'Modify',              btnLabel:'Back to Queue', action:'pending'},
   };
 
   return filtered.slice(0,8).map((o,i)=>{
@@ -1371,37 +1379,71 @@ function showStatusModal(orderId, orderNo) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9001;display:flex;align-items:center;justify-content:center;padding:20px';
 
   let buttonHTML = '';
+  const btnStyle = (color) => `background:${color};color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left`;
 
   // Show different buttons based on current status
   if (currentStatus === 'pending') {
     buttonHTML = `
+      <button onclick="updateOrderStatus('${orderId}','under_process')"
+        style="${btnStyle('#0284c7')}">
+        ⏳ Under process<br><span style="font-size:11px;opacity:0.9">Being processed by parts team</span>
+      </button>
       <button onclick="updateOrderStatus('${orderId}','dispatched')"
-        style="background:#003D8F;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        style="${btnStyle('#0891b2')}">
         📦 Dispatched<br><span style="font-size:11px;opacity:0.9">Parts shipped to branch</span>
       </button>
-
       <button onclick="updateOrderStatus('${orderId}','unavailable')"
-        style="background:#dc2626;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        style="${btnStyle('#dc2626')}">
+        ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Close request - part unavailable</span>
+      </button>
+    `;
+  } else if (currentStatus === 'under_process') {
+    buttonHTML = `
+      <button onclick="updateOrderStatus('${orderId}','available_svc')"
+        style="${btnStyle('#16a34a')}">
+        ✅ Available in SVC stock<br><span style="font-size:11px;opacity:0.9">Part is ready for pickup</span>
+      </button>
+      <button onclick="updateOrderStatus('${orderId}','modify')"
+        style="${btnStyle('#8b5cf6')}">
+        ✏️ Modify<br><span style="font-size:11px;opacity:0.9">Request needs modification</span>
+      </button>
+      <button onclick="updateOrderStatus('${orderId}','unavailable')"
+        style="${btnStyle('#dc2626')}">
         ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Close request - part unavailable</span>
       </button>
     `;
   } else if (currentStatus === 'dispatched') {
     buttonHTML = `
       <button onclick="updateOrderStatus('${orderId}','received')"
-        style="background:#16a34a;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        style="${btnStyle('#059669')}">
         ✅ Received<br><span style="font-size:11px;opacity:0.9">Parts received at branch</span>
       </button>
-
+      <button onclick="updateOrderStatus('${orderId}','modify')"
+        style="${btnStyle('#8b5cf6')}">
+        ✏️ Modify<br><span style="font-size:11px;opacity:0.9">Request needs modification</span>
+      </button>
       <button onclick="updateOrderStatus('${orderId}','unavailable')"
-        style="background:#dc2626;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        style="${btnStyle('#dc2626')}">
         ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Close request - part unavailable</span>
       </button>
     `;
+  } else if (currentStatus === 'modify') {
+    buttonHTML = `
+      <button onclick="updateOrderStatus('${orderId}','pending')"
+        style="${btnStyle('#f59e0b')}">
+        ↩️ Back to Queue<br><span style="font-size:11px;opacity:0.9">Return to pending status</span>
+      </button>
+    `;
   } else {
-    // For unavailable or received status, just show cancel option
+    // For available_svc, unavailable, or received status, show info only
+    const statusLabels = {
+      available_svc: 'Available in SVC stock',
+      unavailable: 'Part Not Available',
+      received: 'Received'
+    };
     buttonHTML = `
       <div style="font-size:13px;color:#6b7280;padding:12px;background:#f3f4f6;border-radius:8px">
-        Current status: <strong>${currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}</strong><br>
+        Current status: <strong>${statusLabels[currentStatus] || currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}</strong><br>
         <span style="font-size:11px">No further updates available for this status.</span>
       </div>
     `;
@@ -1475,7 +1517,16 @@ function updateOrderStatus(orderId, newStatus) {
   const ascCode = (o.branch || '').split('-').pop().trim();
 
   // Determine status text and dates
-  const statusText = newStatus==='received'?'Received':newStatus==='dispatched'?'Dispatched':newStatus==='unavailable'?'Part Not Available':'Pending';
+  const statusTextMap = {
+    'received': 'Received',
+    'dispatched': 'Dispatched',
+    'unavailable': 'Part Not Available',
+    'under_process': 'Under process',
+    'available_svc': 'Available in SVC stock',
+    'modify': 'Modify',
+    'pending': 'Pending'
+  };
+  const statusText = statusTextMap[newStatus] || 'Pending';
   const today = new Date().toLocaleDateString('en-GB');
   let dispatchDate = '';
   let receivingDate = '';
@@ -1483,6 +1534,8 @@ function updateOrderStatus(orderId, newStatus) {
   if (newStatus === 'dispatched') {
     dispatchDate = today;
   } else if (newStatus === 'received') {
+    receivingDate = today;
+  } else if (newStatus === 'available_svc') {
     receivingDate = today;
   }
 
@@ -1504,6 +1557,9 @@ function updateOrderStatus(orderId, newStatus) {
       `Updated By   : ${_currentEmail||'AUX ASC Dashboard'}\nDate         : ${new Date().toLocaleDateString('en-GB')}\n\n`+
       (statusText === 'Dispatched' ? 'Parts have been dispatched. Please track using the AWB provided above.\n\n' : '')+
       (statusText === 'Received' ? 'Parts have been received at the branch.\n\n' : '')+
+      (statusText === 'Available in SVC stock' ? 'Parts are now available in SVC stock. Please collect at your service center.\n\n' : '')+
+      (statusText === 'Under process' ? 'Your spare parts request is being processed. We will update you soon.\n\n' : '')+
+      (statusText === 'Modify' ? 'Your spare parts request needs modification. Please contact the parts team for details.\n\n' : '')+
       (statusText === 'Part Not Available' ? 'This part is not available. Please contact the parts supervisor for alternatives.\n\n' : '')+
       `AUX ASC Dashboard — Created by Moahed Younes`
     );

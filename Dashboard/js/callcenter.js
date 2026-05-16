@@ -418,6 +418,19 @@ function monthlyEvalTable(evals) {
     }));
 }
 
+// ── Filter months to required date range (May 2025 - April 2026) ──
+function filterMonthsToRange(months, startYM = '2025-05', endYM = '2026-04') {
+  const start = new Date(startYM + '-01');
+  const end = new Date(endYM + '-01');
+  end.setMonth(end.getMonth() + 1); // Inclusive of end month
+
+  return months.filter(m => {
+    if (!m.mk || m.mk === '—') return false;
+    const d = new Date(m.mk + '-01');
+    return d >= start && d < end;
+  });
+}
+
 // ── Render Call Center Page ───────────────────────────────────
 async function renderCallCenter() {
   const el = document.getElementById('page-callcenter');
@@ -473,8 +486,11 @@ async function renderCallCenter() {
   const waTotal     = wa.length;
 
   // ── Monthly data ──────────────────────────────────────────
-  const monthly     = groupByMonthCC(calls);
-  const waMonthly   = groupWAByMonth(wa);
+  let monthly       = groupByMonthCC(calls);
+  let waMonthly     = groupWAByMonth(wa);
+  // Filter to May 2025 - April 2026 range only
+  monthly = filterMonthsToRange(monthly, '2025-05', '2026-04');
+  waMonthly = filterMonthsToRange(waMonthly, '2025-05', '2026-04');
   const mLabels     = monthly.map(m => m.mk);
   const peak        = peakHours(calls, wa);
   const hours       = Array.from({length:24},(_,i)=>String(i).padStart(2,'0')+':00');
@@ -487,10 +503,12 @@ async function renderCallCenter() {
 
   // ── Unique agents + months for filters ───────────────────
   const allAgents = [...new Set(CC_DB.calls.map(r=>r._agent).filter(Boolean))].sort();
-  const allMonths = [...new Set([
+  let allMonths = [...new Set([
     ...CC_DB.calls.map(r=>r._monthKey),
     ...CC_DB.wa.map(r=>r._monthKey)
   ].filter(Boolean))].sort();
+  // Only show months within the range (May 2025 - April 2026)
+  allMonths = filterMonthsToRange(allMonths.map(mk => ({mk})), '2025-05', '2026-04').map(m => m.mk);
   const allYears  = [...new Set(allMonths.map(m=>m.slice(0,4)).filter(Boolean))].sort().reverse();
 
   const T = CONFIG.TARGETS;

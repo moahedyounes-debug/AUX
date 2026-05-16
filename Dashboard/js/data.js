@@ -104,11 +104,33 @@ function extractCompany(n) {
   return '';  // unknown — will be filtered out
 }
 
+// ── Normalize city names to canonical forms ────────────────────
+// Unifies spelling variations across all SVC centers
+function normalizeCityName(city) {
+  if (!city) return '';
+  const lower = city.trim().toLowerCase();
+
+  // Jizan variations
+  if (lower === 'jazan' || lower === 'jizan') return 'Jizan';
+
+  // Makkah variations (handle "Makkah Al Mukarramah" and similar)
+  if (lower.includes('makkah') && (lower.includes('mukarramah') || lower.includes('mukarra')))
+    return 'Makkah';
+  if (lower === 'makkah' || lower.includes('mecca')) return 'Makkah';
+
+  // Madainah variations
+  if (lower === 'madaina' || lower === 'madainah' || lower === 'madinah')
+    return 'Madainah';
+
+  // Default: return as-is with trimmed whitespace (preserve original casing if not matched)
+  return city.trim();
+}
+
 // ── Branch: extract city from the provider name and format as "City - Company"
 // Examples:
 //   "ZAM - Jeddah Branch"                          → "Jeddah - ZAM"
 //   "Classic Pvt. Ltd. Company-Riyadh Branch"       → "Riyadh - Classic"
-//   "wiFEX ... - Makkah Al Mukarramah Branch"       → "Makkah Al Mukarramah - wiFEX"
+//   "wiFEX ... - Makkah Al Mukarramah Branch"       → "Makkah - wiFEX"
 function extractBranch(n) {
   if (!n) return null;
 
@@ -123,6 +145,9 @@ function extractBranch(n) {
   city = city.replace(/\s*branch\s*/i, '').trim();
 
   if (!city) return null;
+
+  // Normalize city name to canonical form
+  city = normalizeCityName(city);
 
   return `${city} - ${company}`;
 }
