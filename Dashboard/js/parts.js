@@ -1157,11 +1157,12 @@ async function submitPartsRequest() {
   }
 
   // Email routing for spare parts request
-  // Logic: Open mailto with TO: SVC Center email, CC: ASC + Always CC
+  // TO: branch PIC emails, CC: {ASC} CC + Always CC
   const emailData = await getBranchEmailList(branch);
 
-  let to = emailData.svcEmail || 'arslan.s@auxair.com'; // Fallback to Arslan if SVC email not found
+  const uniqueTO = [...new Set(emailData.toEmails)].filter(e => e);
   const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
+  const to = uniqueTO.join(',') || 'arslan.s@auxair.com'; // Fallback if no branch PIC configured
   const cc = encodeURIComponent(uniqueCC.join(';'));
 
   const sub = encodeURIComponent(`Parts Request — ${orderNo} — ${branch}`);
@@ -1184,8 +1185,9 @@ async function submitPartsRequest() {
 async function sendPartsReminder(ticketNo, branch, partDesc) {
   const emailData = await getBranchEmailList(branch);
 
-  const to = emailData.svcEmail || 'arslan.s@auxair.com';
+  const uniqueTO = [...new Set(emailData.toEmails)].filter(e => e);
   const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
+  const to = uniqueTO.join(',') || 'arslan.s@auxair.com';
   const cc = encodeURIComponent(uniqueCC.join(';'));
 
   const sub=encodeURIComponent(`Parts Status Update Needed — ${ticketNo} — ${branch}`);
@@ -1512,10 +1514,11 @@ function updateOrderStatus(orderId, newStatus) {
   // Send status update email
   (async () => {
     const emailData = await getBranchEmailList(o.branch);
+    const uniqueTO = [...new Set(emailData.toEmails)].filter(e => e);
     const uniqueCC = [...new Set(emailData.ccEmails)].filter(e => e);
     const cc = encodeURIComponent(uniqueCC.join(';'));
 
-    const to = emailData.svcEmail || 'arslan.s@auxair.com'; // TO: SVC Center
+    const to = uniqueTO.join(',') || 'arslan.s@auxair.com'; // TO: branch PIC
     const sub = encodeURIComponent(`Parts Status Update — ${o.orderNo} — ${statusText}`);
     const body = encodeURIComponent(
       `Dear Branch Team,\n\nParts request status update:\n\n`+

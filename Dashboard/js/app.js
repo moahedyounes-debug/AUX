@@ -417,6 +417,9 @@ function clearActivityLog(){
 }
 
 // ── Send Branch Alert Email (Admin + All Access only) ─────────
+// TO  : people whose "If Branch has pending" = exact branchName  (e.g. "Makkah - wiFEX")
+// CC  : people whose "If Branch has pending" = "{Company} CC"    (e.g. "wiFEX CC")
+// CC  : people whose "If Branch has pending" = "Always CC"       (AUX team)
 async function sendBranchAlert(branchName) {
   if(!DB.isAdmin || !DB.isAdminAccess){
     alert('Branch alerts can only be sent by Admin users (Admin Access = yes + ASC = All).');
@@ -425,31 +428,55 @@ async function sendBranchAlert(branchName) {
   logActivity('Send Alert — Branch: '+branchName);
   try {
     const accessRows = await fetchSheet(CONFIG.ACCESS_SHEET);
-    const branchEmails = [];
-    accessRows.forEach(r => {
-      const email    = (r['Email']||r['email']||'').trim();
-      const brFilter = (r['If Branch has pending']||'').trim();
-      if(email && brFilter){
-        const bl=branchName.toLowerCase(),fl=brFilter.toLowerCase();
-        const bPart=bl.split('-').pop().trim(), fPart=fl.split('-').pop().trim();
-        if(bl.includes(fPart)||fl.includes(bPart)) branchEmails.push(email);
+
+    // Extract company from branch name: "Makkah - wiFEX" → "wiFEX"
+    const company = branchName.includes(' - ') ? branchName.split(' - ').pop().trim() : '';
+
+    const toEmails = [];
+    const ccEmails = [];
+
+    // Pass 1: exact match → TO
+    for (const r of accessRows) {
+      const rowBranch = (r['If Branch has pending'] || '').trim();
+      const email     = (r['Email'] || r['email'] || '').trim();
+      if (email && rowBranch.toLowerCase() === branchName.toLowerCase()) {
+        toEmails.push(email);
       }
-    });
-    if(branchEmails.length===0){alert('No email for branch: '+branchName+'\n\nAdd "If Branch has pending" column in Access sheet.');return;}
-    const pending=DB.filtered.filter(r=>r._isPending&&r._branch===branchName);
-    const noReason=pending.filter(r=>!r._hasRescheduleReason).length;
-    const subject=encodeURIComponent('AUX ASC Alert: '+pending.length+' Pending — '+branchName);
-    const body=encodeURIComponent(
-      'Dear Service Center Team,\n\nAutomated alert from AUX ASC Dashboard.\n\n'+
-      'Branch: '+branchName+'\nTotal Pending: '+pending.length+'\nWithout Reason: '+noReason+'\n\nTickets:\n'+
-      pending.slice(0,15).map(r=>'  • '+(r[CONFIG.COLS.TICKET_NUM]||'')
-        +' | Worker: '+(r[CONFIG.COLS.WORKER]||'Unassigned')
-        +' | Aging: '+(r._agingCat||'—')
-        +' | Phase: '+(r._phaseLabel||'—')
-        +(r._rescheduleReason?' | Reason: '+r._rescheduleReason:' | ⚠️ NO REASON')
-      ).join('\n')+(pending.length>15?'\n  ...and '+(pending.length-15)+' more':'')+
+    }
+
+    // Pass 2: {Company} CC + Always CC → CC (skip anyone already in TO)
+    for (const r of accessRows) {
+      const rowBranch = (r['If Branch has pending'] || '').trim();
+      const email     = (r['Email'] || r['email'] || '').trim();
+      if (!email || toEmails.includes(email)) continue;
+      const isCompanyCC = company && rowBranch.toLowerCase() === (company + ' cc').toLowerCase();
+      const isAlwaysCC  = rowBranch.toLowerCase() === 'always cc';
+      if (isCompanyCC || isAlwaysCC) ccEmails.push(email);
+    }
+
+    if (toEmails.length === 0 && ccEmails.length === 0) {
+      alert('No emails configured for branch: ' + branchName + '\n\nCheck "If Branch has pending" column in Access sheet.');
+      return;
+    }
+
+    const pending  = DB.filtered.filter(r => r._isPending && r._branch === branchName);
+    const noReason = pending.filter(r => !r._hasRescheduleReason).length;
+    const subject  = encodeURIComponent('AUX ASC Alert: ' + pending.length + ' Pending — ' + branchName);
+    const body     = encodeURIComponent(
+      'Dear Service Center Team,\n\nAutomated alert from AUX ASC Dashboard.\n\n' +
+      'Branch: ' + branchName + '\nTotal Pending: ' + pending.length + '\nWithout Reason: ' + noReason + '\n\nTickets:\n' +
+      pending.slice(0,15).map(r =>
+        '  • ' + (r[CONFIG.COLS.TICKET_NUM] || '') +
+        ' | Worker: '  + (r[CONFIG.COLS.WORKER] || 'Unassigned') +
+        ' | Aging: '   + (r._agingCat   || '—') +
+        ' | Phase: '   + (r._phaseLabel || '—') +
+        (r._rescheduleReason ? ' | Reason: ' + r._rescheduleReason : ' | ⚠️ NO REASON')
+      ).join('\n') + (pending.length > 15 ? '\n  ...and ' + (pending.length - 15) + ' more' : '') +
       '\n\nPlease update reschedule reasons.\n\nAUX ASC Dashboard — Created by Moahed Younes'
     );
-    window.open('mailto:'+branchEmails.join(',')+'?subject='+subject+'&body='+body,'_blank');
+
+    const to = toEmails.join(',');
+    const cc = encodeURIComponent(ccEmails.join(';'));
+    window.open('mailto:' + to + (cc ? '?cc=' + cc + '&' : '?') + 'subject=' + subject + '&body=' + body, '_blank');
   } catch(err){ alert('Error: '+err.message); }
 }
