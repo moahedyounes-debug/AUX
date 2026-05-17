@@ -237,6 +237,8 @@ body { font-family: var(--font); background: var(--gray-50); color: var(--gray-9
 .kpi-card.amber::before  { background: var(--warning); }
 .kpi-card.red::before    { background: var(--danger); }
 .kpi-card.gray::before   { background: var(--gray-400); }
+.kpi-card.orange::before { background: #EF9F27; }
+.kpi-card.teal::before   { background: #0891B2; }
 .kpi-card.accent         { background: var(--aux-blue); border-color: var(--aux-blue); }
 .kpi-card.accent .kpi-label { color: rgba(255,255,255,.7); }
 .kpi-card.accent .kpi-value { color: white; }

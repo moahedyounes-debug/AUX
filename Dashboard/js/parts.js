@@ -430,14 +430,14 @@ function buildInventoryTableRows(partsArr, transactions) {
             ${esc(p.code)} — ${esc(p.name)}
           </td></tr>`;
       }
-      html += `<tr ${isWH?'style="opacity:.65"':''}>
+      html += `<tr ${isWH?'style="opacity:.75"':''}>
         <td style="padding-left:20px">
           ${isWH?'<span style="font-size:11px;color:var(--gray-400)">WH</span>':
           `<button class="req-btn" onclick="showPartsRequestModal({code:'${esc(p.code)}',name:'${esc(p.name)}'})">+ Request</button>`}
         </td>
         <td class="text-sm">${isWH?'<span class="badge badge-blue">WH</span>':esc(p.asc||'—')}</td>
         <td class="text-sm fw-600">${isWH?'AUX Main Warehouse':esc(p.branch)}</td>
-        <td class="text-mono ${sc}">${fmt(p.svc)}</td>
+        <td class="text-mono ${isWH?'fw-600':''}"><strong>${fmt(isWH?p.wh:p.svc)}</strong></td>
         <td class="text-mono">${fmt(p.consumed)}</td>
         <td class="text-mono">${fmt(p.returnedWH)}</td>
         <td class="text-mono">${f?fmt(f.avgMonthly,1):'—'}</td>
@@ -506,9 +506,21 @@ function buildInventoryTableRows(partsArr, transactions) {
 }
 
 // ── Filter Full Inventory table (called from both search inputs) ──
-function filterInventory() {
+async function filterInventory() {
   const tableBody = document.getElementById('inventory-table-body');
   if (!tableBody) return;
+
+  // Ensure Parts Model sheet is loaded for model search
+  const modelSearch = (document.getElementById('search-model')?.value || '').trim();
+  if (modelSearch && !PARTS_DB.loaded) {
+    if (PARTS_DB.loading) {
+      // Wait for load to complete
+      await new Promise(r => { const check = setInterval(() => { if (!PARTS_DB.loading) { clearInterval(check); r(); } }, 100); });
+    } else {
+      await loadPartsData();
+    }
+  }
+
   const tx = getFilteredTx();
   const stockMap = calcStockMap(tx);
   const partsArr = classifyABC(Object.values(stockMap));
@@ -795,6 +807,44 @@ async function renderParts() {
       }).join('')}</tbody>
     </table></div>
   </div>
+
+  <!-- RETURN SUMMARY KPIs -->
+  ${(() => {
+    const statusCounts = {
+      AVAILABLE: returnStatusList.filter(p => p.status === 'AVAILABLE').length,
+      PENDING_RETURN: returnStatusList.filter(p => p.status === 'PENDING_RETURN').length,
+      IN_TRANSIT: returnStatusList.filter(p => p.status === 'IN_TRANSIT').length,
+      RETURNED: returnStatusList.filter(p => p.status === 'RETURNED').length,
+    };
+    const totalReturn = Object.values(statusCounts).reduce((a,b) => a+b, 0);
+    return `<div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px">
+      <div class="kpi-card blue">
+        <div class="kpi-label">TOTAL TRACKED</div>
+        <div class="kpi-value">${fmt(totalReturn)}</div>
+        <div class="kpi-delta">Parts in return cycle</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">AVAILABLE</div>
+        <div class="kpi-value">${fmt(statusCounts.AVAILABLE)}</div>
+        <div class="kpi-delta">Not yet consumed</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-label">PENDING RETURN</div>
+        <div class="kpi-value">${fmt(statusCounts.PENDING_RETURN)}</div>
+        <div class="kpi-delta">Consumed, awaiting return</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-label">IN TRANSIT</div>
+        <div class="kpi-value">${fmt(statusCounts.IN_TRANSIT)}</div>
+        <div class="kpi-delta">Return requested, pending receipt</div>
+      </div>
+      <div class="kpi-card teal">
+        <div class="kpi-label">RETURNED</div>
+        <div class="kpi-value">${fmt(statusCounts.RETURNED)}</div>
+        <div class="kpi-delta">Return cycle complete</div>
+      </div>
+    </div>`;
+  })()}
 
   <!-- PART RETURN STATUS TRACKING (Sort 6 → Sort 10) -->
   <div class="section-header"><div class="section-title">📦 Part Return Status Tracking</div><span class="section-badge">SVC Centers Return Cycle</span></div>
