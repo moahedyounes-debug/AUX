@@ -12,23 +12,69 @@
 //  Part code = "Accessory Code"
 // ═══════════════════════════════════════════════════════════════
 
-const PARTS_DB = { transactions:[], loaded:false, loading:false };
-let   PARTS_REQUESTS = []; // loaded from Parts tab in main sheet
+const PARTS_DB = {
+  transactions: [],
+  loaded:       false,
+  loading:      false,
+  // model → Set of part codes  (built from Parts Model sheet)
+  modelMap:     {},   // { "ATW18A2DI-CSA": Set(["11223...", "11224..."]), ... }
+  modelRows:    [],   // raw rows from Parts Model sheet (for autocomplete / display)
+};
+let PARTS_REQUESTS = []; // loaded from Parts tab in main sheet
+
+// ── Build model→partCode lookup from Parts Model sheet rows ────
+function buildModelMap(rows) {
+  const map = {};
+  rows.forEach(row => {
+    // Try common column name variants for the model and part code
+    const model = (
+      row['Customer Model'] || row['customer model'] ||
+      row['Model']          || row['model']          ||
+      row['CustomerModel']  || ''
+    ).trim();
+
+    const code = (
+      row['Accessory Code'] || row['accessory code'] ||
+      row['Part Code']      || row['part code']      ||
+      row['Code']           || row['code']           ||
+      row['ACC_CODE']       || ''
+    ).trim();
+
+    if (!model || !code) return;
+
+    const key = model.toLowerCase();
+    if (!map[key]) map[key] = { label: model, codes: new Set() };
+    map[key].codes.add(code);
+  });
+  return map;
+}
 
 // ── Load ───────────────────────────────────────────────────────
 async function loadPartsData() {
   if (PARTS_DB.loading) return;
   PARTS_DB.loading = true;
   try {
-    const [txResp, reqResp] = await Promise.all([
+    const [txResp, modelsResp, reqResp] = await Promise.all([
       fetch(partsSheetUrl(CONFIG.PARTS_TRANSACTION)),
-      fetch(sheetUrl(CONFIG.PARTS_SHEET)).catch(()=>null),
+      fetch(partsSheetUrl(CONFIG.PARTS_MODELS)).catch(() => null),
+      fetch(sheetUrl(CONFIG.PARTS_SHEET)).catch(() => null),
     ]);
     if (!txResp.ok) throw new Error('Cannot load Transaction sheet');
+
     PARTS_DB.transactions = parseCSV(await txResp.text()).map(enrichTransaction);
+
+    if (modelsResp && modelsResp.ok) {
+      PARTS_DB.modelRows = parseCSV(await modelsResp.text());
+      PARTS_DB.modelMap  = buildModelMap(PARTS_DB.modelRows);
+      console.log(`Parts Model sheet loaded: ${PARTS_DB.modelRows.length} rows, ${Object.keys(PARTS_DB.modelMap).length} models`);
+    } else {
+      console.warn('Parts Model sheet not available');
+    }
+
     if (reqResp && reqResp.ok) {
       PARTS_REQUESTS = parseCSV(await reqResp.text());
     }
+
     PARTS_DB.loaded = true;
   } catch(e) {
     console.error('Parts load:', e);
@@ -58,7 +104,6 @@ function enrichTransaction(row) {
   r._key     = r._partCode || r._partName;
   r._awb     = (r[C.REF] || '').trim();
   r._orderNo = (r[C.ORDER_NO] || '').trim();
-  r._model   = (r[C.CUSTOMER_MODEL] || '').trim();   // Customer Model column
   r._monthKey = r._date
     ? `${r._date.getFullYear()}-${String(r._date.getMonth()+1).padStart(2,'0')}` : '';
 
@@ -403,23 +448,38 @@ function buildInventoryTableRows(partsArr, transactions) {
     }).join('');
   }
 
-  // ── MODE B: Search by Customer Model → show all parts for that model ────
-  // When a model is typed, find all part keys that appear in transactions
-  // with that Customer Model, then show those parts in the aggregated view.
+  // ── MODE B: Search by Customer Model (Parts Model sheet) ─────────────────
   let filtered = partsArr;
-  let modelMatchedKeys = null;
 
   if (modelSearch) {
-    // Build set of part keys belonging to this model via transactions
-    modelMatchedKeys = new Set(
-      transactions
-        .filter(tx => tx._model && tx._model.toLowerCase().includes(modelSearch))
-        .map(tx => tx._key)
-        .filter(Boolean)
-    );
-    filtered = partsArr.filter(p => modelMatchedKeys.has(p.code) || modelMatchedKeys.has(p.name));
+    // Look up part codes from PARTS_DB.modelMap (Parts Model sheet)
+    const modelMatchedCodes = new Set();
+    let matchedModelLabel = '';
+
+    Object.entries(PARTS_DB.modelMap).forEach(([key, entry]) => {
+      if (key.includes(modelSearch)) {
+        entry.codes.forEach(c => modelMatchedCodes.add(c));
+        if (!matchedModelLabel) matchedModelLabel = entry.label;
+      }
+    });
+
+    if (modelMatchedCodes.size === 0) {
+      // Parts Model sheet has no entry — show helpful message
+      const modelLoaded = Object.keys(PARTS_DB.modelMap).length > 0;
+      return `<tr><td colspan="11" class="table-empty">
+        ${modelLoaded
+          ? `No parts found for model "<strong>${esc(modelSearch)}</strong>" in Parts Model sheet`
+          : `Parts Model sheet not loaded yet — try refreshing the page`}
+      </td></tr>`;
+    }
+
+    filtered = partsArr.filter(p => modelMatchedCodes.has(p.code));
+
     if (filtered.length === 0) {
-      return `<tr><td colspan="12" class="table-empty">No parts found for model "${esc(modelSearch)}" — check Customer Model column</td></tr>`;
+      return `<tr><td colspan="11" class="table-empty">
+        Model "<strong>${esc(matchedModelLabel||modelSearch)}</strong>" has ${modelMatchedCodes.size} part(s) in Parts Model sheet
+        but none appear in the Transaction sheet yet
+      </td></tr>`;
     }
   }
 
@@ -429,18 +489,11 @@ function buildInventoryTableRows(partsArr, transactions) {
     const whQty = whStockMap[p.code] || 0;
     const wc    = whQty<5?'color-danger':whQty<20?'color-warning':'';
     const sc    = p.svc<=0?'color-danger':p.svc<3?'color-warning':'';
-    // Collect distinct model names associated with this part (for display when searching)
-    const modelsForPart = modelSearch
-      ? [...new Set(transactions.filter(tx => tx._key===p.code && tx._model).map(tx=>tx._model))].slice(0,3).join(', ')
-      : '';
     return `<tr>
       <td><button class="req-btn" onclick="showPartsRequestModal({code:'${esc(p.code)}',name:'${esc(p.name)}'})">+ Request</button></td>
       <td><span class="badge ${ac}">${p.abc}</span></td>
       <td class="text-mono text-sm">${esc(p.code)}</td>
-      <td class="fw-600" style="text-align:left">
-        ${esc(truncate(p.name,30))}
-        ${modelsForPart?`<br><span style="font-size:10px;color:var(--gray-400);font-weight:400">${esc(truncate(modelsForPart,40))}</span>`:''}
-      </td>
+      <td class="fw-600" style="text-align:left">${esc(truncate(p.name,32))}</td>
       <td class="text-sm">${p.branch==='AUX Main WH Stock'?'AUX main warehouse stock':esc(p.branch)}</td>
       <td class="text-mono ${wc}">${fmt(whQty)}</td>
       <td class="text-mono ${sc}">${fmt(p.svc)}</td>
