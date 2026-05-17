@@ -1332,11 +1332,24 @@ async function submitPartsRequest() {
   if(HEARTBEAT_URL){
     try{
       const payload = {
-        action:'parts_request',sheet:CONFIG.PARTS_SHEET,
-        orderNumber:orderNo,partNumber:partCode,partDesc:partName,
-        awb:'',requestDate,finalStatus:'Pending',branch,qty,notes,
-        model:model,serialNumber:serialNum,
-        requestedBy:_currentEmail||'—',asc:ascCode||'—',
+        action:       'parts_request',
+        sheet:        CONFIG.PARTS_SHEET,
+        // ── exact column names from the Parts sheet ──
+        orderNumber:  orderNo,
+        partNumber:   partCode,
+        partDesc:     partName,
+        model:        model,
+        serialNumber: serialNum,
+        awb:          '',
+        requestDate:  requestDate,
+        dispatchDate: '',
+        receivingDate:'',
+        finalStatus:  'Pending',
+        branch:       branch,
+        qty:          qty,
+        notes:        notes,
+        requestedBy:  _currentEmail||'—',
+        asc:          ascCode||'—',
       };
       console.log('Sending parts request to:', HEARTBEAT_URL, payload);
 
@@ -1663,17 +1676,21 @@ function updateOrderStatus(orderId, newStatus) {
       String(x['Order Number']).trim().slice(-4) === orderId.slice(-4));
     if (!r) return;
     o = {
-      id:      orderId,
-      orderNo: String(r['Order Number'] || '').trim(),
-      part:    r['Part Description'] || r['Part Number'] || '—',
-      code:    r['Part Number'] || '',
-      branch:  r['Branch'] || '—',
-      qty:     r['Qty'] || '1',
-      status:  (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
-               (r['Final Status']||'').toLowerCase().includes('dispatched')?'dispatched':
-               (r['Final Status']||'').toLowerCase().includes('unavailable')?'unavailable':'pending',
-      time:    r['Request Date'] || '—',
-      awb:     r['AWB'] || '',
+      id:           orderId,
+      orderNo:      String(r['Order Number'] || '').trim(),
+      part:         r['Part Description'] || r['Part Number'] || '—',
+      code:         r['Part Number'] || '',
+      branch:       r['Branch'] || '—',
+      qty:          r['Qty'] || '1',
+      status:       (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
+                    (r['Final Status']||'').toLowerCase().includes('dispatched')?'dispatched':
+                    (r['Final Status']||'').toLowerCase().includes('unavailable')?'unavailable':'pending',
+      time:         r['Request Date'] || '—',
+      awb:          r['AWB'] || '',
+      model:        r['Model'] || '',
+      serialNumber: r['Serial Number'] || '',
+      notes:        r['Notes'] || '',
+      asc:          r['ASC'] || '—',
     };
     isNewToMemory = true;
   }
@@ -1742,14 +1759,24 @@ function updateOrderStatus(orderId, newStatus) {
     fetch(HEARTBEAT_URL,{method:'POST',mode:'no-cors',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        action:'parts_request',sheet:CONFIG.PARTS_SHEET,
-        orderNumber:o.orderNo, awb:o.awb||'',
-        finalStatus:statusText,
-        dispatchDate:dispatchDate,
-        receivingDate:receivingDate,
-        requestedBy:_currentEmail||'—',
-        asc:ascCode||'—',
-        branch:o.branch||'—'
+        action:       'parts_request',
+        sheet:        CONFIG.PARTS_SHEET,
+        // ── exact column names from the Parts sheet ──
+        orderNumber:  o.orderNo,
+        partNumber:   o.code          || '',
+        partDesc:     o.part          || '',
+        model:        o.model         || '',
+        serialNumber: o.serialNumber  || '',
+        awb:          o.awb           || '',
+        requestDate:  o.time          || '',
+        dispatchDate: dispatchDate    || '',
+        receivingDate:receivingDate   || '',
+        finalStatus:  statusText,
+        branch:       o.branch        || '—',
+        qty:          o.qty           || '',
+        notes:        o.notes         || '',
+        requestedBy:  _currentEmail   || '—',
+        asc:          ascCode         || '—',
       })
     }).catch(()=>{});
   }
@@ -1770,17 +1797,21 @@ function editOrderRequest(orderId) {
       String(x['Order Number']).trim().slice(-4) === orderId.slice(-4));
     if (r) {
       o = {
-        id:      orderId,
-        orderNo: String(r['Order Number'] || '').trim(),
-        part:    r['Part Description'] || r['Part Number'] || '—',
-        code:    r['Part Number'] || '',
-        branch:  r['Branch'] || '—',
-        qty:     r['Qty'] || '1',
-        status:  (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
-                 (r['Final Status']||'').toLowerCase().includes('dispatched')?'dispatched':
-                 (r['Final Status']||'').toLowerCase().includes('unavailable')?'unavailable':'pending',
-        time:    r['Request Date'] || '—',
-        awb:     r['AWB'] || '',
+        id:           orderId,
+        orderNo:      String(r['Order Number'] || '').trim(),
+        part:         r['Part Description'] || r['Part Number'] || '—',
+        code:         r['Part Number'] || '',
+        branch:       r['Branch'] || '—',
+        qty:          r['Qty'] || '1',
+        status:       (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
+                      (r['Final Status']||'').toLowerCase().includes('dispatched')?'dispatched':
+                      (r['Final Status']||'').toLowerCase().includes('unavailable')?'unavailable':'pending',
+        time:         r['Request Date'] || '—',
+        awb:          r['AWB'] || '',
+        model:        r['Model'] || '',
+        serialNumber: r['Serial Number'] || '',
+        notes:        r['Notes'] || '',
+        asc:          r['ASC'] || '—',
       };
     }
   }
@@ -1814,6 +1845,18 @@ function editOrderRequest(orderId) {
             style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-size:13px">
         </div>
 
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">Model <span style="color:#dc2626">*</span></label>
+          <input type="text" id="edit-model" value="${esc(o.model)}"
+            style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-size:13px" placeholder="Required">
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">Serial Number</label>
+          <input type="text" id="edit-serialNumber" value="${esc(o.serialNumber)}"
+            style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-size:13px">
+        </div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div>
             <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">Quantity</label>
@@ -1832,6 +1875,11 @@ function editOrderRequest(orderId) {
           <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">AWB / Tracking Number</label>
           <input type="text" id="edit-awb" value="${esc(o.awb)}"
             style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-size:13px" placeholder="Leave empty if not yet dispatched">
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">Notes</label>
+          <textarea id="edit-notes" style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-size:13px;min-height:60px;font-family:inherit" placeholder="Additional notes">${esc(o.notes)}</textarea>
         </div>
       </div>
 
@@ -1853,6 +1901,17 @@ function saveEditedOrder(orderId) {
   const part = document.getElementById('edit-part')?.value.trim() || '';
   const qty = document.getElementById('edit-qty')?.value.trim() || '';
   const awb = document.getElementById('edit-awb')?.value.trim() || '';
+  const model = document.getElementById('edit-model')?.value.trim() || '';
+  const serialNumber = document.getElementById('edit-serialNumber')?.value.trim() || '';
+  const notes = document.getElementById('edit-notes')?.value.trim() || '';
+
+  // Validate mandatory Model field
+  if (!model) {
+    alert('⚠️ Model field is mandatory. Please enter the customer model before saving.');
+    document.getElementById('edit-model').style.borderColor = '#dc2626';
+    return;
+  }
+  document.getElementById('edit-model').style.borderColor = '#d1d5db';
 
   // Find order
   let o = PENDING_BOARD.find(x => x.id === orderId);
@@ -1861,17 +1920,21 @@ function saveEditedOrder(orderId) {
       String(x['Order Number']).trim().slice(-4) === orderId.slice(-4));
     if (r) {
       o = {
-        id: orderId,
-        orderNo: String(r['Order Number'] || '').trim(),
-        part: r['Part Description'] || r['Part Number'] || '—',
-        code: r['Part Number'] || '',
-        branch: r['Branch'] || '—',
-        qty: r['Qty'] || '1',
-        status: (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
-                (r['Final Status']||'').toLowerCase().includes('dispatched')?'dispatched':
-                (r['Final Status']||'').toLowerCase().includes('unavailable')?'unavailable':'pending',
-        time: r['Request Date'] || '—',
-        awb: r['AWB'] || '',
+        id:           orderId,
+        orderNo:      String(r['Order Number'] || '').trim(),
+        part:         r['Part Description'] || r['Part Number'] || '—',
+        code:         r['Part Number'] || '',
+        branch:       r['Branch'] || '—',
+        qty:          r['Qty'] || '1',
+        status:       (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
+                      (r['Final Status']||'').toLowerCase().includes('dispatched')?'dispatched':
+                      (r['Final Status']||'').toLowerCase().includes('unavailable')?'unavailable':'pending',
+        time:         r['Request Date'] || '—',
+        awb:          r['AWB'] || '',
+        model:        r['Model'] || '',
+        serialNumber: r['Serial Number'] || '',
+        notes:        r['Notes'] || '',
+        asc:          r['ASC'] || '—',
       };
       PENDING_BOARD.push(o);
     }
@@ -1884,6 +1947,9 @@ function saveEditedOrder(orderId) {
   o.part = part || o.part;
   o.qty  = qty  || o.qty;
   o.awb  = awb;
+  o.model = model;
+  o.serialNumber = serialNumber;
+  o.notes = notes;
   o.time = 'Just now';
 
   // Close modal and refresh board
@@ -1894,19 +1960,26 @@ function saveEditedOrder(orderId) {
   // ── Write update to Google Sheet via HEARTBEAT_URL ────────────
   if (HEARTBEAT_URL) {
     const payload = {
-      action:      'parts_request',
-      sheet:       CONFIG.PARTS_SHEET,
-      orderNumber: o.orderNo,
-      partNumber:  o.code,
-      partDesc:    o.part,
-      qty:         o.qty,
-      awb:         o.awb || '',
-      branch:      o.branch,
-      finalStatus: o.status === 'received'   ? 'Received'         :
-                   o.status === 'dispatched'  ? 'Dispatched'       :
-                   o.status === 'unavailable' ? 'Part Not Available':
-                   'Pending',
-      requestedBy: _currentEmail || '—',
+      action:       'parts_request',
+      sheet:        CONFIG.PARTS_SHEET,
+      orderNumber:  o.orderNo,
+      partNumber:   o.code,
+      partDesc:     o.part,
+      model:        o.model,
+      serialNumber: o.serialNumber || '',
+      awb:          o.awb || '',
+      requestDate:  o.time || '',
+      dispatchDate: '',
+      receivingDate:'',
+      finalStatus:  o.status === 'received'   ? 'Received'         :
+                    o.status === 'dispatched'  ? 'Dispatched'       :
+                    o.status === 'unavailable' ? 'Part Not Available':
+                    'Pending',
+      branch:       o.branch,
+      qty:          o.qty,
+      notes:        o.notes || '',
+      requestedBy:  _currentEmail || '—',
+      asc:          o.asc || '—',
     };
     fetch(HEARTBEAT_URL, {
       method:  'POST',
@@ -1915,7 +1988,7 @@ function saveEditedOrder(orderId) {
       body:    JSON.stringify(payload),
     }).catch(e => console.error('Modify sheet write error:', e));
     console.log('Order modify sent to sheet:', payload);
-    logActivity(`Parts Modified — Order:${o.orderNo} Part:${o.code} Qty:${o.qty} AWB:${o.awb||'—'}`);
+    logActivity(`Parts Modified — Order:${o.orderNo} Part:${o.code} Model:${o.model} Qty:${o.qty} AWB:${o.awb||'—'}`);
   } else {
     console.warn('HEARTBEAT_URL not set — modify saved in memory only');
   }
