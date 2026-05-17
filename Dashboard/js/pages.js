@@ -256,6 +256,25 @@ async function handlePartsReminder(ticketNo, branch, partDesc) {
   }
 }
 
+// ── Reschedule date cell: red if overdue, amber if today, normal otherwise ──
+function reschedDateCell(d) {
+  if (!d) return '<span style="color:var(--gray-400)">—</span>';
+  const now   = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dDay  = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const label = fmtDate(d);
+  if (dDay < today) {
+    // Overdue: past date → red badge
+    return `<span style="display:inline-block;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;padding:2px 7px;font-weight:700;font-size:0.85em">${label}</span>`;
+  }
+  if (dDay.getTime() === today.getTime()) {
+    // Today → amber/yellow highlight
+    return `<span style="display:inline-block;background:#fef9c3;color:#92400e;border:1px solid #fde68a;border-radius:4px;padding:2px 7px;font-weight:700;font-size:0.85em">📅 ${label}</span>`;
+  }
+  // Future → normal
+  return `<span style="color:var(--gray-700)">${label}</span>`;
+}
+
 // ── PAGE 3: DAILY OPERATIONS ──────────────────────────────────
 function renderDaily(){
   const allRows=DB.filtered, C=CONFIG.COLS;
@@ -295,7 +314,7 @@ function renderDaily(){
           '<td>'+(r._hasWorker?esc(r[C.WORKER]):'<span class="badge badge-red">Unassigned</span>')+'</td>'+
           '<td>'+ticketStatusBadge(r)+'</td><td>'+agingBadge(r._agingHours)+'</td>'+
           '<td>'+esc(r._rescheduleReason||'—')+'</td>'+
-          '<td class="text-mono">'+fmtDate(r._rescheduled)+'</td>'+
+          '<td class="text-mono">'+reschedDateCell(r._rescheduled)+'</td>'+
           '<td>'+esc(r._rescheduleRemark||'—')+'</td>'+
           '<td>'+partsStatusCell(r)+'</td></tr>').join('')}
       </tbody></table></div>
@@ -309,7 +328,7 @@ function renderDaily(){
         '<td>'+(r._hasWorker?esc(r[C.WORKER]):'<span class="badge badge-red">Unassigned</span>')+'</td>'+
         '<td>'+ticketStatusBadge(r)+'</td><td>'+agingBadge(r._agingHours)+'</td>'+
         '<td>'+esc(r._rescheduleReason||'—')+'</td>'+
-        '<td class="text-mono">'+esc(r._rescheduleDate?r._rescheduleDate.substring(0,10):'—')+'</td>'+
+        '<td class="text-mono">'+reschedDateCell(r._rescheduled)+'</td>'+
         '<td>'+esc(r._rescheduleRemark||'—')+'</td>'+
         '<td>'+partsStatusCell(r)+'</td></tr>').join('')}
       ${displayPending.length>80?'<tr><td colspan="9" class="text-center text-sm" style="color:var(--gray-400);padding:12px">Showing 80 of '+displayPending.length+'</td></tr>':''}

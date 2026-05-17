@@ -436,9 +436,13 @@ async function sendBranchAlert(branchName) {
     const ccEmails = [];
 
     // Pass 1: exact match → TO
+    // Normalize city part so "Khamis Musheet - ABL" in Access sheet matches "Khamis Mushait - ABL"
     for (const r of accessRows) {
-      const rowBranch = (r['If Branch has pending'] || '').trim();
-      const email     = (r['Email'] || r['email'] || '').trim();
+      const raw       = (r['If Branch has pending'] || '').trim();
+      const rowBranch = raw.includes(' - ')
+        ? normalizeCityName(raw.split(' - ')[0].trim()) + ' - ' + raw.split(' - ').slice(1).join(' - ').trim()
+        : raw;
+      const email = (r['Email'] || r['email'] || '').trim();
       if (email && rowBranch.toLowerCase() === branchName.toLowerCase()) {
         toEmails.push(email);
       }

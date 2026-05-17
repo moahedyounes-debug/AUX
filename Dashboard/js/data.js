@@ -251,12 +251,26 @@ function parseDate(s) {
     if (month !== undefined) return new Date(+m2[3], month, +m2[1]);
   }
 
-  // ── DD/MM/YYYY or MM/DD/YYYY
+  // ── DD/MM/YYYY or MM/DD/YYYY ─────────────────────────────────
+  // Some columns (e.g. Rescheduling) use MM/DD/YYYY (US format).
+  // Auto-detect: if the second number > 12 it cannot be a month → MM/DD/YYYY.
+  //              if the first  number > 12 it cannot be a day   → DD/MM/YYYY.
+  //              otherwise default to DD/MM/YYYY (Saudi standard).
   const m3 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(?:(\d{1,2}):(\d{2}))?/);
   if (m3) {
     const [,a,b,y,h='0',min='0'] = m3;
-    // Assume DD/MM/YYYY (Saudi standard)
-    return new Date(+y, +b-1, +a, +h, +min);
+    let month, day;
+    if (+b > 12) {
+      // b can't be a month → MM/DD/YYYY (a=month, b=day)
+      month = +a - 1; day = +b;
+    } else if (+a > 12) {
+      // a can't be a day in DD/MM format → DD/MM/YYYY confirmed (a=day, b=month)
+      month = +b - 1; day = +a;
+    } else {
+      // Ambiguous: default to DD/MM/YYYY (Saudi standard)
+      month = +b - 1; day = +a;
+    }
+    return new Date(+y, month, day, +h, +min);
   }
 
   // ── Fallback: native Date parse

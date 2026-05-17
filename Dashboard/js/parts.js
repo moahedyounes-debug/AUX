@@ -1056,8 +1056,13 @@ async function getBranchEmailList(branchName) {
     let ascName = null;
 
     // First pass: find TO emails and ASC name
+    // Normalize rowBranch so "Khamis Musheet - ABL" matches "Khamis Mushait - ABL"
     for (const row of rows) {
-      const rowBranch = (row[branchCol] || '').trim();
+      const rawBranch = (row[branchCol] || '').trim();
+      // Normalize city part of "City - Company" entries (CC entries like "ZAM CC" are left as-is)
+      const rowBranch = rawBranch.includes(' - ')
+        ? normalizeCityName(rawBranch.split(' - ')[0].trim()) + ' - ' + rawBranch.split(' - ').slice(1).join(' - ').trim()
+        : rawBranch;
       const email = (row[emailCol] || '').trim();
 
       if (rowBranch.toLowerCase() === branchName.toLowerCase()) {
