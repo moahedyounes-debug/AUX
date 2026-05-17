@@ -488,9 +488,17 @@ function populateDropdowns(src) {
   const branches=[...new Set(src.map(r=>r._branch).filter(Boolean))].sort();
   const workers=[...new Set(src.map(r=>r[CONFIG.COLS.WORKER]).filter(Boolean))].sort();
   const br=document.getElementById('filter-branch');
-  if(br)br.innerHTML='<option value="">All Branches</option>'+branches.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('');
+  if(br){
+    const prev=br.value; // save selection before rebuild
+    br.innerHTML='<option value="">All Branches</option>'+branches.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('');
+    if(prev) br.value=prev; // restore selection
+  }
   const wk=document.getElementById('filter-worker');
-  if(wk)wk.innerHTML='<option value="">All Workers</option>'+workers.map(w=>`<option value="${esc(w)}">${esc(w)}</option>`).join('');
+  if(wk){
+    const prev=wk.value; // save selection before rebuild
+    wk.innerHTML='<option value="">All Workers</option>'+workers.map(w=>`<option value="${esc(w)}">${esc(w)}</option>`).join('');
+    if(prev) wk.value=prev; // restore selection
+  }
 }
 
 // ── Helpers ──────────────────────────────────

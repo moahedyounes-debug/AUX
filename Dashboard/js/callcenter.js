@@ -28,6 +28,10 @@ const CC_DB = {
   loading:false,
 };
 
+// ── Persistent filter state (survives DOM rebuilds) ───────────
+// Reading from DOM after innerHTML= always returns '' — use this instead.
+let _ccFilters = { agent: '', year: '', month: '', chan: '', dir: '' };
+
 async function loadCCData() {
   if (CC_DB.loading) return;
   CC_DB.loading = true;
@@ -423,12 +427,14 @@ async function renderCallCenter() {
   const el = document.getElementById('page-callcenter');
   if (!el) return;
 
-  el.innerHTML = `<div style="padding:60px;text-align:center;color:var(--gray-400)">
-    <div class="spinner" style="margin:0 auto 16px;width:32px;height:32px;border-width:3px"></div>
-    <div>Loading Call Center data…</div>
-  </div>`;
-
-  if (!CC_DB.loaded) await loadCCData();
+  // Only show loading spinner when data hasn't been loaded yet
+  if (!CC_DB.loaded) {
+    el.innerHTML = `<div style="padding:60px;text-align:center;color:var(--gray-400)">
+      <div class="spinner" style="margin:0 auto 16px;width:32px;height:32px;border-width:3px"></div>
+      <div>Loading Call Center data…</div>
+    </div>`;
+    await loadCCData();
+  }
 
   if (!CC_DB.loaded) {
     el.innerHTML = `<div class="insight-card" style="border-color:#dc2626;background:#fee2e2">
@@ -441,12 +447,14 @@ async function renderCallCenter() {
     return;
   }
 
-  // ── Current filter values ─────────────────────────────────
-  const fAgent = (document.getElementById('cc-f-agent')?.value || '').trim();
-  const fYear  = (document.getElementById('cc-f-year')?.value  || '').trim();
-  const fMonth = (document.getElementById('cc-f-month')?.value || '').trim();
-  const fChan  = (document.getElementById('cc-f-chan')?.value  || '').trim();
-  const fDir   = (document.getElementById('cc-f-dir')?.value   || '').trim();
+  // ── Read filter values from persistent state (not DOM) ────
+  // DOM is rebuilt on every render so document.getElementById always returns ''
+  // _ccFilters is updated by event listeners BEFORE calling renderCallCenter()
+  const fAgent = _ccFilters.agent;
+  const fYear  = _ccFilters.year;
+  const fMonth = _ccFilters.month;
+  const fChan  = _ccFilters.chan;
+  const fDir   = _ccFilters.dir;
 
   // Apply channel filter
   let calls = filterCalls(fAgent, fYear, fMonth, fDir);
@@ -475,7 +483,7 @@ async function renderCallCenter() {
   // ── Monthly data ──────────────────────────────────────────
   const monthly     = groupByMonthCC(calls);
   const waMonthly   = groupWAByMonth(wa);
-  const mLabels     = monthly.map(m => m.mk);
+  const mLabels     = monthly.map(m => formatMonthLabel(m.mk));
   const peak        = peakHours(calls, wa);
   const hours       = Array.from({length:24},(_,i)=>String(i).padStart(2,'0')+':00');
 
@@ -515,32 +523,33 @@ async function renderCallCenter() {
   <!-- FILTERS -->
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--gray-50);border-radius:var(--r-md);padding:10px 14px;margin-bottom:16px">
     <label style="font-size:11px;color:var(--gray-500)">Agent</label>
-    <select id="cc-f-agent" class="filter-input" style="width:auto" onchange="renderCallCenter()">
+    <select id="cc-f-agent" class="filter-input" style="width:auto">
       <option value="">All agents</option>
-      ${allAgents.map(a=>`<option ${a===fAgent?'selected':''}>${esc(a)}</option>`).join('')}
+      ${allAgents.map(a=>`<option value="${esc(a)}" ${a===fAgent?'selected':''}>${esc(a)}</option>`).join('')}
     </select>
     <label style="font-size:11px;color:var(--gray-500)">Year</label>
-    <select id="cc-f-year" class="filter-input" style="width:auto" onchange="renderCallCenter()">
+    <select id="cc-f-year" class="filter-input" style="width:auto">
       <option value="">All years</option>
-      ${allYears.map(y=>`<option ${y===fYear?'selected':''}>${y}</option>`).join('')}
+      ${allYears.map(y=>`<option value="${y}" ${y===fYear?'selected':''}>${y}</option>`).join('')}
     </select>
     <label style="font-size:11px;color:var(--gray-500)">Month</label>
-    <select id="cc-f-month" class="filter-input" style="width:auto" onchange="renderCallCenter()">
+    <select id="cc-f-month" class="filter-input" style="width:auto">
       <option value="">All months</option>
-      ${allMonths.map(m=>`<option ${m===fMonth?'selected':''}>${esc(m)}</option>`).join('')}
+      ${allMonths.map(m=>`<option value="${m}" ${m===fMonth?'selected':''}>${esc(formatMonthLabel(m))}</option>`).join('')}
     </select>
     <label style="font-size:11px;color:var(--gray-500)">Channel</label>
-    <select id="cc-f-chan" class="filter-input" style="width:auto" onchange="renderCallCenter()">
+    <select id="cc-f-chan" class="filter-input" style="width:auto">
       <option value="" ${!fChan?'selected':''}>All channels</option>
-      <option ${fChan==='Calls'?'selected':''}>Calls</option>
-      <option ${fChan==='WhatsApp'?'selected':''}>WhatsApp</option>
+      <option value="Calls" ${fChan==='Calls'?'selected':''}>Calls</option>
+      <option value="WhatsApp" ${fChan==='WhatsApp'?'selected':''}>WhatsApp</option>
     </select>
     <label style="font-size:11px;color:var(--gray-500)">Direction</label>
-    <select id="cc-f-dir" class="filter-input" style="width:auto" onchange="renderCallCenter()">
+    <select id="cc-f-dir" class="filter-input" style="width:auto">
       <option value="" ${!fDir?'selected':''}>Inbound + Outbound</option>
-      <option ${fDir==='Inbound'?'selected':''}>Inbound</option>
-      <option ${fDir==='Outbound'?'selected':''}>Outbound</option>
+      <option value="Inbound" ${fDir==='Inbound'?'selected':''}>Inbound</option>
+      <option value="Outbound" ${fDir==='Outbound'?'selected':''}>Outbound</option>
     </select>
+    ${(fAgent||fYear||fMonth||fChan||fDir)?`<button onclick="_ccFilters={agent:'',year:'',month:'',chan:'',dir:''};renderCallCenter()" style="background:#f3f4f6;border:.5px solid #d1d5db;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;color:#374151;white-space:nowrap">✕ Clear</button>`:''}
   </div>
 
   <!-- KPI CARDS -->
@@ -643,6 +652,25 @@ async function renderCallCenter() {
   </div>`:''}
   `;
 
+  // ── Attach event listeners — save to state THEN re-render ──
+  // Pattern: on change → update _ccFilters → renderCallCenter() reads from _ccFilters
+  // This avoids the stale-DOM problem where innerHTML= has already cleared the selects.
+  const attachFilterListener = (elementId, stateKey) => {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const handleChange = () => {
+      _ccFilters[stateKey] = el.value;
+      renderCallCenter();
+    };
+    el.addEventListener('change', handleChange);
+  };
+
+  attachFilterListener('cc-f-agent', 'agent');
+  attachFilterListener('cc-f-year',  'year');
+  attachFilterListener('cc-f-month', 'month');
+  attachFilterListener('cc-f-chan',  'chan');
+  attachFilterListener('cc-f-dir',   'dir');
+
   // ── Draw charts ──────────────────────────────────────────
   const base = {
     responsive:true, maintainAspectRatio:false,
@@ -681,7 +709,7 @@ async function renderCallCenter() {
   }
 
   if (waMonthly.length) {
-    const waLabels = waMonthly.map(m=>m.mk);
+    const waLabels = waMonthly.map(m=>formatMonthLabel(m.mk));
     new Chart(document.getElementById('ch-cc-wa'),{
       type:'bar',
       data:{labels:waLabels,datasets:[{

@@ -303,9 +303,10 @@ function buildPartReturnStatus(transactions) {
       p.status = 'PENDING_RETURN';
       p.displayRef = null; // No reference yet
     } else if (has[6]) {
-      // Requested but not yet used: has 6 (or 6,7 only)
-      p.status = 'PENDING_USE';
-      p.displayRef = null; // No reference yet
+      // Requested and sent to SVC but not yet used: has 6 (or 6,7 only)
+      // Part is physically at the SVC center — show as AVAILABLE
+      p.status = 'AVAILABLE';
+      p.displayRef = null;
     } else {
       p.status = 'UNKNOWN';
       p.displayRef = null;
@@ -509,7 +510,7 @@ async function renderParts() {
   // ── Part Return Status Tracking (Sort 6 → 10) ──────────
   // Track detailed return status for each part at each SVC center
   const returnStatusList = buildPartReturnStatus(tx)
-    .filter(p => p.status !== 'UNKNOWN' && p.status !== 'PENDING_USE'); // Only show parts that are in use or returning
+    .filter(p => p.status !== 'UNKNOWN'); // Show all tracked parts (AVAILABLE, PENDING_RETURN, IN_TRANSIT, RETURNED)
 
   el.innerHTML=`
   <!-- HEADER -->
@@ -661,7 +662,7 @@ async function renderParts() {
             catch(e) { return '—'; }
           };
           let locationDisplay = p.asc ? `${p.branch} - ${p.asc}` : p.branch;
-          const statusColor = p.status === 'RETURNED' ? '#1D9E75' : p.status === 'IN_TRANSIT' ? '#EF9F27' : p.status === 'PENDING_RETURN' ? '#E24B4A' : '#6B7280';
+          const statusColor = p.status === 'RETURNED' ? '#1D9E75' : p.status === 'IN_TRANSIT' ? '#EF9F27' : p.status === 'PENDING_RETURN' ? '#E24B4A' : p.status === 'AVAILABLE' ? '#0891B2' : '#6B7280';
           const statusBadge = `<span style="background:${statusColor};color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600">${p.status}</span>`;
           return `<tr>
             <td class="fw-600 text-mono">${esc(locationDisplay)}</td>
@@ -1313,6 +1314,7 @@ function buildPendingBoard() {
   const sMap = {
     pending:       {cls:'badge-gray',     lbl:'Under Process',           btnLabel:'Update Status', action:'pending'},
     dispatched:    {cls:'badge-blue',     lbl:'Dispatched',              btnLabel:'Mark Received', action:'received'},
+    sent:          {cls:'badge-blue',     lbl:'Dispatched',              btnLabel:'Mark Received', action:'received'},
     unavailable:   {cls:'badge-red',      lbl:'Part Not Available',      btnLabel:null,           action:null},
     received:      {cls:'badge-green',    lbl:'Available in SVC Stock',  btnLabel:null,           action:null},
   };
