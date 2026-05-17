@@ -1032,7 +1032,7 @@ function showPartsRequestModal(opts) {
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div style="position:relative">
-            <label style="font-size:11px;color:#6b7280;display:block;margin-bottom:4px">Model Number</label>
+            <label style="font-size:11px;color:#6b7280;display:block;margin-bottom:4px">Model Number <span style="color:#dc2626;font-weight:700">*</span></label>
             <input id="pm-model" value="${esc(opts.model||'')}" type="text" placeholder="e.g. ATW24" autocomplete="off"
               style="width:100%;font-size:13px;padding:8px 10px;border:.5px solid #d1d5db;border-radius:8px;background:#fff;color:#000;font-family:monospace">
             <div id="pm-model-dropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:.5px solid #d1d5db;border-top:none;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:1000;display:none;box-shadow:0 4px 6px rgba(0,0,0,.1)"></div>
@@ -1294,6 +1294,21 @@ async function submitPartsRequest() {
 
   if(!orderNo){alert('Order Number is required (GD…)');return;}
   if(!partName&&!partCode){alert('Please enter part name or part number.');return;}
+  if(!model){
+    // Highlight the model field red and focus it
+    const modelEl = document.getElementById('pm-model');
+    if(modelEl){
+      modelEl.style.border = '2px solid #dc2626';
+      modelEl.style.background = '#fff5f5';
+      modelEl.focus();
+      modelEl.addEventListener('input', ()=>{
+        modelEl.style.border = '.5px solid #d1d5db';
+        modelEl.style.background = '#fff';
+      }, {once:true});
+    }
+    alert('⚠️ Model Number is required.\nPlease enter the customer model (e.g. ATW18A2DI-CSA).');
+    return;
+  }
 
   const requestDate=new Date().toISOString().split('T')[0];
   logActivity(`Parts Request — Order:${orderNo} Part:${partName||partCode} Branch:${branch}`);
@@ -1864,11 +1879,11 @@ function saveEditedOrder(orderId) {
 
   if (!o) return;
 
-  // Update fields
+  // Update in-memory record
   o.code = code || o.code;
   o.part = part || o.part;
-  o.qty = qty || o.qty;
-  o.awb = awb;
+  o.qty  = qty  || o.qty;
+  o.awb  = awb;
   o.time = 'Just now';
 
   // Close modal and refresh board
@@ -1876,6 +1891,32 @@ function saveEditedOrder(orderId) {
   const board = document.getElementById('parts-status-board');
   if (board) board.innerHTML = buildPendingBoard();
 
-  // Log modification
-  console.log('Order modified:', o);
+  // ── Write update to Google Sheet via HEARTBEAT_URL ────────────
+  if (HEARTBEAT_URL) {
+    const payload = {
+      action:      'parts_request',
+      sheet:       CONFIG.PARTS_SHEET,
+      orderNumber: o.orderNo,
+      partNumber:  o.code,
+      partDesc:    o.part,
+      qty:         o.qty,
+      awb:         o.awb || '',
+      branch:      o.branch,
+      finalStatus: o.status === 'received'   ? 'Received'         :
+                   o.status === 'dispatched'  ? 'Dispatched'       :
+                   o.status === 'unavailable' ? 'Part Not Available':
+                   'Pending',
+      requestedBy: _currentEmail || '—',
+    };
+    fetch(HEARTBEAT_URL, {
+      method:  'POST',
+      mode:    'no-cors',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify(payload),
+    }).catch(e => console.error('Modify sheet write error:', e));
+    console.log('Order modify sent to sheet:', payload);
+    logActivity(`Parts Modified — Order:${o.orderNo} Part:${o.code} Qty:${o.qty} AWB:${o.awb||'—'}`);
+  } else {
+    console.warn('HEARTBEAT_URL not set — modify saved in memory only');
+  }
 }
