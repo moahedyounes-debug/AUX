@@ -456,7 +456,7 @@ function enrichRow(row) {
   }
   // 4a. Change of appointment time (branch) with Dispatched work → amber
   else if (phaseLowTrimmed.includes('change of appointment time') && statusLowTrimmed.includes('dispatched')) {
-    baseLabel = 'Dispatched & appointment updated But Not Accepted';
+    baseLabel = 'Dispatched & appointment updated But Not Accepted By Technician';
     baseColor = 'amber';
   }
   // 4b. Change of appointment time (branch) with Accepted → Green
@@ -503,17 +503,14 @@ function enrichRow(row) {
   const hasReason = r._hasRescheduleReason || r._rescheduleRemark;
   const alreadyHasAppointment = baseLabel.toLowerCase().includes('appointment');
 
-  if (r._isPending) {
-    // Don't repeat "appointment" if it's already in the base label
-    if (hasAppointment && hasReason && !alreadyHasAppointment) {
+  if (r._isPending && !alreadyHasAppointment) {
+    // Only add suffixes if base label doesn't already include appointment info
+    if (hasAppointment && hasReason) {
       finalLabel += ' and appointment and reason updated';
-    } else if (hasAppointment && !alreadyHasAppointment) {
+    } else if (hasAppointment) {
       finalLabel += ' and appointment updated';
     } else if (hasReason) {
-      // Only add "reason updated" if not already mentioned
-      if (!finalLabel.toLowerCase().includes('reason')) {
-        finalLabel += ' and reason updated';
-      }
+      finalLabel += ' and reason updated';
     }
   }
 
