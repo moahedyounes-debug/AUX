@@ -271,6 +271,10 @@ function setupDashboard(email, userASC){
   const brAlertNav=document.getElementById('nav-alerts');
   if(brAlertNav) brAlertNav.style.display=(DB.isAdmin&&DB.isAdminAccess)?'flex':'none';
 
+  // Call Center page: visible only to Admin Access = Yes users
+  const ccNavItem = document.querySelector('[data-page="page-callcenter"]');
+  if (ccNavItem) ccNavItem.style.display = DB.isAdminAccess ? 'flex' : 'none';
+
   if(DB.raw.length>0){
     const dates=DB.raw.map(r=>r._created).filter(Boolean).sort((a,b)=>a-b);
     if(dates.length){

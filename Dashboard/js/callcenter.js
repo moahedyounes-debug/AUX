@@ -427,6 +427,16 @@ async function renderCallCenter() {
   const el = document.getElementById('page-callcenter');
   if (!el) return;
 
+  // Access control: Admin Access = Yes only
+  if (!DB.isAdminAccess) {
+    el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:12px;color:var(--gray-500)">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <div style="font-size:18px;font-weight:600;color:var(--gray-700)">Access Restricted</div>
+      <div style="font-size:13px">Call Center page is available to Admin users only.</div>
+    </div>`;
+    return;
+  }
+
   // Only show loading spinner when data hasn't been loaded yet
   if (!CC_DB.loaded) {
     el.innerHTML = `<div style="padding:60px;text-align:center;color:var(--gray-400)">

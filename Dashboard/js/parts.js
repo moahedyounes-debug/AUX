@@ -114,6 +114,35 @@ function calcStockMap(transactions) {
   return m;
 }
 
+// ── Stock per-branch (for "Search by Part Number" view) ────────
+// Same logic as calcStockMap but grouped by partKey + branch, so the
+// same part at different service centers appears on separate rows.
+function calcStockByBranch(transactions) {
+  const m = {};
+  transactions.forEach(r => {
+    if (!r._key) return;
+    const k = `${r._key}::${r._branch}`;
+    if (!m[k]) m[k] = {
+      code: r._partCode, name: r._partName, branch: r._branch, asc: r._asc,
+      wh: 0, svc: 0, consumed: 0, returnedWH: 0,
+      monthlyConsumption: {}, lastUsed: null,
+    };
+    const p = m[k];
+    switch (r._sort) {
+      case 5:  p.wh  += r._qty; break;
+      case 6:  p.wh  -= r._qty; p.svc  += r._qty; break;
+      case 8:  p.svc -= r._qty; p.consumed += r._qty;
+               if (r._monthKey) p.monthlyConsumption[r._monthKey] = (p.monthlyConsumption[r._monthKey]||0)+r._qty;
+               if (!p.lastUsed||(r._date&&r._date>p.lastUsed)) p.lastUsed=r._date;
+               break;
+      case 10: p.wh += r._qty; p.returnedWH += r._qty; break;
+      case 12: p.wh += r._qty; p.returnedWH += r._qty; break;
+    }
+  });
+  Object.values(m).forEach(p => { p.wh=Math.max(0,p.wh); p.svc=Math.max(0,p.svc); });
+  return Object.values(m);
+}
+
 // ── ABC (based on Sort 8 consumption) ─────────────────────────
 function classifyABC(arr) {
   const sorted = [...arr].sort((a,b)=>b.consumed-a.consumed);
@@ -318,33 +347,78 @@ function buildPartReturnStatus(transactions) {
 
 // ── Build inventory table rows with WH stock lookup ─────────────
 function buildInventoryTableRows(partsArr, transactions) {
-  // Create warehouse stock map for quick lookup
+  // Build WH stock map for quick lookup
   const whStockMap = {};
   transactions.forEach(tx => {
     if (tx._branch === 'AUX Main WH Stock' && tx._sort === 5) {
-      const key = tx._key;
-      if (!whStockMap[key]) whStockMap[key] = 0;
-      whStockMap[key] += tx._qty;
+      if (!whStockMap[tx._key]) whStockMap[tx._key] = 0;
+      whStockMap[tx._key] += tx._qty;
     }
   });
 
-  const searchTerm = document.getElementById('search-model')?.value.toLowerCase() || '';
-  let filtered = partsArr;
-  if (searchTerm) {
-    filtered = partsArr.filter(p =>
-      (p.name && p.name.toLowerCase().includes(searchTerm)) ||
-      (p.code && p.code.toLowerCase().includes(searchTerm))
-    );
+  const modelSearch   = (document.getElementById('search-model')?.value    || '').toLowerCase().trim();
+  const partCodeSearch= (document.getElementById('search-part-code')?.value || '').toLowerCase().trim();
+
+  // ── MODE A: Search by Part Number → per-branch breakdown ──────────────
+  if (partCodeSearch) {
+    const byBranch = calcStockByBranch(transactions)
+      .filter(p =>
+        (p.code && p.code.toLowerCase().includes(partCodeSearch)) ||
+        (p.name && p.name.toLowerCase().includes(partCodeSearch))
+      )
+      .sort((a,b)=>(a.code+a.branch).localeCompare(b.code+b.branch));
+
+    if (byBranch.length === 0) return '<tr><td colspan="10" class="table-empty">No parts found for that part number</td></tr>';
+
+    // Group rows by part code to show a sub-header per unique part
+    let lastCode = null;
+    return byBranch.map(p => {
+      const f  = calcForecast(p);
+      const sc = p.svc <= 0 ? 'color-danger' : p.svc < 3 ? 'color-warning' : '';
+      const isWH = p.branch === 'AUX Main WH Stock';
+      let html = '';
+      if (p.code !== lastCode) {
+        lastCode = p.code;
+        html += `<tr style="background:var(--blue-50,#eff6ff)">
+          <td colspan="10" style="padding:6px 10px;font-weight:700;font-size:12px;color:#1e40af;letter-spacing:.5px">
+            ${esc(p.code)} — ${esc(p.name)}
+          </td></tr>`;
+      }
+      html += `<tr ${isWH?'style="opacity:.65"':''}>
+        <td style="padding-left:20px">
+          ${isWH?'<span style="font-size:11px;color:var(--gray-400)">WH</span>':
+          `<button class="req-btn" onclick="showPartsRequestModal({code:'${esc(p.code)}',name:'${esc(p.name)}'})">+ Request</button>`}
+        </td>
+        <td class="text-sm">${isWH?'<span class="badge badge-blue">WH</span>':esc(p.asc||'—')}</td>
+        <td class="text-sm fw-600">${isWH?'AUX Main Warehouse':esc(p.branch)}</td>
+        <td class="text-mono ${sc}">${fmt(p.svc)}</td>
+        <td class="text-mono">${fmt(p.consumed)}</td>
+        <td class="text-mono">${fmt(p.returnedWH)}</td>
+        <td class="text-mono">${f?fmt(f.avgMonthly,1):'—'}</td>
+        <td>${f?`<span class="badge ${f.monthsLeft<1?'badge-red':f.monthsLeft<3?'badge-amber':'badge-green'}">${fmt(f.monthsLeft,1)}mo</span>`:'—'}</td>
+        <td></td><td></td>
+      </tr>`;
+      return html;
+    }).join('');
   }
 
-  return filtered.slice(0,120).map(p=>{
-    const f=calcForecast(p);
-    const ac=p.abc==='A'?'badge-red':p.abc==='B'?'badge-amber':'badge-gray';
-    // WH stock for this part from warehouse inventory
+  // ── MODE B: Search by Model / Part Name → aggregated view (default) ────
+  let filtered = partsArr;
+  if (modelSearch) {
+    filtered = partsArr.filter(p =>
+      (p.name && p.name.toLowerCase().includes(modelSearch)) ||
+      (p.code && p.code.toLowerCase().includes(modelSearch))
+    );
+    if (filtered.length === 0) return '<tr><td colspan="11" class="table-empty">No parts found for that model</td></tr>';
+  }
+
+  return filtered.slice(0,120).map(p => {
+    const f  = calcForecast(p);
+    const ac = p.abc==='A'?'badge-red':p.abc==='B'?'badge-amber':'badge-gray';
     const whQty = whStockMap[p.code] || 0;
-    const wc=whQty<5?'color-danger':whQty<20?'color-warning':'';
-    const sc=p.svc<=0?'color-danger':p.svc<3?'color-warning':'';
-    return`<tr>
+    const wc = whQty<5?'color-danger':whQty<20?'color-warning':'';
+    const sc = p.svc<=0?'color-danger':p.svc<3?'color-warning':'';
+    return `<tr>
       <td><button class="req-btn" onclick="showPartsRequestModal({code:'${esc(p.code)}',name:'${esc(p.name)}'})">+ Request</button></td>
       <td><span class="badge ${ac}">${p.abc}</span></td>
       <td class="text-mono text-sm">${esc(p.code)}</td>
@@ -360,20 +434,28 @@ function buildInventoryTableRows(partsArr, transactions) {
   }).join('');
 }
 
-// ── Filter inventory by model search ────────────────────────────
-function filterInventoryByModel() {
-  // This will be called from the search input
-  // We need to re-render just the table body
+// ── Filter Full Inventory table (called from both search inputs) ──
+function filterInventory() {
   const tableBody = document.getElementById('inventory-table-body');
   if (!tableBody) return;
-
-  // Find the current partsArr and tx from PARTS_DB
   const tx = getFilteredTx();
   const stockMap = calcStockMap(tx);
   const partsArr = classifyABC(Object.values(stockMap));
-
   tableBody.innerHTML = buildInventoryTableRows(partsArr, tx);
+
+  // Update table header to match current mode
+  const partCodeSearch = (document.getElementById('search-part-code')?.value || '').trim();
+  const thead = document.getElementById('inventory-thead');
+  if (thead) {
+    if (partCodeSearch) {
+      thead.innerHTML = '<tr><th></th><th>ASC</th><th style="text-align:left">Branch</th><th>SVC Stock</th><th>Consumed</th><th>Returned</th><th>Avg/Mo</th><th>Months Left</th><th></th><th></th></tr>';
+    } else {
+      thead.innerHTML = '<tr><th></th><th>ABC</th><th>Code</th><th style="text-align:left">Part Name</th><th>Branch</th><th>WH Stock</th><th>SVC Stock</th><th>Consumed</th><th>Returned</th><th>Avg/Mo</th><th>Months Left</th></tr>';
+    }
+  }
 }
+// Backward compat alias
+function filterInventoryByModel() { filterInventory(); }
 
 // ── Filter transactions ────────────────────────────────────────
 function getFilteredTx() {
@@ -704,14 +786,23 @@ async function renderParts() {
 
   <!-- FULL INVENTORY -->
   <div class="section-header"><div class="section-title">Full Inventory — ABC Analysis</div><span class="section-badge">${totalSKUs} SKUs</span></div>
-  <div style="margin-bottom:15px">
-    <input type="text" id="search-model" class="filter-input" placeholder="🔍 Search by Model..."
-           style="width:100%;padding:10px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-family:inherit"
-           oninput="filterInventoryByModel()">
+  <div style="margin-bottom:15px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div>
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Search by Model / Part Name</label>
+      <input type="text" id="search-model" class="filter-input" placeholder="🔍 e.g. Compressor, Fan Motor…"
+             style="width:100%;padding:10px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box"
+             oninput="filterInventory()">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Search by Part Number → per branch</label>
+      <input type="text" id="search-part-code" class="filter-input" placeholder="🔍 e.g. 11223003000465"
+             style="width:100%;padding:10px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box"
+             oninput="filterInventory()">
+    </div>
   </div>
   <div class="table-card">
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th></th><th>ABC</th><th>Code</th><th style="text-align:left">Part Name</th><th>Branch</th><th>WH Stock</th><th>SVC Stock</th><th>Consumed</th><th>Returned</th><th>Avg/Mo</th><th>Months Left</th></tr></thead>
+      <thead id="inventory-thead"><tr><th></th><th>ABC</th><th>Code</th><th style="text-align:left">Part Name</th><th>Branch</th><th>WH Stock</th><th>SVC Stock</th><th>Consumed</th><th>Returned</th><th>Avg/Mo</th><th>Months Left</th></tr></thead>
       <tbody id="inventory-table-body">
       ${buildInventoryTableRows(partsArr, tx)}
       </tbody>
