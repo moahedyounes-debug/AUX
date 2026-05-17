@@ -419,11 +419,6 @@ function populateBranchFilter() {
   select.value = currentValue;
 }
 
-// ── Apply filters and re-render ────────────────────────────────
-function applyFilters() {
-  renderParts();
-}
-
 // ── Render Spare Parts Page ────────────────────────────────────
 async function renderParts() {
   const el = document.getElementById('page-parts');
