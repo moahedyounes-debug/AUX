@@ -199,12 +199,14 @@ function classifyABC(arr) {
 }
 
 // ── Forecast ───────────────────────────────────────────────────
-function calcForecast(p) {
+// availableStock: use p.wh for warehouse, p.svc for SVC centers
+function calcForecast(p, isWarehouse=false) {
   const months = Object.values(p.monthlyConsumption);
   if (!months.length||!months.some(v=>v>0)) return null;
   const avgMonthly = months.reduce((a,b)=>a+b,0)/months.length;
   if (!avgMonthly) return null;
-  return { avgMonthly, monthsLeft:+(p.svc/avgMonthly).toFixed(1), reorderQty:Math.ceil(avgMonthly*3) };
+  const availableStock = isWarehouse ? p.wh : p.svc;
+  return { avgMonthly, monthsLeft:+(availableStock/avgMonthly).toFixed(1), reorderQty:Math.ceil(avgMonthly*3) };
 }
 
 // ── Month label ────────────────────────────────────────────────
@@ -419,9 +421,9 @@ function buildInventoryTableRows(partsArr, transactions) {
     // Group rows by part code to show a sub-header per unique part
     let lastCode = null;
     return byBranch.map(p => {
-      const f  = calcForecast(p);
-      const sc = p.svc <= 0 ? 'color-danger' : p.svc < 3 ? 'color-warning' : '';
       const isWH = p.branch === 'AUX Main WH Stock';
+      const f  = calcForecast(p, isWH);
+      const sc = p.svc <= 0 ? 'color-danger' : p.svc < 3 ? 'color-warning' : '';
       let html = '';
       if (p.code !== lastCode) {
         lastCode = p.code;
@@ -453,15 +455,15 @@ function buildInventoryTableRows(partsArr, transactions) {
 
   if (modelSearch) {
     // Look up part codes from PARTS_DB.modelMap (Parts Model sheet)
+    // Now that dropdown provides exact model names, match exactly
     const modelMatchedCodes = new Set();
     let matchedModelLabel = '';
 
-    Object.entries(PARTS_DB.modelMap).forEach(([key, entry]) => {
-      if (key.includes(modelSearch)) {
-        entry.codes.forEach(c => modelMatchedCodes.add(c));
-        if (!matchedModelLabel) matchedModelLabel = entry.label;
-      }
-    });
+    const entry = PARTS_DB.modelMap[modelSearch];
+    if (entry) {
+      entry.codes.forEach(c => modelMatchedCodes.add(c));
+      matchedModelLabel = entry.label;
+    }
 
     if (modelMatchedCodes.size === 0) {
       // Parts Model sheet has no entry — show helpful message
@@ -584,6 +586,38 @@ function populateBranchFilter() {
   select.value = currentValue;
 }
 
+// ── Populate Model Dropdown ────────────────────────────────────
+function populateModelDropdown() {
+  const select = document.getElementById('search-model');
+  if (!select) return;
+
+  // Extract unique customer models from PARTS_DB.modelRows
+  const models = new Set();
+  PARTS_DB.modelRows.forEach(row => {
+    const model = (
+      row['Customer Model'] || row['customer model'] ||
+      row['Model'] || row['model'] || ''
+    ).trim();
+    if (model) models.add(model);
+  });
+
+  // Sort alphabetically
+  const sortedModels = Array.from(models).sort();
+
+  // Keep existing value (if already selected)
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">— Select a Model —</option>';
+
+  sortedModels.forEach(model => {
+    const opt = document.createElement('option');
+    opt.value = model.toLowerCase();
+    opt.textContent = model;
+    select.appendChild(opt);
+  });
+
+  select.value = currentValue;
+}
+
 // ── Render Spare Parts Page ────────────────────────────────────
 async function renderParts() {
   const el = document.getElementById('page-parts');
@@ -603,6 +637,7 @@ async function renderParts() {
   }
 
   populateBranchFilter();
+  populateModelDropdown();
   const tx = getFilteredTx();
   const stockMap   = calcStockMap(tx);
   const partsArr   = classifyABC(Object.values(stockMap));
@@ -910,9 +945,11 @@ async function renderParts() {
   <div style="margin-bottom:15px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div>
       <label style="display:block;font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Search by Customer Model</label>
-      <input type="text" id="search-model" class="filter-input" placeholder="🔍 e.g. ATW18A2DI-CSA"
-             style="width:100%;padding:10px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box"
-             oninput="filterInventory()">
+      <select id="search-model" class="filter-input"
+             style="width:100%;padding:10px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box;appearance:none;background:white;cursor:pointer"
+             onchange="filterInventory()">
+        <option value="">— Select a Model —</option>
+      </select>
     </div>
     <div>
       <label style="display:block;font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Search by Part Number → per branch</label>
