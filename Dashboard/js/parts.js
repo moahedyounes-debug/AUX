@@ -1311,10 +1311,10 @@ function buildPendingBoard() {
   if (!filtered.length) return '<div style="font-size:12px;color:var(--gray-400);padding:.5rem 0">No pending part requests</div>';
 
   const sMap = {
-    pending:    {cls:'badge-amber', lbl:'Pending',            btnLabel:'Update Status', action:'pending'},
-    dispatched: {cls:'badge-blue',  lbl:'Dispatched',        btnLabel:'Mark Received', action:'received'},
-    unavailable:{cls:'badge-red',   lbl:'Part Not Available', btnLabel:null,           action:null},
-    received:   {cls:'badge-green', lbl:'Received',          btnLabel:null,           action:null},
+    pending:       {cls:'badge-gray',     lbl:'Under Process',           btnLabel:'Update Status', action:'pending'},
+    dispatched:    {cls:'badge-blue',     lbl:'Dispatched',              btnLabel:'Mark Received', action:'received'},
+    unavailable:   {cls:'badge-red',      lbl:'Part Not Available',      btnLabel:null,           action:null},
+    received:      {cls:'badge-green',    lbl:'Available in SVC Stock',  btnLabel:null,           action:null},
   };
 
   return filtered.slice(0,8).map((o,i)=>{
@@ -1382,27 +1382,48 @@ function showStatusModal(orderId, orderNo) {
 
       <button onclick="updateOrderStatus('${orderId}','unavailable')"
         style="background:#dc2626;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
-        ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Close request - part unavailable</span>
+        ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Part is not available</span>
+      </button>
+
+      <button onclick="editOrderRequest('${orderId}')"
+        style="background:#8B5CF6;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        ✏️ Modify<br><span style="font-size:11px;opacity:0.9">Edit request details</span>
       </button>
     `;
   } else if (currentStatus === 'dispatched') {
     buttonHTML = `
       <button onclick="updateOrderStatus('${orderId}','received')"
         style="background:#16a34a;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
-        ✅ Received<br><span style="font-size:11px;opacity:0.9">Parts received at branch</span>
+        ✅ Available in SVC Stock<br><span style="font-size:11px;opacity:0.9">Parts received at branch</span>
       </button>
 
       <button onclick="updateOrderStatus('${orderId}','unavailable')"
         style="background:#dc2626;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
-        ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Close request - part unavailable</span>
+        ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Part is not available</span>
+      </button>
+
+      <button onclick="editOrderRequest('${orderId}')"
+        style="background:#8B5CF6;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        ✏️ Modify<br><span style="font-size:11px;opacity:0.9">Edit request details</span>
       </button>
     `;
+  } else if (currentStatus === 'received') {
+    buttonHTML = `
+      <button onclick="editOrderRequest('${orderId}')"
+        style="background:#8B5CF6;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        ✏️ Modify<br><span style="font-size:11px;opacity:0.9">Edit request details</span>
+      </button>
+
+      <div style="font-size:13px;color:#6b7280;padding:12px;background:#f3f4f6;border-radius:8px;margin-top:10px">
+        Status: <strong>Available in SVC Stock</strong>
+      </div>
+    `;
   } else {
-    // For unavailable or received status, just show cancel option
+    // For unavailable status, show message
     buttonHTML = `
       <div style="font-size:13px;color:#6b7280;padding:12px;background:#f3f4f6;border-radius:8px">
-        Current status: <strong>${currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}</strong><br>
-        <span style="font-size:11px">No further updates available for this status.</span>
+        Status: <strong>Part Not Available</strong><br>
+        <span style="font-size:11px">Request has been closed.</span>
       </div>
     `;
   }
@@ -1529,4 +1550,142 @@ function updateOrderStatus(orderId, newStatus) {
   }
   const board=document.getElementById('parts-status-board');
   if(board) board.innerHTML=buildPendingBoard();
+}
+
+// ── Edit/Modify order request ────────────────────────────────────
+function editOrderRequest(orderId) {
+  // Close the current modal
+  document.getElementById('status-modal-overlay')?.remove();
+
+  // Find order by ID
+  let o = PENDING_BOARD.find(x => x.id === orderId);
+
+  if (!o && PARTS_REQUESTS) {
+    const r = PARTS_REQUESTS?.find(x => x['Order Number'] &&
+      String(x['Order Number']).trim().slice(-4) === orderId.slice(-4));
+    if (r) {
+      o = {
+        id:      orderId,
+        orderNo: String(r['Order Number'] || '').trim(),
+        part:    r['Part Description'] || r['Part Number'] || '—',
+        code:    r['Part Number'] || '',
+        branch:  r['Branch'] || '—',
+        qty:     r['Qty'] || '1',
+        status:  (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
+                 (r['Final Status']||'').toLowerCase().includes('dispatched')?'dispatched':
+                 (r['Final Status']||'').toLowerCase().includes('unavailable')?'unavailable':'pending',
+        time:    r['Request Date'] || '—',
+        awb:     r['AWB'] || '',
+      };
+    }
+  }
+
+  if (!o) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'edit-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9001;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:12px;border:.5px solid #e5e7eb;padding:1.5rem;width:480px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+      <div style="font-size:15px;font-weight:600;color:#111;margin-bottom:1.5rem">Modify Part Request</div>
+
+      <div style="display:flex;flex-direction:column;gap:15px">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">Order Number</label>
+          <input type="text" id="edit-orderNo" value="${esc(o.orderNo)}"
+            style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-family:monospace;font-size:13px" disabled>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">Part Number</label>
+          <input type="text" id="edit-code" value="${esc(o.code)}"
+            style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-size:13px">
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">Part Description</label>
+          <input type="text" id="edit-part" value="${esc(o.part)}"
+            style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-size:13px">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">Quantity</label>
+            <input type="number" id="edit-qty" value="${esc(o.qty)}"
+              style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-size:13px">
+          </div>
+
+          <div>
+            <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">Branch</label>
+            <input type="text" id="edit-branch" value="${esc(o.branch)}"
+              style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-size:13px" disabled>
+          </div>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#333;margin-bottom:6px">AWB / Tracking Number</label>
+          <input type="text" id="edit-awb" value="${esc(o.awb)}"
+            style="width:100%;padding:8px;border:.5px solid #d1d5db;border-radius:6px;font-size:13px" placeholder="Leave empty if not yet dispatched">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;padding-top:1rem;border-top:.5px solid #f3f4f6">
+        <button onclick="document.getElementById('edit-modal-overlay').remove()"
+          style="background:#f9fafb;border:.5px solid #d1d5db;border-radius:8px;padding:8px 18px;font-size:12px;cursor:pointer;color:#374151">Cancel</button>
+
+        <button onclick="saveEditedOrder('${orderId}')"
+          style="background:#003D8F;color:white;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer">Save Changes</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+}
+
+// ── Save edited order ────────────────────────────────────────────
+function saveEditedOrder(orderId) {
+  const code = document.getElementById('edit-code')?.value.trim() || '';
+  const part = document.getElementById('edit-part')?.value.trim() || '';
+  const qty = document.getElementById('edit-qty')?.value.trim() || '';
+  const awb = document.getElementById('edit-awb')?.value.trim() || '';
+
+  // Find order
+  let o = PENDING_BOARD.find(x => x.id === orderId);
+  if (!o) {
+    const r = PARTS_REQUESTS?.find(x => x['Order Number'] &&
+      String(x['Order Number']).trim().slice(-4) === orderId.slice(-4));
+    if (r) {
+      o = {
+        id: orderId,
+        orderNo: String(r['Order Number'] || '').trim(),
+        part: r['Part Description'] || r['Part Number'] || '—',
+        code: r['Part Number'] || '',
+        branch: r['Branch'] || '—',
+        qty: r['Qty'] || '1',
+        status: (r['Final Status']||'Pending').toLowerCase().includes('receiv')?'received':
+                (r['Final Status']||'').toLowerCase().includes('dispatched')?'dispatched':
+                (r['Final Status']||'').toLowerCase().includes('unavailable')?'unavailable':'pending',
+        time: r['Request Date'] || '—',
+        awb: r['AWB'] || '',
+      };
+      PENDING_BOARD.push(o);
+    }
+  }
+
+  if (!o) return;
+
+  // Update fields
+  o.code = code || o.code;
+  o.part = part || o.part;
+  o.qty = qty || o.qty;
+  o.awb = awb;
+  o.time = 'Just now';
+
+  // Close modal and refresh board
+  document.getElementById('edit-modal-overlay')?.remove();
+  const board = document.getElementById('parts-status-board');
+  if (board) board.innerHTML = buildPendingBoard();
+
+  // Log modification
+  console.log('Order modified:', o);
 }

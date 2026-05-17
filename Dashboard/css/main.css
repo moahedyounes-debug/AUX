@@ -294,6 +294,7 @@ body { font-family: var(--font); background: var(--gray-50); color: var(--gray-9
 .badge-amber  { background: var(--warning-bg); color: var(--warning); }
 .badge-red    { background: var(--danger-bg);  color: var(--danger); }
 .badge-blue   { background: var(--aux-blue-mist); color: var(--aux-blue); }
+.badge-gray   { background: #e5e7eb; color: #4b5563; }
 .badge-orange { background: var(--orange-bg);  color: var(--orange); }
 .badge-gray   { background: var(--gray-100);   color: var(--gray-600); }
 
