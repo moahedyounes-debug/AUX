@@ -104,11 +104,104 @@ function extractCompany(n) {
   return '';  // unknown — will be filtered out
 }
 
+// ── Canonical city name map ─────────────────────────────────────
+// Maps all known spelling variants → single canonical name.
+// Keys MUST be lower-case; values are the canonical display form.
+const CITY_NORMALIZE = {
+  // ── Khamis Mushait ──────────────────────────────────────────
+  'khamis musheet':              'Khamis Mushait',
+  'khamis mushayt':              'Khamis Mushait',
+  'khamis mushyat':              'Khamis Mushait',
+  'khamis musheit':              'Khamis Mushait',
+  'khamis mushyt':               'Khamis Mushait',
+  'hamis mushait':               'Khamis Mushait',
+  // ── Makkah ──────────────────────────────────────────────────
+  'makkah al mukarramah':        'Makkah',
+  'makkah al-mukarramah':        'Makkah',
+  'mecca':                       'Makkah',
+  'mekka':                       'Makkah',
+  // ── Madinah ─────────────────────────────────────────────────
+  'al madinah':                  'Madinah',
+  'al madinah al munawwarah':    'Madinah',
+  'al-madinah':                  'Madinah',
+  'medina':                      'Madinah',
+  'madina':                      'Madinah',
+  'madinah al munawwarah':       'Madinah',
+  // ── Al Hasa / Alhasa ────────────────────────────────────────
+  'al hasa':                     'Alhasa',
+  'al-hasa':                     'Alhasa',
+  'al ahsa':                     'Alhasa',
+  'al-ahsa':                     'Alhasa',
+  'ahsa':                        'Alhasa',
+  // ── Jeddah ──────────────────────────────────────────────────
+  'jiddah':                      'Jeddah',
+  'jedda':                       'Jeddah',
+  'jiddah':                      'Jeddah',
+  // ── Qassim ──────────────────────────────────────────────────
+  'al qassim':                   'Qassim',
+  'al-qassim':                   'Qassim',
+  'qaseem':                      'Qassim',
+  'qasim':                       'Qassim',
+  'buraidah':                    'Qassim',   // capital of Qassim region
+  // ── Jizan / Jazan ────────────────────────────────────────────
+  'jazan':                       'Jizan',
+  'jizan':                       'Jizan',
+  // ── Taif ────────────────────────────────────────────────────
+  'al taif':                     'Taif',
+  'at-taif':                     'Taif',
+  "at-ta'if":                    'Taif',
+  'ta\'if':                      'Taif',
+  // ── Hail ────────────────────────────────────────────────────
+  "ha'il":                       'Hail',
+  'ha\'il':                      'Hail',
+  // ── Riyadh ──────────────────────────────────────────────────
+  'ar riyadh':                   'Riyadh',
+  'ar-riyadh':                   'Riyadh',
+  // ── Dammam ──────────────────────────────────────────────────
+  'ad dammam':                   'Dammam',
+  'ad-dammam':                   'Dammam',
+  // ── Tabuk ───────────────────────────────────────────────────
+  'tabuk city':                  'Tabuk',
+  // ── Al Kharj ────────────────────────────────────────────────
+  'alkharj':                     'Al Kharj',
+  'al-kharj':                    'Al Kharj',
+  // ── Al Baha ─────────────────────────────────────────────────
+  'al-baha':                     'Al Baha',
+  'albaha':                      'Al Baha',
+  // ── Al Qunfudhah ────────────────────────────────────────────
+  'al qunfudah':                 'Al Qunfudhah',
+  'al-qunfudhah':                'Al Qunfudhah',
+  'qunfudhah':                   'Al Qunfudhah',
+  // ── Hafar Al Batin ──────────────────────────────────────────
+  'hafar albatin':                'Hafar Al Batin',
+  'hafar-al-batin':               'Hafar Al Batin',
+  // ── Yanbu ───────────────────────────────────────────────────
+  'yanbo':                       'Yanbu',
+  'yanbu al-bahr':               'Yanbu',
+  // ── Najran ──────────────────────────────────────────────────
+  'najran city':                 'Najran',
+  // ── Sakaka ──────────────────────────────────────────────────
+  'sakakah':                     'Sakaka',
+  // ── Rabigh ──────────────────────────────────────────────────
+  'rabegh':                      'Rabigh',
+  'rabigh city':                 'Rabigh',
+  // ── Bisha ───────────────────────────────────────────────────
+  'besha':                       'Bisha',
+  'bisah':                       'Bisha',
+};
+
+// ── Normalise a raw city/branch name to its canonical form ──────
+function normalizeCityName(city) {
+  if (!city) return city;
+  const trimmed = city.trim();
+  return CITY_NORMALIZE[trimmed.toLowerCase()] || trimmed;
+}
+
 // ── Branch: extract city from the provider name and format as "City - Company"
 // Examples:
 //   "ZAM - Jeddah Branch"                          → "Jeddah - ZAM"
 //   "Classic Pvt. Ltd. Company-Riyadh Branch"       → "Riyadh - Classic"
-//   "wiFEX ... - Makkah Al Mukarramah Branch"       → "Makkah Al Mukarramah - wiFEX"
+//   "wiFEX ... - Makkah Al Mukarramah Branch"       → "Makkah - wiFEX"
 function extractBranch(n) {
   if (!n) return null;
 
@@ -121,6 +214,7 @@ function extractBranch(n) {
 
   let city = n.substring(dashIdx + 1).trim();
   city = city.replace(/\s*branch\s*/i, '').trim();
+  city = normalizeCityName(city);   // ← canonicalise spelling
 
   if (!city) return null;
 

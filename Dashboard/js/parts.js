@@ -49,7 +49,7 @@ function enrichTransaction(row) {
   const warehouseName = (r[C.WAREHOUSE] || '').trim().toLowerCase();
   const isWarehouse = warehouseName && (warehouseName.includes('warehouse') || warehouseName.includes('riyadh'));
 
-  r._branch  = isWarehouse ? 'AUX Main WH Stock' : ((r[C.BRANCH] || r[C.BRANCH2] || '').trim() || 'Unknown');
+  r._branch  = isWarehouse ? 'AUX Main WH Stock' : normalizeCityName((r[C.BRANCH] || r[C.BRANCH2] || '').trim() || 'Unknown');
   // Warehouse transactions should not have ASC; clear it for warehouse
   r._asc     = isWarehouse ? '' : ((r[C.ASC] || r[C.ASC2] || '').trim());
   // Part name: prefer Part Name, fallback to Second Part Name
