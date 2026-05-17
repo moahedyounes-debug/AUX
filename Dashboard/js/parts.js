@@ -1377,6 +1377,11 @@ function showStatusModal(orderId, orderNo) {
         📦 Dispatched<br><span style="font-size:11px;opacity:0.9">Parts shipped to branch</span>
       </button>
 
+      <button onclick="updateOrderStatus('${orderId}','received')"
+        style="background:#16a34a;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+        ✅ Available in SVC Stock<br><span style="font-size:11px;opacity:0.9">Parts already at branch</span>
+      </button>
+
       <button onclick="updateOrderStatus('${orderId}','unavailable')"
         style="background:#dc2626;color:white;border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;text-align:left">
         ❌ Part Not Available<br><span style="font-size:11px;opacity:0.9">Part is not available</span>
