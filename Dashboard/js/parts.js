@@ -2029,15 +2029,18 @@ function saveEditedOrder(orderId) {
 
   if (!o) return;
 
+  // Preserve original request date BEFORE overwriting o.time (which is used for display)
+  const originalRequestDate = o.time && o.time !== 'Just now' ? o.time : '';
+
   // Update in-memory record
-  o.code = code || o.code;
-  o.part = part || o.part;
-  o.qty  = qty  || o.qty;
-  o.awb  = awb;
-  o.model = model;
+  o.code         = code || o.code;
+  o.part         = part || o.part;
+  o.qty          = qty  || o.qty;
+  o.awb          = awb;
+  o.model        = model;
   o.serialNumber = serialNumber;
-  o.notes = notes;
-  o.time = 'Just now';
+  o.notes        = notes;
+  o.time         = 'Just now'; // display only — original date preserved above
 
   // Close modal and refresh board
   document.getElementById('edit-modal-overlay')?.remove();
@@ -2046,27 +2049,28 @@ function saveEditedOrder(orderId) {
 
   // ── Write update to Google Sheet via HEARTBEAT_URL ────────────
   if (HEARTBEAT_URL) {
+    const finalStatus = o.status === 'received'   ? 'Received'          :
+                        o.status === 'dispatched'  ? 'Dispatched'        :
+                        o.status === 'unavailable' ? 'Part Not Available':
+                        'Pending';
     const payload = {
-      action:       'parts_request',
+      action:       'parts_request',         // same action as status updates (Apps Script handles upsert by orderNumber)
       sheet:        CONFIG.PARTS_SHEET,
-      orderNumber:  o.orderNo,
-      partNumber:   o.code,
-      partDesc:     o.part,
-      model:        o.model,
+      orderNumber:  o.orderNo,               // used by Apps Script to find & update the row
+      partNumber:   o.code        || '',
+      partDesc:     o.part        || '',
+      model:        o.model       || '',
       serialNumber: o.serialNumber || '',
-      awb:          o.awb || '',
-      requestDate:  o.time || '',
+      awb:          o.awb          || '',
+      requestDate:  originalRequestDate,     // ← preserve original date, NOT 'Just now'
       dispatchDate: '',
       receivingDate:'',
-      finalStatus:  o.status === 'received'   ? 'Received'         :
-                    o.status === 'dispatched'  ? 'Dispatched'       :
-                    o.status === 'unavailable' ? 'Part Not Available':
-                    'Pending',
-      branch:       o.branch,
-      qty:          o.qty,
-      notes:        o.notes || '',
+      finalStatus,
+      branch:       o.branch      || '—',
+      qty:          o.qty         || '',
+      notes:        o.notes       || '',
       requestedBy:  _currentEmail || '—',
-      asc:          o.asc || '—',
+      asc:          o.asc         || '—',
     };
     fetch(HEARTBEAT_URL, {
       method:  'POST',
