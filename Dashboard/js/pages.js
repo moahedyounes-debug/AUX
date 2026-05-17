@@ -185,8 +185,15 @@ function partsStatusCell(r) {
   const ticketNo = r[C.TICKET_NUM] || '';
   const branch   = r._branch || '';
 
-  // Look up in Parts DB (Requested Spare Part sheet or Transaction sheet)
-  // Match by Associated Order Number = ticketNo
+  // Look up in PARTS_REQUESTS (Final Status from Parts page)
+  let partRequest = null;
+  if (PARTS_REQUESTS && PARTS_REQUESTS.length) {
+    partRequest = PARTS_REQUESTS.find(p =>
+      (p['Order Number'] || '').trim() === ticketNo.trim()
+    );
+  }
+
+  // Look up in Parts DB (Tracking info)
   let trackingInfo = null;
   if (PARTS_DB.loaded && PARTS_DB.transactions.length) {
     const P = CONFIG.PARTS_COLS;
@@ -201,28 +208,48 @@ function partsStatusCell(r) {
           awb,
           partName: match._partName || match[P.PART_NAME] || '',
           partCode: match._partCode || match[P.CODE] || '',
-          status:   match._trackStatus || 'In Transit',
         };
       }
     }
   }
 
-  if (trackingInfo) {
-    // Has tracking → show last status with mini tracker link
+  // Determine part status from PARTS_REQUESTS (priority) or tracking info
+  if (partRequest) {
+    const finalStatus = partRequest['Final Status'] || 'Pending';
+    const statusColor = finalStatus.toLowerCase().includes('receiv') ? '#059669'    : // Green
+                        finalStatus.toLowerCase().includes('dispatch') ? '#d97706'  : // Amber
+                        finalStatus.toLowerCase().includes('unavailable') ? '#dc2626' : // Red
+                        '#6366f1'; // Blue (Pending)
+    const statusIcon = finalStatus.toLowerCase().includes('receiv') ? '✓'        :
+                       finalStatus.toLowerCase().includes('dispatch') ? '📤'     :
+                       finalStatus.toLowerCase().includes('unavailable') ? '✗' : '⏳';
+    const partCode = partRequest['Part Number'] || '';
+    const partName = partRequest['Part Description'] || '';
+    const awb = partRequest['AWB'] || '';
+
+    return `<div style="display:flex;flex-direction:column;gap:4px;min-width:140px">
+      <span class="badge" style="background:${statusColor};color:white;font-size:10px;padding:4px 8px;border-radius:4px;font-weight:600;text-align:center">
+        ${statusIcon} ${esc(finalStatus)}
+      </span>
+      ${partCode ? `<span style="font-size:9px;color:var(--gray-600);font-family:var(--mono)">${esc(partCode)}</span>` : ''}
+      ${awb ? `<span style="font-size:9px;color:var(--gray-400);font-family:var(--mono);cursor:pointer" onclick="showPartsTrackingPopup('${esc(ticketNo)}','${esc(awb)}','${esc(partName)}')" title="Track AWB: ${esc(awb)}">📦 ${esc(awb.substring(0,10))}…</span>` : ''}
+    </div>`;
+  } else if (trackingInfo) {
+    // Has tracking but no request record → show tracking link
     return `<div style="display:flex;flex-direction:column;gap:3px;min-width:120px">
       <span class="badge badge-blue" style="font-size:9px;cursor:pointer"
         onclick="showPartsTrackingPopup('${esc(ticketNo)}','${esc(trackingInfo.awb)}','${esc(trackingInfo.partName)}')"
         title="AWB: ${esc(trackingInfo.awb)}">
-        📦 ${esc(trackingInfo.status)}
+        📦 In Transit
       </span>
       <span style="font-size:9px;color:var(--gray-400);font-family:var(--mono)">${esc(trackingInfo.awb.substring(0,12))}…</span>
     </div>`;
   } else {
-    // No tracking → show reminder button
+    // No part request → show reminder button
     const partDesc = (r[C.MAINTENANCE] || supp || 'Part required').substring(0, 40);
     return `<button onclick="handlePartsReminder('${esc(ticketNo)}','${esc(branch)}','${esc(partDesc)}')"
       style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;
-             padding:4px 8px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;
+             padding:6px 10px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;
              font-family:var(--font);transition:.15s"
       onmouseover="this.style.background='#fca5a5'" onmouseout="this.style.background='#fee2e2'">
       🔩 Request Part
