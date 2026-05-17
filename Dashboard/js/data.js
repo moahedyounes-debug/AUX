@@ -142,7 +142,15 @@ const CITY_NORMALIZE = {
   'al-qassim':                   'Qassim',
   'qaseem':                      'Qassim',
   'qasim':                       'Qassim',
-  'buraidah':                    'Qassim',   // capital of Qassim region
+  // Buraydah / Buraidah = capital city of Qassim region (all variants → Qassim)
+  'buraydah':                    'Qassim',
+  'al buraydah':                 'Qassim',
+  'al-buraydah':                 'Qassim',
+  'buraidah':                    'Qassim',
+  'al buraidah':                 'Qassim',
+  'unayzah':                     'Qassim',   // second major city in Qassim
+  'unaizah':                     'Qassim',
+  'onaizah':                     'Qassim',
   // ── Jizan / Jazan ────────────────────────────────────────────
   'jazan':                       'Jizan',
   'jizan':                       'Jizan',

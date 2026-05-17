@@ -435,16 +435,32 @@ async function sendBranchAlert(branchName) {
     const toEmails = [];
     const ccEmails = [];
 
-    // Pass 1: exact match → TO
-    // Normalize city part so "Khamis Musheet - ABL" in Access sheet matches "Khamis Mushait - ABL"
+    // Helper: normalize city part of an Access-sheet branch value
+    const normRow = raw => {
+      if (!raw.includes(' - ')) return raw;
+      return normalizeCityName(raw.split(' - ')[0].trim()) + ' - ' + raw.split(' - ').slice(1).join(' - ').trim();
+    };
+
+    // Pass 1: normalized exact match → TO
+    // "Khamis Musheet - ABL" → "Khamis Mushait - ABL"
+    // "Buraydah - ZAM"       → "Qassim - ZAM" (Buraydah is the capital of Qassim)
     for (const r of accessRows) {
-      const raw       = (r['If Branch has pending'] || '').trim();
-      const rowBranch = raw.includes(' - ')
-        ? normalizeCityName(raw.split(' - ')[0].trim()) + ' - ' + raw.split(' - ').slice(1).join(' - ').trim()
-        : raw;
+      const rowBranch = normRow((r['If Branch has pending'] || '').trim());
       const email = (r['Email'] || r['email'] || '').trim();
       if (email && rowBranch.toLowerCase() === branchName.toLowerCase()) {
         toEmails.push(email);
+      }
+    }
+
+    // Fallback: if no match under normalized name, try original raw value
+    // (handles cases where Access sheet uses Buraydah but ticket data was not normalized)
+    if (toEmails.length === 0) {
+      for (const r of accessRows) {
+        const rowBranch = (r['If Branch has pending'] || '').trim();
+        const email = (r['Email'] || r['email'] || '').trim();
+        if (email && rowBranch.toLowerCase() === branchName.toLowerCase()) {
+          toEmails.push(email);
+        }
       }
     }
 

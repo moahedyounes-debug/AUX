@@ -1055,19 +1055,37 @@ async function getBranchEmailList(branchName) {
     let ccEmails = [];
     let ascName = null;
 
+    // Helper: normalize the city part of a "City - Company" Access-sheet entry
+    const normalizeRowBranch = raw => {
+      if (!raw.includes(' - ')) return raw;
+      const city    = normalizeCityName(raw.split(' - ')[0].trim());
+      const company = raw.split(' - ').slice(1).join(' - ').trim();
+      return `${city} - ${company}`;
+    };
+
     // First pass: find TO emails and ASC name
     // Normalize rowBranch so "Khamis Musheet - ABL" matches "Khamis Mushait - ABL"
+    // Also handles "Buraydah - ZAM" → looks for "Qassim - ZAM" in Access sheet
     for (const row of rows) {
-      const rawBranch = (row[branchCol] || '').trim();
-      // Normalize city part of "City - Company" entries (CC entries like "ZAM CC" are left as-is)
-      const rowBranch = rawBranch.includes(' - ')
-        ? normalizeCityName(rawBranch.split(' - ')[0].trim()) + ' - ' + rawBranch.split(' - ').slice(1).join(' - ').trim()
-        : rawBranch;
+      const rowBranch = normalizeRowBranch((row[branchCol] || '').trim());
       const email = (row[emailCol] || '').trim();
 
       if (rowBranch.toLowerCase() === branchName.toLowerCase()) {
         if (email) toEmails.push(email);
         if (!ascName) ascName = (row[ascCol] || '').trim();
+      }
+    }
+
+    // Fallback: if Access sheet doesn't have the normalized name (e.g. "Qassim - ZAM")
+    // but DOES have the original name (e.g. "Buraydah - ZAM"), try original un-normalized
+    if (toEmails.length === 0) {
+      for (const row of rows) {
+        const rowBranch = (row[branchCol] || '').trim();
+        const email = (row[emailCol] || '').trim();
+        if (email && rowBranch.toLowerCase() === branchName.toLowerCase()) {
+          toEmails.push(email);
+          if (!ascName) ascName = (row[ascCol] || '').trim();
+        }
       }
     }
 
