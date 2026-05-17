@@ -58,6 +58,7 @@ function enrichTransaction(row) {
   r._key     = r._partCode || r._partName;
   r._awb     = (r[C.REF] || '').trim();
   r._orderNo = (r[C.ORDER_NO] || '').trim();
+  r._model   = (r[C.CUSTOMER_MODEL] || '').trim();   // Customer Model column
   r._monthKey = r._date
     ? `${r._date.getFullYear()}-${String(r._date.getMonth()+1).padStart(2,'0')}` : '';
 
@@ -402,27 +403,44 @@ function buildInventoryTableRows(partsArr, transactions) {
     }).join('');
   }
 
-  // ── MODE B: Search by Model / Part Name → aggregated view (default) ────
+  // ── MODE B: Search by Customer Model → show all parts for that model ────
+  // When a model is typed, find all part keys that appear in transactions
+  // with that Customer Model, then show those parts in the aggregated view.
   let filtered = partsArr;
+  let modelMatchedKeys = null;
+
   if (modelSearch) {
-    filtered = partsArr.filter(p =>
-      (p.name && p.name.toLowerCase().includes(modelSearch)) ||
-      (p.code && p.code.toLowerCase().includes(modelSearch))
+    // Build set of part keys belonging to this model via transactions
+    modelMatchedKeys = new Set(
+      transactions
+        .filter(tx => tx._model && tx._model.toLowerCase().includes(modelSearch))
+        .map(tx => tx._key)
+        .filter(Boolean)
     );
-    if (filtered.length === 0) return '<tr><td colspan="11" class="table-empty">No parts found for that model</td></tr>';
+    filtered = partsArr.filter(p => modelMatchedKeys.has(p.code) || modelMatchedKeys.has(p.name));
+    if (filtered.length === 0) {
+      return `<tr><td colspan="12" class="table-empty">No parts found for model "${esc(modelSearch)}" — check Customer Model column</td></tr>`;
+    }
   }
 
   return filtered.slice(0,120).map(p => {
-    const f  = calcForecast(p);
-    const ac = p.abc==='A'?'badge-red':p.abc==='B'?'badge-amber':'badge-gray';
+    const f     = calcForecast(p);
+    const ac    = p.abc==='A'?'badge-red':p.abc==='B'?'badge-amber':'badge-gray';
     const whQty = whStockMap[p.code] || 0;
-    const wc = whQty<5?'color-danger':whQty<20?'color-warning':'';
-    const sc = p.svc<=0?'color-danger':p.svc<3?'color-warning':'';
+    const wc    = whQty<5?'color-danger':whQty<20?'color-warning':'';
+    const sc    = p.svc<=0?'color-danger':p.svc<3?'color-warning':'';
+    // Collect distinct model names associated with this part (for display when searching)
+    const modelsForPart = modelSearch
+      ? [...new Set(transactions.filter(tx => tx._key===p.code && tx._model).map(tx=>tx._model))].slice(0,3).join(', ')
+      : '';
     return `<tr>
       <td><button class="req-btn" onclick="showPartsRequestModal({code:'${esc(p.code)}',name:'${esc(p.name)}'})">+ Request</button></td>
       <td><span class="badge ${ac}">${p.abc}</span></td>
       <td class="text-mono text-sm">${esc(p.code)}</td>
-      <td class="fw-600" style="text-align:left">${esc(truncate(p.name,32))}</td>
+      <td class="fw-600" style="text-align:left">
+        ${esc(truncate(p.name,30))}
+        ${modelsForPart?`<br><span style="font-size:10px;color:var(--gray-400);font-weight:400">${esc(truncate(modelsForPart,40))}</span>`:''}
+      </td>
       <td class="text-sm">${p.branch==='AUX Main WH Stock'?'AUX main warehouse stock':esc(p.branch)}</td>
       <td class="text-mono ${wc}">${fmt(whQty)}</td>
       <td class="text-mono ${sc}">${fmt(p.svc)}</td>
@@ -788,8 +806,8 @@ async function renderParts() {
   <div class="section-header"><div class="section-title">Full Inventory — ABC Analysis</div><span class="section-badge">${totalSKUs} SKUs</span></div>
   <div style="margin-bottom:15px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div>
-      <label style="display:block;font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Search by Model / Part Name</label>
-      <input type="text" id="search-model" class="filter-input" placeholder="🔍 e.g. Compressor, Fan Motor…"
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Search by Customer Model</label>
+      <input type="text" id="search-model" class="filter-input" placeholder="🔍 e.g. ATW18A2DI-CSA"
              style="width:100%;padding:10px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box"
              oninput="filterInventory()">
     </div>

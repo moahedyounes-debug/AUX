@@ -51,6 +51,7 @@ const CONFIG = {
     CODE2:       'Second Code',
     BRANCH2:     'Second Branch',
     ASC2:        'Second ASC',
+    CUSTOMER_MODEL: 'Customer Model',   // e.g. "ATW18A2DI-CSA"
   },
 
   // Call Center KPI columns
