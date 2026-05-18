@@ -145,8 +145,25 @@
         <input type="date" id="filter-to" class="filter-input" onchange="applyFilters()">
       </div>
       <div class="filter-group">
+        <label class="filter-label" style="font-size:10px;text-transform:uppercase">Quick Range</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button style="padding:6px 8px;font-size:11px;border:1px solid var(--gray-300);background:white;border-radius:4px;cursor:pointer;transition:all 0.2s"
+                  onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'"
+                  onclick="setQuickDateFilter('thisMonth')">This Month</button>
+          <button style="padding:6px 8px;font-size:11px;border:1px solid var(--gray-300);background:white;border-radius:4px;cursor:pointer;transition:all 0.2s"
+                  onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'"
+                  onclick="setQuickDateFilter('last30')">Last 30 Days</button>
+          <button style="padding:6px 8px;font-size:11px;border:1px solid var(--gray-300);background:white;border-radius:4px;cursor:pointer;transition:all 0.2s"
+                  onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'"
+                  onclick="setQuickDateFilter('ytd')">YTD</button>
+          <button style="padding:6px 8px;font-size:11px;border:1px solid var(--gray-300);background:white;border-radius:4px;cursor:pointer;transition:all 0.2s"
+                  onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'"
+                  onclick="setQuickDateFilter('reset')">Reset</button>
+        </div>
+      </div>
+      <div class="filter-group">
         <label class="filter-label" data-i18n="filter_branch">Branch</label>
-        <select id="filter-branch" class="filter-input" onchange="applyFilters()"><option value="" data-i18n="all_branches">All Branches</option></select>
+        <select id="filter-branch" class="filter-input" onchange="handleBranchFilterChange()"><option value="" data-i18n="all_branches">All Branches</option></select>
       </div>
       <div class="filter-group">
         <label class="filter-label" data-i18n="filter_worker">Worker</label>

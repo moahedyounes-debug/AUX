@@ -22,6 +22,11 @@ const PARTS_DB = {
 };
 let PARTS_REQUESTS = []; // loaded from Parts tab in main sheet
 
+// State for interactive card filtering
+let _metricsFilterState = {
+  activeMetric: null, // 'lowStock', 'zeroStock', 'reorderAlert', or null
+};
+
 // ── Build model→partCode lookup from Parts Model sheet rows ────
 function buildModelMap(rows) {
   const map = {};
@@ -301,26 +306,25 @@ function buildPartReturnStatus(transactions) {
     }
   });
 
-  return Array.from(statusMap.values()).map(p => {
-    const has = p.sortStages;
-    if (has[10]) {
-      p.status = 'RETURNED';
-      p.displayRef = p.reference.returnReceiptId;
-    } else if (has[9]) {
-      p.status = 'IN_TRANSIT';
-      p.displayRef = p.reference.returnRequestId;
-    } else if (has[8]) {
-      p.status = 'PENDING_RETURN';
-      p.displayRef = null;
-    } else if (has[6]) {
-      p.status = 'AVAILABLE';
-      p.displayRef = null;
-    } else {
-      p.status = 'UNKNOWN';
-      p.displayRef = null;
-    }
-    return p;
-  });
+  return Array.from(statusMap.values())
+    .filter(p => p.sortStages[8]) // ← CRITICAL: Only show parts that have been CONSUMED (Sort 8)
+    .map(p => {
+      const has = p.sortStages;
+      if (has[10]) {
+        p.status = 'RETURNED';
+        p.displayRef = p.reference.returnReceiptId;
+      } else if (has[9]) {
+        p.status = 'IN_TRANSIT';
+        p.displayRef = p.reference.returnRequestId;
+      } else if (has[8]) {
+        p.status = 'PENDING_RETURN';
+        p.displayRef = null;
+      } else {
+        p.status = 'UNKNOWN';
+        p.displayRef = null;
+      }
+      return p;
+    });
 }
 
 // ── Build inventory table rows ─────────────────────────────────
@@ -436,6 +440,9 @@ function buildInventoryTableRows(partsArr, transactions) {
     }
   }
 
+  // ── Apply metric filter (from card clicks) ─────────────────────
+  filtered = applyMetricFilterToInventory(filtered);
+
   // ── Render rows — show ✅ In SVC Stock badge when p.svc > 0 ──
   return filtered.slice(0, 200).map(p => {
     const f     = calcForecast(p);
@@ -538,14 +545,367 @@ function populateBranchFilter() {
   select.innerHTML = '<option value="">All Branches</option>';
   sortedBranches.forEach(br => {
     const opt = document.createElement('option');
-    opt.value = br; opt.textContent = br;
+    opt.value = br;
+    opt.textContent = br;
     select.appendChild(opt);
   });
   select.value = currentValue;
 }
 
+// ── Handle filter changes for Spare Parts page ─────────────────────
+function onPartsFilterChange() {
+  // When any filter (branch, date, etc.) changes, re-render the parts page
+  if (document.getElementById('page-parts')) {
+    renderParts();
+  }
+}
+
+// ── Unified filter change handler for branch filter ─────────────────
+// The branch filter is shared across all pages, but has different data formats:
+// - Main dashboard: branch format is "City - ASC" (e.g., "Dammam - ZAM")
+// - Parts page: branch format is just City (e.g., "Dammam")
+// This function routes to the appropriate filter handler based on the current page
+function handleBranchFilterChange() {
+  const activePage = document.querySelector('.page.active')?.id || currentPage;
+  if (activePage === 'page-parts') {
+    // For parts page, only re-render parts (don't call global applyFilters which uses different data format)
+    onPartsFilterChange();
+  } else {
+    // For all other pages (main dashboard), apply global filters using applyFilters()
+    applyFilters();
+  }
+}
+
+// ── Filter return status cards ────────────────────────────────────────
+let _returnStatusFilterState = { activeStatus: null };
+function filterReturnStatus(status) {
+  const currentStatus = _returnStatusFilterState.activeStatus;
+  // Toggle: click same card again to reset filter
+  _returnStatusFilterState.activeStatus = (currentStatus === status) ? null : status;
+  updateReturnStatusCardStyles();
+  applyReturnStatusFilter();
+}
+
+function updateReturnStatusCardStyles() {
+  const status = _returnStatusFilterState.activeStatus;
+  document.querySelectorAll('.kpi-grid .kpi-card').forEach((card, idx) => {
+    const statuses = ['all', 'available', 'pendingReturn', 'inTransit', 'returned'];
+    if (statuses[idx] === status) {
+      card.style.borderColor = card.classList[1] === 'blue' ? '#003D8F' :
+                               card.classList[1] === 'green' ? '#16a34a' :
+                               card.classList[1] === 'amber' ? '#d97706' :
+                               card.classList[1] === 'orange' ? '#ea580c' : '#0891b2';
+      card.style.borderWidth = '2px';
+    } else {
+      card.style.borderColor = 'transparent';
+      card.style.borderWidth = '2px';
+    }
+  });
+}
+
+function applyReturnStatusFilter() {
+  const status = _returnStatusFilterState.activeStatus;
+  const table = document.querySelector('[data-export-id="return-status-table"]');
+  if (!table) return;
+
+  const rows = table.querySelectorAll('tbody tr');
+  rows.forEach(row => {
+    if (!status) {
+      row.style.display = '';
+    } else {
+      const statusCell = row.cells[3]?.textContent?.trim() || '';
+      let matches = false;
+      switch(status) {
+        case 'available': matches = statusCell === 'AVAILABLE'; break;
+        case 'pendingReturn': matches = statusCell === 'PENDING_RETURN'; break;
+        case 'inTransit': matches = statusCell === 'IN_TRANSIT'; break;
+        case 'returned': matches = statusCell === 'RETURNED'; break;
+        case 'all': matches = true; break;
+      }
+      row.style.display = matches ? '' : 'none';
+    }
+  });
+}
+
+// ── Quick date filter helper ────────────────────────────────────────
+function setQuickDateFilter(range) {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const date = today.getDate();
+
+  let from, to;
+
+  switch(range) {
+    case 'thisMonth':
+      from = new Date(year, month, 1);
+      to = new Date(year, month + 1, 0); // Last day of current month
+      break;
+    case 'last30':
+      to = new Date(today);
+      from = new Date(today.setDate(today.getDate() - 30));
+      break;
+    case 'ytd':
+      from = new Date(year, 0, 1); // January 1
+      to = new Date(year, month, date); // Today
+      break;
+    case 'reset':
+      document.getElementById('filter-from').value = '';
+      document.getElementById('filter-to').value = '';
+      applyFilters();
+      onPartsFilterChange();
+      return;
+    default:
+      return;
+  }
+
+  // Format dates as YYYY-MM-DD for date input
+  const formatDate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dt = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dt}`;
+  };
+
+  document.getElementById('filter-from').value = formatDate(from);
+  document.getElementById('filter-to').value = formatDate(to);
+
+  applyFilters();
+  onPartsFilterChange();
+}
+
+// ── Filter inventory by metric (card click handler) ──────────────────
+function filterByMetric(metric) {
+  // Toggle metric filter (click again to deactivate)
+  if (_metricsFilterState.activeMetric === metric) {
+    _metricsFilterState.activeMetric = null;
+  } else {
+    _metricsFilterState.activeMetric = metric;
+  }
+
+  // Re-render to update filtered inventory display and card highlighting
+  if (document.getElementById('page-parts')) {
+    filterInventory(); // Update inventory table with metric filter
+    updateMetricCardStyles(); // Update visual highlighting on cards
+  }
+}
+
+// ── Update visual highlighting on metric cards ───────────────────────
+function updateMetricCardStyles() {
+  const cardIds = ['kpi-lowStock', 'kpi-zeroStock', 'kpi-reorderAlert'];
+  const metricsMap = {
+    'lowStock': 'kpi-lowStock',
+    'zeroStock': 'kpi-zeroStock',
+    'reorderAlert': 'kpi-reorderAlert'
+  };
+
+  for (let metric in metricsMap) {
+    const cardEl = document.getElementById(metricsMap[metric]);
+    if (cardEl) {
+      if (_metricsFilterState.activeMetric === metric) {
+        cardEl.style.borderColor = '#003D8F';
+        cardEl.style.borderWidth = '2px';
+        cardEl.style.boxShadow = '0 0 0 3px rgba(0, 61, 143, 0.1)';
+      } else {
+        cardEl.style.borderColor = 'transparent';
+        cardEl.style.borderWidth = '1px';
+        cardEl.style.boxShadow = 'none';
+      }
+    }
+  }
+}
+
+// ── Apply metric filter to inventory table ────────────────────────────
+function applyMetricFilterToInventory(partsArr) {
+  if (!_metricsFilterState.activeMetric) {
+    return partsArr; // No filter, return all parts
+  }
+
+  const metric = _metricsFilterState.activeMetric;
+  return partsArr.filter(p => {
+    switch(metric) {
+      case 'lowStock':
+        return p.svc > 0 && p.svc <= 3; // Parts with low stock at SVC
+      case 'zeroStock':
+        return p.svc <= 0 && p.consumed > 0; // Parts with zero stock but consumed before
+      case 'reorderAlert':
+        const f = calcForecast(p);
+        return f && f.monthsLeft < 3 && p.svc > 0; // Parts needing reorder
+      default:
+        return true;
+    }
+  });
+}
+
 // ── populateModelDropdown — kept as no-op (UI now uses text input) ──
 function populateModelDropdown() { /* replaced by free-text search */ }
+
+// ── Excel Export Helper ────────────────────────────────────────
+function exportTableToExcel(headers, rows, sheetName, filename) {
+  // Create cell entries in Excel XML format
+  function xesc(v) {
+    return String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function cell(v, ci, ri) {
+    return '<c r="' + String.fromCharCode(65 + ci) + (ri + 1) + '" t="inlineStr"><is><t>' + xesc(v) + '</t></is></c>';
+  }
+
+  // Build all rows with headers first
+  const allRows = [headers].concat(rows);
+
+  // Generate worksheet XML
+  const sx = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>' +
+    allRows.map((row, ri) => {
+      return '<row r="' + (ri + 1) + '">' +
+        row.map((v, ci) => cell(v, ci, ri)).join('') +
+        '</row>';
+    }).join('') +
+    '</sheetData></worksheet>';
+
+  // Build ZIP structure with all required XLSX files
+  const files = {
+    '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+    '_rels/.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+    'xl/workbook.xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="' + xesc(sheetName) + '" sheetId="1" r:id="rId1"/></sheets></workbook>',
+    'xl/_rels/workbook.xml.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+    'xl/worksheets/sheet1.xml': sx
+  };
+
+  // Use buildZipStore from pages.js (reuse existing utility)
+  const blob = buildZipStore(files, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename + '.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Export Handlers ────────────────────────────────────────────
+function exportFullInventory() {
+  const tbody = document.getElementById('inventory-table-body');
+  if (!tbody) {
+    alert('Inventory table not found');
+    return;
+  }
+
+  // Get headers from table
+  const headers = ['ABC', 'Code', 'Part Name', 'Branch', 'WH Stock', 'SVC Stock', 'Consumed', 'Returned', 'Avg/Mo', 'Months Left'];
+
+  // Get rows from visible table
+  const rows = [];
+  const trs = tbody.querySelectorAll('tr');
+  trs.forEach(tr => {
+    // ← CRITICAL: Only export VISIBLE rows (respect applied filters)
+    if (tr.style.display === 'none') return;
+
+    const cells = tr.querySelectorAll('td');
+    if (cells.length > 0) {
+      const row = [];
+      cells.forEach((td, idx) => {
+        // Skip first column (checkbox/icon)
+        if (idx === 0) return;
+        // Get text content, removing emojis and badges
+        let text = td.textContent.trim();
+        // For badge cells, extract the text content only
+        const badge = td.querySelector('.badge');
+        if (badge) {
+          text = badge.textContent.trim();
+        }
+        row.push(text);
+      });
+      if (row.length > 0) rows.push(row);
+    }
+  });
+
+  if (rows.length === 0) {
+    alert('No data to export');
+    return;
+  }
+
+  const timestamp = new Date().toISOString().slice(0, 10);
+  exportTableToExcel(headers, rows, 'Full Inventory', 'Spare_Parts_Full_Inventory_' + timestamp);
+}
+
+function exportBranchStock() {
+  const table = document.querySelector('[data-export-id="branch-stock-table"]');
+  if (!table) {
+    alert('Branch Stock Summary table not found');
+    return;
+  }
+
+  const headers = ['Branch / Warehouse', 'SKUs', 'SVC Stock', 'Low (≤3)', 'Out of Stock', 'Consumed', 'Health'];
+  const rows = [];
+
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    // ← CRITICAL: Only export VISIBLE rows (respect applied filters)
+    if (tr.style.display === 'none') return;
+
+    const cells = tr.querySelectorAll('td');
+    if (cells.length > 0) {
+      const row = [];
+      cells.forEach(td => {
+        let text = td.textContent.trim();
+        const badge = td.querySelector('.badge');
+        if (badge) {
+          text = badge.textContent.trim();
+        }
+        row.push(text);
+      });
+      rows.push(row);
+    }
+  });
+
+  if (rows.length === 0) {
+    alert('No data to export (may be filtered)');
+    return;
+  }
+
+  const timestamp = new Date().toISOString().slice(0, 10);
+  exportTableToExcel(headers, rows, 'Branch Stock', 'Spare_Parts_Branch_Stock_' + timestamp);
+}
+
+function exportReturnStatus() {
+  const table = document.querySelector('[data-export-id="return-status-table"]');
+  if (!table) {
+    alert('Return Status table not found');
+    return;
+  }
+
+  const headers = ['Location', 'Part Code', 'Part Name', 'Status', 'Request Date', 'Used Date', 'Return Request Date', 'Return Received Date'];
+  const rows = [];
+
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    // ← CRITICAL: Only export VISIBLE rows (respect applied filters)
+    if (tr.style.display === 'none') return;
+
+    const cells = tr.querySelectorAll('td');
+    if (cells.length > 0) {
+      const row = [];
+      cells.forEach(td => {
+        let text = td.textContent.trim();
+        const badge = td.querySelector('.badge');
+        if (badge) {
+          text = badge.textContent.trim();
+        }
+        row.push(text);
+      });
+      rows.push(row);
+    }
+  });
+
+  if (rows.length === 0) {
+    alert('No data to export (may be filtered)');
+    return;
+  }
+
+  const timestamp = new Date().toISOString().slice(0, 10);
+  const activeFilter = _returnStatusFilterState.activeStatus;
+  const filterSuffix = activeFilter ? `_${activeFilter}` : '';
+  exportTableToExcel(headers, rows, 'Return Status', 'Spare_Parts_Return_Status_' + timestamp + filterSuffix);
+}
 
 // ── Render Spare Parts Page ────────────────────────────────────
 async function renderParts() {
@@ -681,17 +1041,29 @@ async function renderParts() {
       <div class="kpi-value">${fmt(totalStock)}</div>
       <div class="kpi-delta">All branches + WH</div>
     </div>
-    <div class="kpi-card ${lowStock>0?'amber':'green'}">
+    <div id="kpi-lowStock" class="kpi-card ${lowStock>0?'amber':'green'}"
+         style="cursor:pointer;transition:all 0.2s ease;user-select:none"
+         onclick="filterByMetric('lowStock')"
+         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 16px rgba(0,0,0,0.15)'"
+         onmouseout="this.style.transform='translateY(0)';this.style.boxShadow=''">
       <div class="kpi-label">LOW STOCK</div>
       <div class="kpi-value">${fmt(lowStock)}</div>
       <div class="kpi-delta">≤ 3 units SVC</div>
     </div>
-    <div class="kpi-card ${zeroStock>0?'red':'green'}">
+    <div id="kpi-zeroStock" class="kpi-card ${zeroStock>0?'red':'green'}"
+         style="cursor:pointer;transition:all 0.2s ease;user-select:none"
+         onclick="filterByMetric('zeroStock')"
+         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 16px rgba(0,0,0,0.15)'"
+         onmouseout="this.style.transform='translateY(0)';this.style.boxShadow=''">
       <div class="kpi-label">OUT OF STOCK</div>
       <div class="kpi-value">${fmt(zeroStock)}</div>
       <div class="kpi-delta">SVC balance = 0</div>
     </div>
-    <div class="kpi-card ${reorderAlert>0?'amber':'green'}">
+    <div id="kpi-reorderAlert" class="kpi-card ${reorderAlert>0?'amber':'green'}"
+         style="cursor:pointer;transition:all 0.2s ease;user-select:none"
+         onclick="filterByMetric('reorderAlert')"
+         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 16px rgba(0,0,0,0.15)'"
+         onmouseout="this.style.transform='translateY(0)';this.style.boxShadow=''">
       <div class="kpi-label">REORDER ALERT</div>
       <div class="kpi-value">${fmt(reorderAlert)}</div>
       <div class="kpi-delta">&lt; 3 months stock</div>
@@ -765,9 +1137,10 @@ async function renderParts() {
   <div class="section-header">
     <div class="section-title">Branch Stock Summary</div>
     <span class="section-badge" style="font-size:11px;font-weight:400">SVC = Service Center Stock</span>
+    <button onclick="exportBranchStock()" class="export-btn excel" style="padding:7px 16px;height:36px;font-size:12px;margin-left:auto">📊 Export Excel</button>
   </div>
   <div class="table-card" style="margin-bottom:18px">
-    <div class="table-scroll"><table class="data-table">
+    <div class="table-scroll"><table class="data-table" data-export-id="branch-stock-table">
       <thead><tr>
         <th style="text-align:left">BRANCH / WAREHOUSE</th>
         <th>SKUs</th><th>SVC Stock</th><th>Low (≤3)</th>
@@ -789,29 +1162,29 @@ async function renderParts() {
     </table></div>
   </div>
 
-  <!-- RETURN STATUS KPIs -->
+  <!-- RETURN STATUS KPIs - Interactive -->
   <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px">
-    <div class="kpi-card blue">
+    <div class="kpi-card blue" onclick="filterReturnStatus('all')" style="cursor:pointer;transition:all 0.2s;border:2px solid transparent" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 12px rgba(0,61,143,0.2)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
       <div class="kpi-label">TOTAL TRACKED</div>
       <div class="kpi-value">${fmt(totalReturn)}</div>
       <div class="kpi-delta">Parts in return cycle</div>
     </div>
-    <div class="kpi-card green">
+    <div class="kpi-card green" onclick="filterReturnStatus('available')" style="cursor:pointer;transition:all 0.2s;border:2px solid transparent" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 12px rgba(22,163,74,0.2)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
       <div class="kpi-label">AVAILABLE</div>
       <div class="kpi-value">${fmt(statusCounts.AVAILABLE)}</div>
       <div class="kpi-delta">Not yet consumed</div>
     </div>
-    <div class="kpi-card amber">
+    <div class="kpi-card amber" onclick="filterReturnStatus('pendingReturn')" style="cursor:pointer;transition:all 0.2s;border:2px solid transparent" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 12px rgba(217,119,6,0.2)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
       <div class="kpi-label">PENDING RETURN</div>
       <div class="kpi-value">${fmt(statusCounts.PENDING_RETURN)}</div>
       <div class="kpi-delta">Consumed, awaiting return</div>
     </div>
-    <div class="kpi-card orange">
+    <div class="kpi-card orange" onclick="filterReturnStatus('inTransit')" style="cursor:pointer;transition:all 0.2s;border:2px solid transparent" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 12px rgba(239,159,39,0.2)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
       <div class="kpi-label">IN TRANSIT</div>
       <div class="kpi-value">${fmt(statusCounts.IN_TRANSIT)}</div>
       <div class="kpi-delta">Return requested, pending receipt</div>
     </div>
-    <div class="kpi-card teal">
+    <div class="kpi-card teal" onclick="filterReturnStatus('returned')" style="cursor:pointer;transition:all 0.2s;border:2px solid transparent" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 12px rgba(8,145,178,0.2)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
       <div class="kpi-label">RETURNED</div>
       <div class="kpi-value">${fmt(statusCounts.RETURNED)}</div>
       <div class="kpi-delta">Return cycle complete</div>
@@ -822,9 +1195,10 @@ async function renderParts() {
   <div class="section-header">
     <div class="section-title">📦 Part Return Status Tracking</div>
     <span class="section-badge">SVC Centers Return Cycle</span>
+    <button onclick="exportReturnStatus()" class="export-btn excel" style="padding:7px 16px;height:36px;font-size:12px;margin-left:auto">📊 Export Excel</button>
   </div>
   <div class="table-card" style="margin-bottom:18px">
-    <div class="table-scroll"><table class="data-table">
+    <div class="table-scroll"><table class="data-table" data-export-id="return-status-table">
       <thead><tr>
         <th>Location (Branch - ASC)</th>
         <th style="text-align:left">Part Code</th>
@@ -902,6 +1276,7 @@ async function renderParts() {
   <div class="section-header">
     <div class="section-title">Full Inventory — ABC Analysis</div>
     <span class="section-badge">${totalSKUs} SKUs</span>
+    <button onclick="exportFullInventory()" class="export-btn excel" style="padding:7px 16px;height:36px;font-size:12px;margin-left:auto">📊 Export Excel</button>
   </div>
 
   <!-- Search controls -->
@@ -1886,3 +2261,10 @@ function saveEditedOrder(orderId) {
     logActivity(`Parts Modified — Order:${o.orderNo} Part:${o.code} Model:${o.model} Qty:${o.qty} AWB:${o.awb||'—'}`);
   }
 }
+
+// ── Expose functions to global scope for onclick handlers ────────────
+window.filterReturnStatus = filterReturnStatus;
+window.updateReturnStatusCardStyles = updateReturnStatusCardStyles;
+window.applyReturnStatusFilter = applyReturnStatusFilter;
+window.setQuickDateFilter = setQuickDateFilter;
+window.handleBranchFilterChange = handleBranchFilterChange;
