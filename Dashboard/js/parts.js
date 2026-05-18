@@ -126,8 +126,9 @@ function enrichTransaction(row) {
   r._partName = ((r[C.PART_NAME]||'').trim() || (r[C.PART_NAME2]||'').trim() || (r[C.ACC_NAME]||'').trim());
   r._partCode = ((r[C.ACC_CODE]||'').trim()  || (r[C.CODE]||'').trim() || (r[C.CODE2]||'').trim());
   r._key     = r._partCode || r._partName;
-  r._awb     = (r[C.REF] || '').trim();
-  r._orderNo = (r[C.ORDER_NO] || '').trim();
+  // Capture reference number - try multiple column name variations
+  r._awb     = (r[C.REF] || r['Reference'] || r['Referance'] || '').trim();
+  r._orderNo = (r[C.ORDER_NO] || r['Associated Order Number'] || r['Reference'] || '').trim();
   r._monthKey = r._date
     ? `${r._date.getFullYear()}-${String(r._date.getMonth()+1).padStart(2,'0')}` : '';
   r._transactionType = mapTransactionTypeFromSort(r._sort);
@@ -300,7 +301,8 @@ function buildPartReturnStatus(transactions) {
       if ((entry.code === partCode || entry.name === partCode) && entry.sortStages[9]) {
         entry.sortStages[10] = true;
         entry.dates.returnReceivedDate = tx._date;
-        entry.reference.returnReceiptId = tx._orderNo;
+        // Use orderNo if available, fallback to awb (reference) from same transaction
+        entry.reference.returnReceiptId = tx._orderNo || tx._awb || entry.reference.returnRequestId;
         break;
       }
     }
