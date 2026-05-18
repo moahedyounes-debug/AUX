@@ -616,7 +616,6 @@ function applyReturnStatusFilter() {
       const statusCell = row.cells[3]?.textContent?.trim() || '';
       let matches = false;
       switch(status) {
-        case 'available': matches = statusCell === 'AVAILABLE'; break;
         case 'pendingReturn': matches = statusCell === 'PENDING_RETURN'; break;
         case 'inTransit': matches = statusCell === 'IN_TRANSIT'; break;
         case 'returned': matches = statusCell === 'RETURNED'; break;
@@ -987,7 +986,6 @@ async function renderParts() {
   // ── Part Return Status Tracking ───────────────────────────
   const returnStatusList = buildPartReturnStatus(tx).filter(p => p.status !== 'UNKNOWN');
   const statusCounts = {
-    AVAILABLE:      returnStatusList.filter(p=>p.status==='AVAILABLE').length,
     PENDING_RETURN: returnStatusList.filter(p=>p.status==='PENDING_RETURN').length,
     IN_TRANSIT:     returnStatusList.filter(p=>p.status==='IN_TRANSIT').length,
     RETURNED:       returnStatusList.filter(p=>p.status==='RETURNED').length,
@@ -1163,16 +1161,11 @@ async function renderParts() {
   </div>
 
   <!-- RETURN STATUS KPIs - Interactive -->
-  <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px">
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     <div class="kpi-card blue" onclick="filterReturnStatus('all')" style="cursor:pointer;transition:all 0.2s;border:2px solid transparent" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 12px rgba(0,61,143,0.2)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
       <div class="kpi-label">TOTAL TRACKED</div>
       <div class="kpi-value">${fmt(totalReturn)}</div>
       <div class="kpi-delta">Parts in return cycle</div>
-    </div>
-    <div class="kpi-card green" onclick="filterReturnStatus('available')" style="cursor:pointer;transition:all 0.2s;border:2px solid transparent" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 12px rgba(22,163,74,0.2)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
-      <div class="kpi-label">AVAILABLE</div>
-      <div class="kpi-value">${fmt(statusCounts.AVAILABLE)}</div>
-      <div class="kpi-delta">Not yet consumed</div>
     </div>
     <div class="kpi-card amber" onclick="filterReturnStatus('pendingReturn')" style="cursor:pointer;transition:all 0.2s;border:2px solid transparent" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 12px rgba(217,119,6,0.2)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
       <div class="kpi-label">PENDING RETURN</div>
