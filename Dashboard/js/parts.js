@@ -25,19 +25,40 @@ let PARTS_REQUESTS = []; // loaded from Parts tab in main sheet
 // ── Build model→partCode lookup from Parts Model sheet rows ────
 function buildModelMap(rows) {
   const map = {};
-  rows.forEach(row => {
+  let debugInfo = { totalRows: rows.length, modelCount: 0, noModel: 0, noCode: 0, noModelOrCode: 0 };
+
+  // Log first row structure to understand available columns
+  if (rows.length > 0) {
+    console.log('First row keys:', Object.keys(rows[0]));
+    console.log('First row sample:', rows[0]);
+  }
+
+  rows.forEach((row, idx) => {
+    // Primary model source: Customer Model (friendly names like ATW24A2DI-CSA)
+    // Fallback: *Model Code (numeric internal codes)
     const model = (
       row['Customer Model'] || row['customer model'] ||
+      row['*Model Code']    || row['Model Code']    ||
       row['Model']          || row['model']          ||
       row['CustomerModel']  || ''
     ).trim();
 
     const code = (
-      row['Accessory Code'] || row['accessory code'] ||
+      row['*Accessory Code'] || row['Accessory Code'] || row['accessory code'] ||
       row['Part Code']      || row['part code']      ||
       row['Code']           || row['code']           ||
       row['ACC_CODE']       || ''
     ).trim();
+
+    if (!model && !code) {
+      debugInfo.noModelOrCode++;
+    } else if (!model) {
+      debugInfo.noModel++;
+    } else if (!code) {
+      debugInfo.noCode++;
+    } else {
+      debugInfo.modelCount++;
+    }
 
     if (!model || !code) return;
 
@@ -45,6 +66,8 @@ function buildModelMap(rows) {
     if (!map[key]) map[key] = { label: model, codes: new Set() };
     map[key].codes.add(code);
   });
+
+  console.log('buildModelMap debug:', debugInfo);
   return map;
 }
 
