@@ -145,24 +145,24 @@ function renderTrends(){
   const worst=valid.reduce((a,b)=>b.rate48h<(a?.rate48h??999)?b:a,null);
   document.getElementById('page-trends').innerHTML=`
   <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
-    <div class="kpi-card blue"><div class="kpi-label">Best Month (48h)</div><div class="kpi-value" style="font-size:20px">${best?best.label:'—'}</div><div class="kpi-delta">${best?fmtPct(best.rate48h):'—'}</div></div>
-    <div class="kpi-card red"><div class="kpi-label">Worst Month (48h)</div><div class="kpi-value" style="font-size:20px">${worst?worst.label:'—'}</div><div class="kpi-delta">${worst?fmtPct(worst.rate48h):'—'}</div></div>
-    <div class="kpi-card gray"><div class="kpi-label">Avg 48h Rate</div><div class="kpi-value">${fmtPct(avg(monthly,m=>m.rate48h))}</div><div class="kpi-target">Target ≥ ${T.RATE_48H}%</div></div>
-    <div class="kpi-card gray"><div class="kpi-label">Avg 72h Rate</div><div class="kpi-value">${fmtPct(avg(monthly,m=>m.rate72h))}</div><div class="kpi-target">Target ≥ ${T.RATE_72H}%</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">${t('best_month_48h')}</div><div class="kpi-value" style="font-size:20px">${best?best.label:'—'}</div><div class="kpi-delta">${best?fmtPct(best.rate48h):'—'}</div></div>
+    <div class="kpi-card red"><div class="kpi-label">${t('worst_month_48h')}</div><div class="kpi-value" style="font-size:20px">${worst?worst.label:'—'}</div><div class="kpi-delta">${worst?fmtPct(worst.rate48h):'—'}</div></div>
+    <div class="kpi-card gray"><div class="kpi-label">${t('avg_48h_rate')}</div><div class="kpi-value">${fmtPct(avg(monthly,m=>m.rate48h))}</div><div class="kpi-target">${t('target')} ≥ ${T.RATE_48H}%</div></div>
+    <div class="kpi-card gray"><div class="kpi-label">${t('avg_72h_rate')}</div><div class="kpi-value">${fmtPct(avg(monthly,m=>m.rate72h))}</div><div class="kpi-target">${t('target')} ≥ ${T.RATE_72H}%</div></div>
   </div>
   <div class="chart-grid">
-    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">48h &amp; 72h Rate Trend</div></div></div><div class="chart-wrap tall"><canvas id="ch-tr-rates"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">Ticket Volume</div></div></div><div class="chart-wrap tall"><canvas id="ch-tr-vol"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">Pending Trend (Duration)</div></div></div><div class="chart-wrap"><canvas id="ch-tr-pend"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">Rescheduled Tickets — Monthly</div></div></div><div class="chart-wrap"><canvas id="ch-tr-resched"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">${t('rate_48h_trend')}</div></div></div><div class="chart-wrap tall"><canvas id="ch-tr-rates"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">${t('ticket_volume')}</div></div></div><div class="chart-wrap tall"><canvas id="ch-tr-vol"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">${t('pending_trend_duration')}</div></div></div><div class="chart-wrap"><canvas id="ch-tr-pend"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">${t('rescheduled_tickets_monthly')}</div></div></div><div class="chart-wrap"><canvas id="ch-tr-resched"></canvas></div></div>
   </div>
   <div class="chart-grid single">
-    <div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Monthly Comparison</div></div><div class="chart-wrap tall"><canvas id="ch-tr-compare"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('monthly_comparison')}</div></div><div class="chart-wrap tall"><canvas id="ch-tr-compare"></canvas></div></div>
   </div>`;
   lineChart('ch-tr-rates',mLabels,[{label:'48h %',data:monthly.map(m=>m.rate48h?+m.rate48h.toFixed(1):null),borderColor:CONFIG.COLORS.BLUE},{label:'72h %',data:monthly.map(m=>m.rate72h?+m.rate72h.toFixed(1):null),borderColor:CONFIG.COLORS.BLUE3,borderDash:[5,3]}],{scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}});
-  barChart('ch-tr-vol',mLabels,[{label:'Total',data:monthly.map(m=>m.total),backgroundColor:CONFIG.COLORS.BLUE4},{label:'Completed',data:monthly.map(m=>m.completed),backgroundColor:CONFIG.COLORS.BLUE2},{label:'Pending',data:monthly.map(m=>m.pending),backgroundColor:CONFIG.COLORS.AMBER}]);
-  lineChart('ch-tr-pend',mLabels,[{label:'Pending Snapshot',data:monthly.map(m=>m.pendingDuration),borderColor:CONFIG.COLORS.RED,fill:true,backgroundColor:'rgba(220,38,38,.07)'}],{scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}});
-  barChart('ch-tr-resched',mLabels,[{label:'Rescheduled',data:monthly.map(m=>m.withReason),backgroundColor:CONFIG.COLORS.AMBER}],{plugins:{legend:{display:false}}});
+  barChart('ch-tr-vol',mLabels,[{label:t('total_tickets'),data:monthly.map(m=>m.total),backgroundColor:CONFIG.COLORS.BLUE4},{label:t('completed'),data:monthly.map(m=>m.completed),backgroundColor:CONFIG.COLORS.BLUE2},{label:t('pending'),data:monthly.map(m=>m.pending),backgroundColor:CONFIG.COLORS.AMBER}]);
+  lineChart('ch-tr-pend',mLabels,[{label:t('pending'),data:monthly.map(m=>m.pendingDuration),borderColor:CONFIG.COLORS.RED,fill:true,backgroundColor:'rgba(220,38,38,.07)'}],{scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}});
+  barChart('ch-tr-resched',mLabels,[{label:t('with_reason'),data:monthly.map(m=>m.withReason),backgroundColor:CONFIG.COLORS.AMBER}],{plugins:{legend:{display:false}}});
   barChart('ch-tr-compare',mLabels,[{label:'48h %',data:monthly.map(m=>m.rate48h?+m.rate48h.toFixed(1):null),backgroundColor:CONFIG.COLORS.BLUE},{label:'72h %',data:monthly.map(m=>m.rate72h?+m.rate72h.toFixed(1):null),backgroundColor:CONFIG.COLORS.BLUE3}],{scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}});
 }
 
@@ -321,21 +321,21 @@ function renderDaily(){
   document.getElementById('page-daily').innerHTML=`
   ${filterTagHtml()}
   <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px">
-    <div class="kpi-card accent"><div class="kpi-label">Today's Visits</div><div class="kpi-value">${fmt(today.length)}</div><div class="kpi-delta">Rescheduled to today</div></div>
-    <div class="kpi-card amber" onclick="setChartFilter('pending','all')" style="cursor:pointer"><div class="kpi-label">Total Pending</div><div class="kpi-value">${fmt(pending.length)}</div><div class="kpi-delta">Completion Result blank</div></div>
-    <div class="kpi-card blue"><div class="kpi-label">Active Workers</div><div class="kpi-value">${fmt(activeWorkers.length)}</div><div class="kpi-delta">On today's schedule</div></div>
-    <div class="kpi-card ${dispatchedWork>0?'red':'green'}" onclick="setChartFilter('dispatched','yes')" style="cursor:pointer"><div class="kpi-label">Dispatched (Not Accepted)</div><div class="kpi-value">${fmt(dispatchedWork)}</div><div class="kpi-delta">Status = Dispatched Work</div></div>
-    <div class="kpi-card ${noWorker>0?'red':'green'}" onclick="setChartFilter('noWorker','yes')" style="cursor:pointer"><div class="kpi-label">No Worker Assigned</div><div class="kpi-value">${fmt(noWorker)}</div><div class="kpi-delta">Worker Name = blank</div></div>
+    <div class="kpi-card accent"><div class="kpi-label">${t('today_visits')}</div><div class="kpi-value">${fmt(today.length)}</div><div class="kpi-delta">${t('rescheduled_today')}</div></div>
+    <div class="kpi-card amber" onclick="setChartFilter('pending','all')" style="cursor:pointer"><div class="kpi-label">${t('total_pending')}</div><div class="kpi-value">${fmt(pending.length)}</div><div class="kpi-delta">${t('completion_result_blank')}</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">${t('active_workers')}</div><div class="kpi-value">${fmt(activeWorkers.length)}</div><div class="kpi-delta">${t('on_schedule')}</div></div>
+    <div class="kpi-card ${dispatchedWork>0?'red':'green'}" onclick="setChartFilter('dispatched','yes')" style="cursor:pointer"><div class="kpi-label">${t('dispatched_na')}</div><div class="kpi-value">${fmt(dispatchedWork)}</div><div class="kpi-delta">${t('status_dispatched')}</div></div>
+    <div class="kpi-card ${noWorker>0?'red':'green'}" onclick="setChartFilter('noWorker','yes')" style="cursor:pointer"><div class="kpi-label">${t('no_worker_assigned')}</div><div class="kpi-value">${fmt(noWorker)}</div><div class="kpi-delta">${t('worker_name_blank')}</div></div>
   </div>
   <div class="chart-grid two-thirds">
-    <div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Aging Distribution (Pending)</div></div><div id="aging-daily" style="padding-top:8px"></div></div>
-    <div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Reschedule Reasons</div></div><div class="chart-wrap"><canvas id="ch-daily-rsn"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('aging_distribution')}</div></div><div id="aging-daily" style="padding-top:8px"></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('reschedule_reasons')}</div></div><div class="chart-wrap"><canvas id="ch-daily-rsn"></canvas></div></div>
   </div>
   <div class="table-card">
-    <div class="table-header"><div class="table-title">Today's Visits (from Rescheduling date)</div><div class="table-count">${today.length} tickets</div></div>
+    <div class="table-header"><div class="table-title">${t('todays_visits')} (${t('from_reschedule_date')})</div><div class="table-count">${today.length} ${t('tickets_count')}</div></div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Ticket #</th><th>Branch</th><th>Worker</th><th>Ticket Status</th><th>Aging</th><th>Reason</th><th>Date</th><th>Remark</th><th>Parts</th></tr></thead>
-      <tbody>${today.length===0?'<tr><td colspan="9" class="table-empty">No visits scheduled for today</td></tr>':
+      <thead><tr><th>${t('ticket_no')}</th><th>${t('branch')}</th><th>${t('worker')}</th><th>${t('ticket_status')}</th><th>${t('aging')}</th><th>${t('reason')}</th><th>${t('date')}</th><th>${t('remark')}</th><th>Parts</th></tr></thead>
+      <tbody>${today.length===0?'<tr><td colspan="9" class="table-empty">${t('no_visits')}</td></tr>':
         today.map(r=>'<tr>'+
           '<td class="ticket-id">'+esc(r[C.TICKET_NUM])+'</td><td>'+esc(r._branch)+'</td>'+
           '<td>'+(r._hasWorker?esc(r[C.WORKER]):'<span class="badge badge-red">Unassigned</span>')+'</td>'+
@@ -347,38 +347,38 @@ function renderDaily(){
       </tbody></table></div>
   </div>
   <div class="table-card">
-    <div class="table-header"><div class="table-title">${_chartFilter?'Filtered Pending Tickets':'All Pending Tickets'}</div><div class="table-count">${displayPending.length} tickets</div></div>
+    <div class="table-header"><div class="table-title">${_chartFilter?t('pending')+' '+t('pending')+' '+t('pending'):t('all_pending')}</div><div class="table-count">${displayPending.length} ${t('tickets_count')}</div></div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Ticket #</th><th>Branch</th><th>Worker</th><th>Ticket Status</th><th>Aging</th><th>Reason</th><th>Date</th><th>Remark</th><th>Parts</th></tr></thead>
+      <thead><tr><th>${t('ticket_no')}</th><th>${t('branch')}</th><th>${t('worker')}</th><th>${t('ticket_status')}</th><th>${t('aging')}</th><th>${t('reason')}</th><th>${t('date')}</th><th>${t('remark')}</th><th>Parts</th></tr></thead>
       <tbody>${displayPending.slice(0,80).map(r=>'<tr>'+
         '<td class="ticket-id">'+esc(r[C.TICKET_NUM])+'</td><td>'+esc(r._branch)+'</td>'+
-        '<td>'+(r._hasWorker?esc(r[C.WORKER]):'<span class="badge badge-red">Unassigned</span>')+'</td>'+
+        '<td>'+(r._hasWorker?esc(r[C.WORKER]):'<span class="badge badge-red">'+t('st_not_assigned')+'</span>')+'</td>'+
         '<td>'+ticketStatusBadge(r)+'</td><td>'+agingBadge(r._agingHours)+'</td>'+
         '<td>'+esc(r._rescheduleReason||'—')+'</td>'+
         '<td class="text-mono">'+reschedDateCell(r._rescheduled)+'</td>'+
         '<td>'+esc(r._rescheduleRemark||'—')+'</td>'+
         '<td>'+partsStatusCell(r)+'</td></tr>').join('')}
-      ${displayPending.length>80?'<tr><td colspan="9" class="text-center text-sm" style="color:var(--gray-400);padding:12px">Showing 80 of '+displayPending.length+'</td></tr>':''}
+      ${displayPending.length>80?'<tr><td colspan="9" class="text-center text-sm" style="color:var(--gray-400);padding:12px">'+t('showing')+' 80 '+t('of')+' '+displayPending.length+'</td></tr>':''}
       </tbody></table></div>
   </div>
-  <div class="section-header"><div class="section-title">Pending Summary — Pivot (Branch × Aging)</div></div>
+  <div class="section-header"><div class="section-title">${t('pending_summary_pivot')}</div></div>
   <div class="table-card">
-    <div class="table-header"><div class="table-title">Pending by Service Center &amp; Aging</div><div class="table-count">${pivot.totalPending} pending</div></div>
+    <div class="table-header"><div class="table-title">${t('by_service_center_aging')}</div><div class="table-count">${pivot.totalPending} ${t('pending')}</div></div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>Service Center</th>${pivot.cols.map(c=>'<th>'+c+'</th>').join('')}<th class="fw-600">Total</th></tr></thead>
+      <thead><tr><th>${t('branch')}</th>${pivot.cols.map(c=>'<th>'+c+'</th>').join('')}<th class="fw-600">Total</th></tr></thead>
       <tbody>${pivot.rows.map(r=>'<tr style="cursor:pointer" onclick="setChartFilter(\'branch\',\''+esc(r.branch)+'\')">'+
         '<td class="fw-600">'+esc(r.branch)+'</td>'+
         pivot.cols.map(c=>'<td class="text-mono">'+(r[c]||'')+'</td>').join('')+
         '<td class="fw-600 text-mono">'+r.total+'</td></tr>').join('')}
-      ${pivot.rows.length===0?'<tr><td colspan="'+(pivot.cols.length+2)+'" class="table-empty">No pending tickets</td></tr>':''}
+      ${pivot.rows.length===0?'<tr><td colspan="'+(pivot.cols.length+2)+'" class="table-empty">'+t('no_data')+'</td></tr>':''}
       </tbody></table></div>
   </div>
-  <div class="section-header"><div class="section-title">Load by City</div></div>
+  <div class="section-header"><div class="section-title">${t('load_by_city')}</div></div>
   <div class="table-card">
-    <div class="table-header"><div class="table-title">Registration Q'ty &amp; Closed Q'ty by City</div><div class="table-count">${cityLoad.length} cities</div></div>
+    <div class="table-header"><div class="table-title">Registration &amp; Closed by City</div><div class="table-count">${cityLoad.length} cities</div></div>
     <div class="table-scroll"><table class="data-table">
-      <thead><tr><th>City</th><th class="text-mono">Registration</th><th class="text-mono">Closed</th><th class="text-mono">Pending</th><th class="text-mono">Pending %</th><th class="text-mono">48h Rate</th><th class="text-mono">72h Rate</th></tr></thead>
-      <tbody>${cityLoad.length===0?'<tr><td colspan="7" class="table-empty">No data available</td></tr>':
+      <thead><tr><th>${t('branch')}</th><th class="text-mono">Registration</th><th class="text-mono">Closed</th><th class="text-mono">${t('pending')}</th><th class="text-mono">${t('pending')} %</th><th class="text-mono">48h Rate</th><th class="text-mono">72h Rate</th></tr></thead>
+      <tbody>${cityLoad.length===0?'<tr><td colspan="7" class="table-empty">${t('no_data')}</td></tr>':
         cityLoad.map(c=>'<tr>'+
           '<td class="fw-600">'+esc(c.city)+'</td>'+
           '<td class="text-mono text-center">'+c.registration+'</td>'+
@@ -426,10 +426,10 @@ function renderPending(){
   document.getElementById('page-pending').innerHTML=`
   ${filterTagHtml()}
   <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
-    <div class="kpi-card accent"><div class="kpi-label">Total Pending</div><div class="kpi-value">${fmt(pending.length)}</div></div>
-    <div class="kpi-card amber"><div class="kpi-label">Pending Rate</div><div class="kpi-value">${fmtPct(KPI.pendingRate(rows))}</div><div class="kpi-target">Target ≤ ${CONFIG.TARGETS.PENDING_RATE}%</div></div>
+    <div class="kpi-card accent"><div class="kpi-label">${t('total_pending')}</div><div class="kpi-value">${fmt(pending.length)}</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">${t('pending_rate')}</div><div class="kpi-value">${fmtPct(KPI.pendingRate(rows))}</div><div class="kpi-target">${t('target')} ≤ ${CONFIG.TARGETS.PENDING_RATE}%</div></div>
     <div class="kpi-card ${farCount>0?'red':'green'}"><div class="kpi-label">Far Distance (>60km)</div><div class="kpi-value">${fmt(farCount)}</div></div>
-    <div class="kpi-card ${pendNoReason>0?'red':'green'}" onclick="setChartFilter('noReason','yes')" style="cursor:pointer"><div class="kpi-label">Pending No Reason</div><div class="kpi-value">${fmt(pendNoReason)}</div></div>
+    <div class="kpi-card ${pendNoReason>0?'red':'green'}" onclick="setChartFilter('noReason','yes')" style="cursor:pointer"><div class="kpi-label">${t('pending_no_reason')}</div><div class="kpi-value">${fmt(pendNoReason)}</div></div>
   </div>
   ${categories.length>0?`
   <div class="section-header"><div class="section-title">Delay Categories (from Pending Reason sheet)</div><span class="section-badge">Auto-Mapped</span></div>
@@ -473,10 +473,10 @@ function renderBranches(){
   var rows=DB.filtered, branches=KPI.byBranch(rows), T=CONFIG.TARGETS;
   document.getElementById('page-branches').innerHTML=
   '<div class="insight-card"><div class="insight-icon">📊</div><div class="insight-text"><div class="insight-title">Branch Ranking — '+esc(DB.userASC)+'</div>'+branches.length+' branches · Score = 40% 48h + 35% 72h + 25% Resolution</div></div>'+
-  '<div class="chart-grid"><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">48h Rate</div><span class="section-badge">Target '+T.RATE_48H+'%</span></div><div class="chart-wrap tall"><canvas id="ch-br-48"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">72h Rate</div><span class="section-badge">Target '+T.RATE_72H+'%</span></div><div class="chart-wrap tall"><canvas id="ch-br-72"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Pending Rate</div></div><div class="chart-wrap"><canvas id="ch-br-pend"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Rescheduled</div></div><div class="chart-wrap"><canvas id="ch-br-rsch"></canvas></div></div></div>'+
-  '<div class="table-card"><div class="table-scroll"><table class="data-table"><thead><tr><th>Rank</th><th>Branch</th><th>Total</th><th>Pending</th><th>Pending Rate</th><th>48h Rate</th><th>72h Rate</th><th>Score</th></tr></thead><tbody>'+
+  '<div class="chart-grid"><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('rate_48h')}</div><span class="section-badge">${t('target')} '+T.RATE_48H+'%</span></div><div class="chart-wrap tall"><canvas id="ch-br-48"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('rate_72h')}</div><span class="section-badge">${t('target')} '+T.RATE_72H+'%</span></div><div class="chart-wrap tall"><canvas id="ch-br-72"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('pending_rate')}</div></div><div class="chart-wrap"><canvas id="ch-br-pend"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Rescheduled</div></div><div class="chart-wrap"><canvas id="ch-br-rsch"></canvas></div></div></div>'+
+  '<div class="table-card"><div class="table-scroll"><table class="data-table"><thead><tr><th>Rank</th><th>${t('branch')}</th><th>Total</th><th>${t('pending')}</th><th>${t('pending_rate')}</th><th>${t('rate_48h')}</th><th>${t('rate_72h')}</th><th>Score</th></tr></thead><tbody>'+
   branches.map(function(b,i){return '<tr onclick="setChartFilter(\'branch\',\''+esc(b.branch)+'\')" style="cursor:pointer"><td><div class="rank-num '+(i===0?'gold':i===1?'silver':i===2?'bronze':'other')+'" style="display:inline-flex">'+(i+1)+'</div></td><td class="fw-600">'+esc(b.branch)+'</td><td class="text-mono">'+fmt(b.total)+'</td><td class="text-mono">'+fmt(b.pending)+'</td><td>'+targetBadge(b.pendingRate,T.PENDING_RATE,false)+'</td><td>'+targetBadge(b.rate48h,T.RATE_48H)+'</td><td>'+targetBadge(b.rate72h,T.RATE_72H)+'</td><td><span class="badge '+(b.score>=80?'badge-green':b.score>=60?'badge-blue':'badge-amber')+'">'+fmt(b.score,1)+'</span></td></tr>';}).join('')+
-  '</tbody></table></div></div>';
+  '</tbody></table></div></div>`;
   var bl=branches.map(function(b){return truncate(b.branch,20);});
   hBarChart('ch-br-48',bl,branches.map(function(b){return b.rate48h?+b.rate48h.toFixed(1):null;}),CONFIG.COLORS.BLUE,{scales:{x:{max:100}}});
   hBarChart('ch-br-72',bl,branches.map(function(b){return b.rate72h?+b.rate72h.toFixed(1):null;}),CONFIG.COLORS.BLUE3,{scales:{x:{max:100}}});
@@ -497,11 +497,11 @@ function renderRejected(){
     '<div class="kpi-card amber"><div class="kpi-label">Returned</div><div class="kpi-value">'+fmt(ret.length)+'</div><div class="kpi-delta">Rejected upon review</div></div>'+
     '<div class="kpi-card blue"><div class="kpi-label">OBM Statement</div><div class="kpi-value">'+fmt(obm.length)+'</div><div class="kpi-delta">Cancel + OBM</div></div>'+
     '<div class="kpi-card gray"><div class="kpi-label">Combined</div><div class="kpi-value">'+fmt(all.length)+'</div><div class="kpi-delta">'+(rows.length?fmtPct(all.length/rows.length*100):'—')+' of total</div></div></div>'+
-  '<div class="chart-grid"><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Type Breakdown</div></div><div class="chart-wrap"><canvas id="ch-rj-type"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Aging</div></div><div id="aging-rj" style="padding-top:8px"></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">By Branch</div></div><div class="chart-wrap"><canvas id="ch-rj-br"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">By Technician</div></div><div class="chart-wrap"><canvas id="ch-rj-wk"></canvas></div></div></div>'+
-  '<div class="table-card"><div class="table-header"><div class="table-title">Rejected / Returned / OBM</div><div class="table-count">'+all.length+' records</div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>Ticket #</th><th>Branch</th><th>Worker</th><th>Type</th><th>Phase</th><th>Result</th><th>Service Info</th><th>Aging</th></tr></thead><tbody>'+
-  (all.length===0?'<tr><td colspan="8" class="table-empty">No records found</td></tr>':
+  '<div class="chart-grid"><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Type Breakdown</div></div><div class="chart-wrap"><canvas id="ch-rj-type"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('aging')}</div></div><div id="aging-rj" style="padding-top:8px"></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">By Branch</div></div><div class="chart-wrap"><canvas id="ch-rj-br"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">By Technician</div></div><div class="chart-wrap"><canvas id="ch-rj-wk"></canvas></div></div></div>'+
+  '<div class="table-card"><div class="table-header"><div class="table-title">Rejected / Returned / OBM</div><div class="table-count">'+all.length+' records</div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>${t('ticket_no')}</th><th>${t('branch')}</th><th>${t('worker')}</th><th>Type</th><th>Phase</th><th>Result</th><th>Service Info</th><th>${t('aging')}</th></tr></thead><tbody>'+
+  (all.length===0?'<tr><td colspan="8" class="table-empty">${t('no_data')}</td></tr>':
   all.slice(0,60).map(function(r){return '<tr><td class="ticket-id">'+esc(r[C.TICKET_NUM])+'</td><td>'+esc(r._branch)+'</td><td>'+esc(r[C.WORKER]||'—')+'</td><td>'+statusBadge(r)+'</td><td>'+esc(r[C.PHASE]||'—')+'</td><td>'+esc(r[C.COMPLETION_RESULT]||'—')+'</td><td>'+esc(truncate(r[C.SERVICE_INFO]||r[C.SERVICE_TYPE]||'—',30))+'</td><td>'+agingBadge(r._agingHours)+'</td></tr>';}).join(''))+
-  '</tbody></table></div></div>';
+  '</tbody></table></div></div>`;
   donutChart('ch-rj-type',['Rejected','Returned','OBM Statement'],[rej.length,ret.length,obm.length],{plugins:{legend:{position:'right'}}});
   renderAgingBars('aging-rj',aging,all.length);
   hBarChart('ch-rj-br',byBr.map(function(b){return truncate(b.branch,22);}),byBr.map(function(b){return b.count;}),CONFIG.COLORS.RED);
@@ -514,11 +514,11 @@ function renderExport(){
   var r48=KPI.rate48h(rows), r72=KPI.rate72h(rows), monthly=KPI.byMonth(rows);
   document.getElementById('page-export').innerHTML=
   '<div class="insight-card"><div class="insight-icon">📤</div><div class="insight-text"><div class="insight-title">Export Center — '+esc(DB.userASC)+'</div>'+fmt(rows.length)+' tickets in view.'+(DB.isAdmin?' <span class="badge badge-blue">Admin</span>':'')+'</div></div>'+
-  '<div class="export-section"><h3>📊 Raw Data — Excel (.xlsx)</h3><p>15 columns per AUX spec. Opens in Microsoft Excel.</p>'+
-  '<div class="export-options"><div class="export-option selected" onclick="selectExportOpt(this,\'all\')" id="opt-all"><div class="export-opt-icon">📋</div><div class="export-opt-title">All</div><div class="export-opt-desc">'+fmt(rows.length)+' rows</div></div><div class="export-option" onclick="selectExportOpt(this,\'pending\')" id="opt-pending"><div class="export-opt-icon">⏳</div><div class="export-opt-title">Pending</div><div class="export-opt-desc">'+fmt(pending.length)+' rows</div></div><div class="export-option" onclick="selectExportOpt(this,\'completed\')" id="opt-completed"><div class="export-opt-icon">✅</div><div class="export-opt-title">Completed</div><div class="export-opt-desc">'+fmt(comp.length)+' rows</div></div></div>'+
-  '<button class="export-btn excel" onclick="doExcelExport()">📥 Download Excel</button><div class="export-progress" id="prog-excel"><div class="spinner" style="border-top-color:#1D6F42"></div><span>Generating…</span></div></div>'+
-  '<div class="export-section"><h3>📑 KPI Report — PowerPoint (.pptx)</h3><p>AUX-branded presentation with KPI summary, trends, branch comparison, and strategic recommendations.</p>'+
-  '<button class="export-btn pptx" onclick="doPptxExport()">📥 Download PowerPoint</button><div class="export-progress" id="prog-pptx"><div class="spinner" style="border-top-color:#C43E1C"></div><span>Generating…</span></div></div>';
+  '<div class="export-section"><h3>📊 ${t('export_excel_title')}</h3><p>15 columns per AUX spec. Opens in Microsoft Excel.</p>'+
+  '<div class="export-options"><div class="export-option selected" onclick="selectExportOpt(this,\'all\')" id="opt-all"><div class="export-opt-icon">📋</div><div class="export-opt-title">${t('all_tickets')}</div><div class="export-opt-desc">'+fmt(rows.length)+' rows</div></div><div class="export-option" onclick="selectExportOpt(this,\'pending\')" id="opt-pending"><div class="export-opt-icon">⏳</div><div class="export-opt-title">${t('pending')}</div><div class="export-opt-desc">'+fmt(pending.length)+' rows</div></div><div class="export-option" onclick="selectExportOpt(this,\'completed\')" id="opt-completed"><div class="export-opt-icon">✅</div><div class="export-opt-title">${t('completed')}</div><div class="export-opt-desc">'+fmt(comp.length)+' rows</div></div></div>'+
+  '<button class="export-btn excel" onclick="doExcelExport()">${t('download_excel')}</button><div class="export-progress" id="prog-excel"><div class="spinner" style="border-top-color:#1D6F42"></div><span>${t('loading')}</span></div></div>'+
+  '<div class="export-section"><h3>📑 ${t('export_pptx_title')}</h3><p>AUX-branded presentation with KPI summary, trends, branch comparison, and strategic recommendations.</p>'+
+  '<button class="export-btn pptx" onclick="doPptxExport()">${t('download_pptx')}</button><div class="export-progress" id="prog-pptx"><div class="spinner" style="border-top-color:#C43E1C"></div><span>${t('loading')}</span></div></div>`;
 }
 
 // ── Export handlers ───────────────────────────────────────────
