@@ -1,0 +1,266 @@
+::1 - - [18/May/2026 10:14:34] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /css/main.css HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /js/i18n.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /js/config.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /js/data.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /js/kpis.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /js/charts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /js/pages.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /js/app.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:34] "GET /js/tour.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:14:35] code 404, message File not found
+::1 - - [18/May/2026 10:14:35] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:15:47] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 10:18:58] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 10:20:53] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /css/main.css HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /js/kpis.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /js/i18n.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /js/data.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /js/config.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /js/charts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /js/pages.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /js/app.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] "GET /js/tour.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:20:54] code 404, message File not found
+::1 - - [18/May/2026 10:20:54] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:22:06] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 10:23:09] code 404, message File not found
+::1 - - [18/May/2026 10:23:09] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:23:26] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 10:23:26] code 404, message File not found
+::1 - - [18/May/2026 10:23:26] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:23:26] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 10:23:39] code 404, message File not found
+::1 - - [18/May/2026 10:23:39] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:23:41] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] code 404, message File not found
+::1 - - [18/May/2026 10:23:41] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:23:41] "GET /js/charts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] "GET /css/main.css HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] "GET /js/config.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] "GET /js/i18n.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] "GET /js/kpis.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] "GET /js/data.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] "GET /js/pages.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] "GET /js/app.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] "GET /js/tour.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:23:41] code 404, message File not found
+::1 - - [18/May/2026 10:23:41] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:26:05] code 404, message File not found
+::1 - - [18/May/2026 10:26:05] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:26:05] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] code 404, message File not found
+::1 - - [18/May/2026 10:26:07] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:26:07] "GET /css/main.css HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET /js/i18n.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET /js/config.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET /js/data.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET /js/kpis.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET /js/charts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET /js/pages.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET /js/app.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] "GET /js/tour.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:26:07] code 404, message File not found
+::1 - - [18/May/2026 10:26:07] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:28:53] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] code 404, message File not found
+::1 - - [18/May/2026 10:28:53] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 10:28:53] "GET /css/main.css HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] "GET /js/i18n.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] "GET /js/config.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] "GET /js/data.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] "GET /js/kpis.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] "GET /js/charts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] "GET /js/pages.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] "GET /js/app.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:53] "GET /js/tour.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 10:28:54] code 404, message File not found
+::1 - - [18/May/2026 10:28:54] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [18/May/2026 11:09:54] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 11:13:07] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 11:13:10] code 404, message File not found
+::1 - - [18/May/2026 11:13:10] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 11:16:51] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 11:16:52] code 404, message File not found
+::1 - - [18/May/2026 11:16:52] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 11:16:52] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 11:40:53] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 11:40:53] code 404, message File not found
+::1 - - [18/May/2026 11:40:53] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 11:40:53] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 11:40:56] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 11:40:56] code 404, message File not found
+::1 - - [18/May/2026 11:40:56] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 11:48:45] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 11:48:45] code 404, message File not found
+::1 - - [18/May/2026 11:48:45] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 11:48:45] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 11:57:04] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 11:57:04] code 404, message File not found
+::1 - - [18/May/2026 11:57:04] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 11:57:05] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:21:21] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 12:21:21] code 404, message File not found
+::1 - - [18/May/2026 12:21:21] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 12:21:21] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 12:27:54] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 12:27:54] code 404, message File not found
+::1 - - [18/May/2026 12:27:54] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 12:27:54] "GET /css/main.css HTTP/1.1" 304 -
+::1 - - [18/May/2026 12:27:54] "GET /js/data.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 12:27:54] "GET /js/pages.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 12:27:54] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 12:30:57] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 12:30:57] code 404, message File not found
+::1 - - [18/May/2026 12:30:57] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 12:31:59] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] code 404, message File not found
+::1 - - [18/May/2026 12:31:59] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+::1 - - [18/May/2026 12:31:59] "GET /js/config.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] "GET /js/i18n.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] "GET /css/main.css HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] "GET /js/data.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] "GET /js/kpis.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] "GET /js/charts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] "GET /js/pages.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] "GET /js/tour.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:31:59] "GET /js/app.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 12:32:00] code 404, message File not found
+::1 - - [18/May/2026 12:32:00] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [18/May/2026 13:37:11] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 13:37:11] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 13:39:10] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 13:41:07] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 13:46:05] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 13:46:05] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 13:48:09] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 13:48:09] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:19:10] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 14:19:10] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:43:31] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:43:31] "GET /css/main.css HTTP/1.1" 304 -
+::1 - - [18/May/2026 14:43:31] "GET /js/data.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 14:43:31] "GET /js/pages.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 14:43:31] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:45:34] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 14:45:34] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 14:46:46] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 14:46:46] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 14:51:44] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /css/main.css HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /js/i18n.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /js/config.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /js/data.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /js/kpis.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /js/charts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /js/pages.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /js/app.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:44] "GET /js/tour.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 14:51:45] code 404, message File not found
+::1 - - [18/May/2026 14:51:45] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [18/May/2026 15:56:56] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 15:56:56] "GET /js/i18n.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 15:56:56] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 16:16:57] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 16:16:57] "GET /js/i18n.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 16:16:57] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 16:24:38] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /css/main.css HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /js/i18n.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /js/config.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /js/data.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /js/kpis.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /js/charts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /js/pages.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /js/app.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:38] "GET /js/tour.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 16:24:39] code 404, message File not found
+::1 - - [18/May/2026 16:24:39] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [18/May/2026 16:25:46] code 400, message Bad request version ('ùDë')
+::1 - - [18/May/2026 16:25:46] "\x16\x03\x01\x06ò\x01\x00\x06î\x03\x03sàGì\x03ê`®q\x11s¸\x82\x86±B}£\x92\x04ÁµÐ\x813E6D(½\x9fT ûÍ\x8cË\x89jÑ>÷Îøz\x99èÇ\x05·n\x0dùDë" 400 -
+::1 - - [18/May/2026 16:25:46] code 400, message Bad request version ('ÅpjÓ')
+::1 - - [18/May/2026 16:25:46] "\x16\x03\x01\x06ò\x01\x00\x06î\x03\x03\x15]}\x80N¹\x01¸L+z¯Q?ëÐî¨!\x93 üBÔ\x0b/^»+©¬Ä Ã5¥x\x9bxt\x00\x8aLM5\x05 ÅpjÓ" 400 -
+::1 - - [18/May/2026 16:25:46] code 400, message Bad request version ('\\x9a\\x9a\\x13\\x01\\x13\\x02\\x13\\x03À+À/À,À0Ì©Ì¨À\\x13À\\x14\\x00\\x9c\\x00\\x9d\\x00/\\x005\\x01\\x00\\x06¥\\x9a\\x9a\\x00\\x00\\x00+\\x00\\x07\\x06**\\x03\\x04\\x03\\x03\\x00')
+::1 - - [18/May/2026 16:25:46] "\x16\x03\x01\x07\x12\x01\x00\x07\x0e\x03\x03!gNJRýÉ\x99áUÕ&³µ\x9bigLô#±ûíBLweGA3'\x15 ¨\x9bn%\x0dá¤Â»ÀU\x84ä\x8e\x8fc\x8fÿ[\x01§&\x1c\x005/\x9bÆ8\x80ö®\x00 \x9a\x9a\x13\x01\x13\x02\x13\x03À+À/À,À0Ì©Ì¨À\x13À\x14\x00\x9c\x00\x9d\x00/\x005\x01\x00\x06¥\x9a\x9a\x00\x00\x00+\x00\x07\x06**\x03\x04\x03\x03\x00" 400 -
+::1 - - [18/May/2026 16:25:46] code 400, message Bad request version ('\\x02h2\\x08http/1.1\\x00')
+::1 - - [18/May/2026 16:25:46] "\x16\x03\x01\x06²\x01\x00\x06®\x03\x03\x17\x05\x80©ì¬F÷"%yÝ­y¡m\x1f|jÓ\x07¨9\x01ËíÐi`åC% *Ëu»\x8f1?£üü\x14\x0dE\x89À\x09¼¼Jú\x99Ea0·K\x0caM5\x064\x00 ::\x13\x01\x13\x02\x13\x03À+À/À,À0Ì©Ì¨À\x13À\x14\x00\x9c\x00\x9d\x00/\x005\x01\x00\x06E**\x00\x00ÿ\x01\x00\x01\x00\x00\x10\x00\x0e\x00\x0c\x02h2\x08http/1.1\x00" 400 -
+::1 - - [18/May/2026 17:18:11] "GET / HTTP/1.1" 304 -
+::1 - - [18/May/2026 17:18:12] "GET /js/i18n.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 17:18:12] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [18/May/2026 17:19:34] "GET / HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /css/main.css HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /js/i18n.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /js/config.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /js/data.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /js/kpis.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /js/charts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /js/pages.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /js/app.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:34] "GET /js/tour.js HTTP/1.1" 200 -
+::1 - - [18/May/2026 17:19:35] code 404, message File not found
+::1 - - [18/May/2026 17:19:35] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [19/May/2026 03:30:25] "GET / HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:30:25] "GET /css/main.css HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:30:26] "GET /js/i18n.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:30:26] "GET /js/config.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:30:26] "GET /js/data.js HTTP/1.1" 200 -
+::1 - - [19/May/2026 03:30:26] "GET /js/kpis.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:30:26] "GET /js/pages.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:30:26] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:30:26] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [19/May/2026 03:30:26] "GET /js/app.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:32:22] "GET /js/data.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:32:22] "GET /js/callcenter.js HTTP/1.1" 200 -
+::1 - - [19/May/2026 03:32:48] "GET / HTTP/1.1" 200 -
+::1 - - [19/May/2026 03:32:48] "GET /js/data.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:32:48] "GET /js/callcenter.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:33:07] "GET /?v=2 HTTP/1.1" 200 -
+::1 - - [19/May/2026 03:33:07] "GET /js/data.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:33:07] "GET /js/callcenter.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:33:15] "GET /js/i18n.js?bust=1779150795476 HTTP/1.1" 200 -
+::1 - - [19/May/2026 03:33:34] "GET /js/data.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 03:33:34] "GET /js/callcenter.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 08:52:16] "GET /?nocache=1779169936640 HTTP/1.1" 200 -
+::1 - - [19/May/2026 08:52:17] "GET /css/main.css HTTP/1.1" 304 -
+::1 - - [19/May/2026 08:52:17] "GET /js/i18n.js?v=2 HTTP/1.1" 200 -
+::1 - - [19/May/2026 08:52:17] "GET /js/config.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 08:52:17] "GET /js/data.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 08:52:17] "GET /js/pages.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 08:52:17] "GET /js/parts.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 08:52:17] "GET /js/callcenter.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 08:52:17] "GET /js/app.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 10:28:57] "GET /?nocache=1779169936640 HTTP/1.1" 304 -
+::1 - - [19/May/2026 10:28:58] "GET /js/i18n.js?v=2 HTTP/1.1" 200 -
+::1 - - [19/May/2026 10:28:58] "GET /js/data.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 10:28:58] "GET /js/callcenter.js HTTP/1.1" 304 -
+::1 - - [19/May/2026 10:33:33] "GET /?nocache=1779169936640 HTTP/1.1" 200 -
+::1 - - [19/May/2026 10:33:33] "GET /js/i18n.js?v=2 HTTP/1.1" 304 -
+::1 - - [19/May/2026 10:47:06] "GET /?nocache=1779169936640 HTTP/1.1" 304 -
+::1 - - [19/May/2026 10:47:06] "GET /js/i18n.js?v=2 HTTP/1.1" 304 -
+::1 - - [19/May/2026 10:47:06] "GET /js/parts.js HTTP/1.1" 200 -
+::1 - - [19/May/2026 12:14:17] code 404, message File not found
+::1 - - [19/May/2026 12:14:17] "GET /copy_to_clipboard.html HTTP/1.1" 404 -
+::1 - - [19/May/2026 12:14:35] code 404, message File not found
+::1 - - [19/May/2026 12:14:35] "GET /copy_to_clipboard.html HTTP/1.1" 404 -
+::1 - - [19/May/2026 12:18:13] code 404, message File not found
+::1 - - [19/May/2026 12:18:13] "GET /copy_data.html HTTP/1.1" 404 -
