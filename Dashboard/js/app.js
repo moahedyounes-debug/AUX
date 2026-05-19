@@ -120,7 +120,7 @@ let _heartbeatTimer   = null;
 
 // Google Apps Script Web App URL — set this after deploying the script
 // See: AUX_Heartbeat_Script.gs in the project folder
-let HEARTBEAT_URL = 'https://script.google.com/macros/s/AKfycbyRGaKvBin32c4B-L2aVjYnO2LmKYkB1yeuhkN9EgLubV7AA3XR384KBxbcA9eSuz7tbQ/exec';
+let HEARTBEAT_URL = 'https://script.google.com/macros/s/AKfycbwTAg8LT0WlhISqJkofs4WDNfqljWFLf_RNh0EzdBHMon3gmwyEG9AZkF1iaGkYe78Wdg/exec';
 
 // Write heartbeat to Google Sheet via Apps Script (works cross-device/global)
 async function writeHeartbeat(){
