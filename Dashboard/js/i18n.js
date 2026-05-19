@@ -24,7 +24,9 @@ const I18N = {
     nav_daily:      'Daily Operations',
     nav_pending:    'Pending Analysis',
     nav_branches:   'Branch Comparison',
+    nav_parts:      'Spare Parts',
     nav_rejected:   'Rejected / Returned',
+    nav_callcenter: 'Call Center',
     nav_export:     'Export Center',
     nav_insights:   'Deep Insights',
     nav_activity:   'Activity Log',
@@ -115,6 +117,143 @@ const I18N = {
     refreshed:      'Refreshed ✓',
     refreshing:     'Refreshing…',
     updated:        'Updated',
+
+    // KPI Cards (Parts Dashboard)
+    total_skus:         'TOTAL SKUS',
+    total_skus_desc:    'Parts in inventory',
+    low_stock:          'LOW STOCK',
+    low_stock_desc:     '≤ 3 units at SVC',
+    out_of_stock:       'OUT OF STOCK',
+    out_of_stock_desc:  'Zero balance',
+    reorder_alert:      'REORDER ALERT',
+    reorder_alert_desc: '< 3 months stock',
+    total_stock:        'TOTAL STOCK',
+    total_stock_desc:   'Main WH inventory',
+
+    // Parts Dashboard - Main Views
+    main_branch_stock:          'Main Branch Stock',
+    svc_center_distribution:    'SVC Center Distribution',
+    consumption_tracker:        'Consumption Tracker',
+    return_management:          'Return Management',
+    part_tracking_lifecycle:    'Part Tracking Lifecycle',
+    pending_requests_board:     'Pending Requests Board',
+
+    // Parts Dashboard - Column Headers
+    part_code:          'Part Code',
+    part_name:          'Part Name',
+    balance:            'Balance',
+    consumed_ytd:       'Consumed YTD',
+    last_received:      'Last Received',
+    svc_point:          'SVC Point',
+    inventory_count:    'Inventory Count',
+    consumption_rate:   'Consumption Rate (30d)',
+    low_stock_flag:     'Low Stock',
+    branch:             'Branch',
+    stock_point:        'Stock Point',
+    warehouse:          'Warehouse',
+    consumed_count:     'Consumed Count',
+    consumed_by:        'Consumed By',
+    last_used:          'Last Used',
+    return_reference:   'Reference #',
+    request_date:       'Request Date',
+    return_requested:   'Return Requested',
+    return_received:    'Return Received',
+    status:             'Status',
+    days_in_transit:    'Days in Transit',
+    outstanding:        'Outstanding',
+
+    // Return Status Labels
+    pending_return:     'Pending Return',
+    in_transit:         'In Transit',
+    returned:           'Returned',
+    in_use:             'In Use',
+    awaiting_receipt:   'Awaiting Receipt',
+
+    // Status Badges
+    status_pending_return:  'PENDING RETURN',
+    status_in_transit:      'IN TRANSIT',
+    status_returned:        'RETURNED',
+    status_in_use:          'IN USE',
+
+    // Months
+    january:    'January',
+    february:   'February',
+    march:      'March',
+    april:      'April',
+    may:        'May',
+    june:       'June',
+    july:       'July',
+    august:     'August',
+    september:  'September',
+    october:    'October',
+    november:   'November',
+    december:   'December',
+
+    // Charts (General)
+    monthly_trend:      'Monthly Trend',
+    daily_performance:  'Daily Performance',
+    consumption_chart:  'Consumption by Part',
+    return_status:      'Return Status Overview',
+    monthly_usage:      'Monthly Usage',
+    last_6_months:      'Last 6 months',
+    abc_classification: 'ABC Classification',
+    top_consumed:       'Top 10 Consumed Parts',
+    stock_by_branch:    'Stock Balance by Branch',
+    reorder_alert_title: 'Reorder Alert',
+    months_stock:       'Months of SVC Stock',
+    pending_requests:   'Pending Part Requests',
+    status_board:       'Status Board',
+
+    // Buttons & Actions
+    export_excel:       '📊 Export to Excel',
+    filter:             'Filter',
+    reset:              'Reset',
+    search:             'Search',
+    apply:              'Apply',
+    close:              'Close',
+    edit:               'Edit',
+    save:               'Save',
+    cancel:             'Cancel',
+    delete:             'Delete',
+    print:              'Print',
+
+    // Messages
+    no_data:            'No data available',
+    loading:            'Loading…',
+    error_loading:      'Error loading data',
+    success:            'Success',
+    warning:            'Warning',
+    please_select:      'Please select',
+
+    // Call Center
+    cc_sla_rate:           'SLA Rate',
+    cc_abandon_rate:       'Abandon Rate',
+    cc_total_calls:        'Total Calls',
+    cc_whatsapp:           'WhatsApp',
+    cc_avg_aht:            'Avg AHT',
+    cc_avg_tht:            'Avg THT',
+    cc_inbound:            'Inbound',
+    cc_outbound:           'Outbound',
+    cc_all_calls:          'All calls',
+    cc_conversations:      'Conversations',
+    cc_handle_time:        'Handle time',
+    cc_talk_time:          'Talk time',
+    cc_of_total:           'of total',
+    cc_target_sla:         'Target ≥',
+    cc_target_abandon:     'Target ≤',
+    cc_sla_rate_monthly:   'SLA Rate — Monthly',
+    cc_abandon_rate_monthly: 'Abandon Rate — Monthly',
+    cc_call_volume_monthly:  'Call Volume — Inbound vs Outbound',
+    cc_wa_volume_monthly:    'WhatsApp Volume — Monthly',
+    cc_peak_hours:           'Peak Hours — Calls & WhatsApp',
+    cc_peak_hours_sub:       'Volume by hour of day (darker = more volume)',
+    cc_within_sla_formula:   'Within SLA=1 ÷ total · target',
+    cc_abandon_formula:      'Event=ABANDON ÷ total · target ≤',
+    cc_agent_evaluation:     'Agent Evaluation — Overall Scores',
+    cc_agents:               'agents',
+    cc_monthly_evaluation:   'Monthly Evaluation — All Agents',
+    cc_call_center_agent:    'Call center agent',
+    cc_no_eval_data:         'No evaluation data for this period',
   },
 
   ar: {
@@ -137,7 +276,9 @@ const I18N = {
     nav_daily:      'العمليات اليومية',
     nav_pending:    'تحليل المعلّق',
     nav_branches:   'مقارنة الفروع',
+    nav_parts:      'قطع الغيار',
     nav_rejected:   'المرفوض / المرتجع',
+    nav_callcenter: 'مركز الاتصال',
     nav_export:     'تصدير البيانات',
     nav_insights:   'تحليلات عميقة',
     nav_activity:   'سجل النشاط',
@@ -228,6 +369,143 @@ const I18N = {
     refreshed:      'تم التحديث ✓',
     refreshing:     'جاري التحديث…',
     updated:        'آخر تحديث',
+
+    // KPI Cards (Parts Dashboard)
+    total_skus:         'إجمالي الأصناف',
+    total_skus_desc:    'الأصناف المتاحة',
+    low_stock:          'مخزون منخفض',
+    low_stock_desc:     '≤ 3 وحدات',
+    out_of_stock:       'نافد من المخزون',
+    out_of_stock_desc:  'رصيد صفر',
+    reorder_alert:      'تنبيه إعادة الطلب',
+    reorder_alert_desc: 'أقل من 3 أشهر',
+    total_stock:        'إجمالي المخزون',
+    total_stock_desc:   'مخزون المستودع الرئيسي',
+
+    // Parts Dashboard - Main Views
+    main_branch_stock:          'مخزون الفرع الرئيسي',
+    svc_center_distribution:    'توزيع مراكز الخدمة',
+    consumption_tracker:        'تتبع الاستهلاك',
+    return_management:          'إدارة المرتجعات',
+    part_tracking_lifecycle:    'دورة حياة الأصناف',
+    pending_requests_board:     'لوحة الطلبات المعلّقة',
+
+    // Parts Dashboard - Column Headers
+    part_code:          'رمز الصنف',
+    part_name:          'اسم الصنف',
+    balance:            'الرصيد',
+    consumed_ytd:       'المستهلك (سنة)',
+    last_received:      'آخر استقبال',
+    svc_point:          'نقطة الخدمة',
+    inventory_count:    'عدد المخزون',
+    consumption_rate:   'معدل الاستهلاك (30 يوم)',
+    low_stock_flag:     'مخزون منخفض',
+    branch:             'الفرع',
+    stock_point:        'نقطة المخزون',
+    warehouse:          'المستودع',
+    consumed_count:     'عدد المستهلك',
+    consumed_by:        'مستهلك بواسطة',
+    last_used:          'آخر استخدام',
+    return_reference:   'رقم المرجع',
+    request_date:       'تاريخ الطلب',
+    return_requested:   'تم طلب المرتجع',
+    return_received:    'تم استقبال المرتجع',
+    status:             'الحالة',
+    days_in_transit:    'أيام في الطريق',
+    outstanding:        'قيد المعالجة',
+
+    // Return Status Labels
+    pending_return:     'انتظار الإرجاع',
+    in_transit:         'قيد النقل',
+    returned:           'تم الإرجاع',
+    in_use:             'قيد الاستخدام',
+    awaiting_receipt:   'في انتظار الاستقبال',
+
+    // Status Badges
+    status_pending_return:  'انتظار الإرجاع',
+    status_in_transit:      'قيد النقل',
+    status_returned:        'تم الإرجاع',
+    status_in_use:          'قيد الاستخدام',
+
+    // Months
+    january:    'يناير',
+    february:   'فبراير',
+    march:      'مارس',
+    april:      'إبريل',
+    may:        'مايو',
+    june:       'يونيو',
+    july:       'يوليو',
+    august:     'أغسطس',
+    september:  'سبتمبر',
+    october:    'أكتوبر',
+    november:   'نوفمبر',
+    december:   'ديسمبر',
+
+    // Charts (General)
+    monthly_trend:      'الاتجاه الشهري',
+    daily_performance:  'الأداء اليومي',
+    consumption_chart:  'الاستهلاك حسب الصنف',
+    return_status:      'نظرة عامة على المرتجعات',
+    monthly_usage:      'الاستخدام الشهري',
+    last_6_months:      'آخر 6 أشهر',
+    abc_classification: 'تصنيف ABC',
+    top_consumed:       'أكثر 10 أصناف استهلاكاً',
+    stock_by_branch:    'رصيد المخزون حسب الفرع',
+    reorder_alert_title: 'تنبيه إعادة الطلب',
+    months_stock:       'أشهر مخزون الخدمة',
+    pending_requests:   'طلبات الأصناف المعلّقة',
+    status_board:       'لوحة الحالة',
+
+    // Buttons & Actions
+    export_excel:       '📊 تصدير إلى Excel',
+    filter:             'فلتر',
+    reset:              'إعادة تعيين',
+    search:             'بحث',
+    apply:              'تطبيق',
+    close:              'إغلاق',
+    edit:               'تعديل',
+    save:               'حفظ',
+    cancel:             'إلغاء',
+    delete:             'حذف',
+    print:              'طباعة',
+
+    // Messages
+    no_data:            'لا توجد بيانات',
+    loading:            'جاري التحميل…',
+    error_loading:      'خطأ في تحميل البيانات',
+    success:            'نجح',
+    warning:            'تحذير',
+    please_select:      'يرجى التحديد',
+
+    // Call Center
+    cc_sla_rate:           'معدل الخدمة SLA',
+    cc_abandon_rate:       'معدل الإهمال',
+    cc_total_calls:        'إجمالي المكالمات',
+    cc_whatsapp:           'واتساب',
+    cc_avg_aht:            'متوسط وقت المعالجة',
+    cc_avg_tht:            'متوسط وقت الحديث',
+    cc_inbound:            'واردة',
+    cc_outbound:           'صادرة',
+    cc_all_calls:          'جميع المكالمات',
+    cc_conversations:      'المحادثات',
+    cc_handle_time:        'وقت المعالجة',
+    cc_talk_time:          'وقت الحديث',
+    cc_of_total:           'من الإجمالي',
+    cc_target_sla:         'الهدف ≥',
+    cc_target_abandon:     'الهدف ≤',
+    cc_sla_rate_monthly:   'معدل الخدمة — شهري',
+    cc_abandon_rate_monthly: 'معدل الإهمال — شهري',
+    cc_call_volume_monthly:  'حجم المكالمات — واردة مقابل صادرة',
+    cc_wa_volume_monthly:    'حجم واتساب — شهري',
+    cc_peak_hours:           'ساعات الذروة — المكالمات وواتساب',
+    cc_peak_hours_sub:       'الحجم حسب ساعة اليوم (أغمق = حجم أكبر)',
+    cc_within_sla_formula:   'SLA=1 ÷ المجموع · الهدف',
+    cc_abandon_formula:      'ABANDON ÷ المجموع · الهدف ≤',
+    cc_agent_evaluation:     'تقييم الوكلاء — النتائج الإجمالية',
+    cc_agents:               'وكلاء',
+    cc_monthly_evaluation:   'التقييم الشهري — جميع الوكلاء',
+    cc_call_center_agent:    'وكيل مركز الاتصالات',
+    cc_no_eval_data:         'لا توجد بيانات تقييم لهذه الفترة',
   },
 
   zh: {
@@ -250,7 +528,9 @@ const I18N = {
     nav_daily:      '日常运营',
     nav_pending:    '待处理分析',
     nav_branches:   '分支比较',
+    nav_parts:      '备件管理',
     nav_rejected:   '已拒绝/已退回',
+    nav_callcenter: '呼叫中心',
     nav_export:     '导出中心',
     nav_insights:   '深度洞察',
     nav_activity:   '活动日志',
@@ -341,6 +621,143 @@ const I18N = {
     refreshed:      '已刷新 ✓',
     refreshing:     '刷新中…',
     updated:        '最后更新',
+
+    // KPI Cards (Parts Dashboard)
+    total_skus:         '库存总数',
+    total_skus_desc:    '库存中的零件',
+    low_stock:          '库存不足',
+    low_stock_desc:     '≤ 3 件',
+    out_of_stock:       '缺货',
+    out_of_stock_desc:  '无库存',
+    reorder_alert:      '补货提醒',
+    reorder_alert_desc: '< 3 个月库存',
+    total_stock:        '总库存',
+    total_stock_desc:   '主仓库存',
+
+    // Parts Dashboard - Main Views
+    main_branch_stock:          '主分支库存',
+    svc_center_distribution:    '服务中心分布',
+    consumption_tracker:        '消耗跟踪',
+    return_management:          '退货管理',
+    part_tracking_lifecycle:    '零件追踪生命周期',
+    pending_requests_board:     '待处理请求板',
+
+    // Parts Dashboard - Column Headers
+    part_code:          '零件代码',
+    part_name:          '零件名称',
+    balance:            '余额',
+    consumed_ytd:       '年度消耗',
+    last_received:      '最后接收',
+    svc_point:          '服务点',
+    inventory_count:    '库存数量',
+    consumption_rate:   '消耗率（30天）',
+    low_stock_flag:     '库存不足',
+    branch:             '分支',
+    stock_point:        '库存点',
+    warehouse:          '仓库',
+    consumed_count:     '消耗数量',
+    consumed_by:        '消耗者',
+    last_used:          '最后使用',
+    return_reference:   '参考编号',
+    request_date:       '请求日期',
+    return_requested:   '已请求退货',
+    return_received:    '已收到退货',
+    status:             '状态',
+    days_in_transit:    '运输天数',
+    outstanding:        '待处理',
+
+    // Return Status Labels
+    pending_return:     '待退货',
+    in_transit:         '运输中',
+    returned:           '已退货',
+    in_use:             '使用中',
+    awaiting_receipt:   '等待接收',
+
+    // Status Badges
+    status_pending_return:  '待退货',
+    status_in_transit:      '运输中',
+    status_returned:        '已退货',
+    status_in_use:          '使用中',
+
+    // Months
+    january:    '一月',
+    february:   '二月',
+    march:      '三月',
+    april:      '四月',
+    may:        '五月',
+    june:       '六月',
+    july:       '七月',
+    august:     '八月',
+    september:  '九月',
+    october:    '十月',
+    november:   '十一月',
+    december:   '十二月',
+
+    // Charts (General)
+    monthly_trend:      '月度趋势',
+    daily_performance:  '日常绩效',
+    consumption_chart:  '按零件消耗',
+    return_status:      '退货状态概览',
+    monthly_usage:      '月度使用量',
+    last_6_months:      '最后 6 个月',
+    abc_classification: 'ABC 分类',
+    top_consumed:       '消耗最多的 10 个零件',
+    stock_by_branch:    '按分支库存余额',
+    reorder_alert_title: '补货提醒',
+    months_stock:       '服务点库存月份',
+    pending_requests:   '待处理零件请求',
+    status_board:       '状态板',
+
+    // Buttons & Actions
+    export_excel:       '📊 导出为 Excel',
+    filter:             '筛选',
+    reset:              '重置',
+    search:             '搜索',
+    apply:              '应用',
+    close:              '关闭',
+    edit:               '编辑',
+    save:               '保存',
+    cancel:             '取消',
+    delete:             '删除',
+    print:              '打印',
+
+    // Messages
+    no_data:            '没有可用数据',
+    loading:            '加载中…',
+    error_loading:      '加载数据出错',
+    success:            '成功',
+    warning:            '警告',
+    please_select:      '请选择',
+
+    // Call Center
+    cc_sla_rate:           '服务水平率',
+    cc_abandon_rate:       '放弃率',
+    cc_total_calls:        '总呼叫数',
+    cc_whatsapp:           'WhatsApp',
+    cc_avg_aht:            '平均处理时长',
+    cc_avg_tht:            '平均通话时长',
+    cc_inbound:            '呼入',
+    cc_outbound:           '呼出',
+    cc_all_calls:          '所有呼叫',
+    cc_conversations:      '对话数',
+    cc_handle_time:        '处理时长',
+    cc_talk_time:          '通话时长',
+    cc_of_total:           '占总数',
+    cc_target_sla:         '目标 ≥',
+    cc_target_abandon:     '目标 ≤',
+    cc_sla_rate_monthly:   '服务水平率 — 月度',
+    cc_abandon_rate_monthly: '放弃率 — 月度',
+    cc_call_volume_monthly:  '呼叫量 — 呼入与呼出',
+    cc_wa_volume_monthly:    'WhatsApp量 — 月度',
+    cc_peak_hours:           '高峰时段 — 呼叫与WhatsApp',
+    cc_peak_hours_sub:       '按小时统计量（颜色越深 = 量越大）',
+    cc_within_sla_formula:   'SLA=1 ÷ 总数 · 目标',
+    cc_abandon_formula:      '放弃 ÷ 总数 · 目标 ≤',
+    cc_agent_evaluation:     '坐席评估 — 总体得分',
+    cc_agents:               '坐席',
+    cc_monthly_evaluation:   '月度评估 — 所有坐席',
+    cc_call_center_agent:    '呼叫中心坐席',
+    cc_no_eval_data:         '本期无评估数据',
   }
 };
 
@@ -360,6 +777,10 @@ function setLang(lang) {
   document.documentElement.dir  = isRTL ? 'rtl' : 'ltr';
   document.body.classList.toggle('rtl', isRTL);
   applyTranslations();
+  // Re-render the current page so JS-generated content (cards, charts) gets translated
+  if (typeof renderCurrentPage === 'function') {
+    renderCurrentPage();
+  }
 }
 
 // Apply all data-i18n attributes
@@ -376,3 +797,77 @@ function applyTranslations() {
     btn.classList.toggle('active', btn.getAttribute('data-lang') === _lang);
   });
 }
+
+// ─────────────────────────────────────────────────────────────
+// Format numbers based on language
+function formatNumber(num, decimals = 0) {
+  if (num === null || num === undefined) return '—';
+
+  const options = {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  };
+
+  // Language-specific number formatting
+  const formatters = {
+    en: new Intl.NumberFormat('en-US', options),
+    ar: new Intl.NumberFormat('ar-SA', options),
+    zh: new Intl.NumberFormat('zh-CN', options)
+  };
+
+  return (formatters[_lang] || formatters.en).format(num);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Format date based on language
+function formatLocalizedDate(date, format = 'short') {
+  if (!date) return '—';
+
+  const options = {
+    short: { day: '2-digit', month: 'short', year: 'numeric' },
+    long: { day: 'numeric', month: 'long', year: 'numeric' },
+    month: { month: 'short', year: 'numeric' }
+  };
+
+  const locales = {
+    en: 'en-GB',
+    ar: 'ar-SA',
+    zh: 'zh-CN'
+  };
+
+  return new Intl.DateTimeFormat(locales[_lang] || 'en-GB', options[format] || options.short)
+    .format(new Date(date));
+}
+
+// ─────────────────────────────────────────────────────────────
+// Get translated month name
+function getMonthName(monthIndex) {
+  const monthKeys = [
+    'january', 'february', 'march', 'april',
+    'may', 'june', 'july', 'august',
+    'september', 'october', 'november', 'december'
+  ];
+
+  return t(monthKeys[monthIndex] || monthKeys[0]);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Format KPI value with language consideration
+function formatKPI(value, type = 'number') {
+  if (type === 'percent') {
+    return formatNumber(value, 1) + '%';
+  } else if (type === 'hours') {
+    return formatNumber(value, 1) + ' h';
+  } else if (type === 'count') {
+    return formatNumber(value, 0);
+  }
+  return formatNumber(value, 0);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Create month labels in current language
+function getMonthLabels() {
+  return Array.from({length: 12}, (_, i) => getMonthName(i));
+}
+
+console.log('✅ i18n system loaded. Current language:', _lang);

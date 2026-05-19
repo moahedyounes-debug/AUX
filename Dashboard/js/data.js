@@ -649,6 +649,10 @@ function fmtPct(n,d=1){
 function formatMonthLabel(ym){
   if(!ym) return '—';
   const[y,m]=ym.split('-');
-  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]+' '+y;
+  const idx = parseInt(m) - 1;
+  const monthStr = (typeof getMonthName === 'function')
+    ? getMonthName(idx)
+    : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][idx];
+  return monthStr + ' ' + y;
 }
 function truncate(s,n){if(!s)return'—';return s.length>n?s.substring(0,n)+'…':s;}

@@ -54,10 +54,10 @@ function enrichCall(row) {
   const C = CONFIG.CC_COLS;
   const r = {...row};
 
-  // Month: extract from Date column (format: MM/DD/YYYY or MM/DD/YY) as "YYYY-MM"
+  // Month: extract from Date column (formats: MM/DD/YYYY, MM/DD/YY, YYYY-MM-DD) as "YYYY-MM"
   // Try named columns first, then unnamed columns by index
   const dateStr = r[C.DATE] || r['Date'] || r['date'] || r['__col_0'] || '';
-  // Try MM/DD/YYYY format first, then MM/DD/YY format
+  // Try MM/DD/YYYY format first, then MM/DD/YY format, then ISO YYYY-MM-DD format
   let dateMatch = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (!dateMatch) dateMatch = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{2})/);
 
@@ -68,7 +68,15 @@ function enrichCall(row) {
     if (year.length === 2) year = '20' + year;
     r._monthKey = `${year}-${String(parseInt(month)).padStart(2, '0')}`;
   } else {
-    r._monthKey = '';
+    // Try ISO format: YYYY-MM-DD HH:MM:SS (used in newer sheet exports)
+    const isoMatch = String(dateStr).match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      const year = isoMatch[1];   // YYYY
+      const month = isoMatch[2];  // MM
+      r._monthKey = `${year}-${String(parseInt(month)).padStart(2, '0')}`;
+    } else {
+      r._monthKey = '';
+    }
   }
 
   // Hour: Use SLAP2 if available, else HOUR
@@ -565,50 +573,50 @@ async function renderCallCenter() {
   <!-- KPI CARDS -->
   <div class="kpi-grid" style="grid-template-columns:repeat(8,1fr);margin-bottom:18px">
     <div class="kpi-card ${slaRate===null?'gray':slaRate>=T.SLA?'green':slaRate>=T.SLA*.9?'amber':'red'}">
-      <div class="kpi-label">SLA Rate</div><div class="kpi-value">${fmtPct(slaRate)}</div>
-      <div class="kpi-target">Target ≥ ${T.SLA}%</div>
+      <div class="kpi-label">${t('cc_sla_rate')}</div><div class="kpi-value">${fmtPct(slaRate)}</div>
+      <div class="kpi-target">${t('cc_target_sla')} ${T.SLA}%</div>
     </div>
     <div class="kpi-card ${abandonRate===null?'gray':abandonRate<=T.ABANDON?'green':abandonRate<=T.ABANDON*2?'amber':'red'}">
-      <div class="kpi-label">Abandon Rate</div><div class="kpi-value">${fmtPct(abandonRate)}</div>
-      <div class="kpi-target">Target ≤ ${T.ABANDON}%</div>
+      <div class="kpi-label">${t('cc_abandon_rate')}</div><div class="kpi-value">${fmtPct(abandonRate)}</div>
+      <div class="kpi-target">${t('cc_target_abandon')} ${T.ABANDON}%</div>
     </div>
-    <div class="kpi-card accent"><div class="kpi-label">Total Calls</div><div class="kpi-value">${fmt(total)}</div><div class="kpi-delta">All calls</div></div>
-    <div class="kpi-card blue"><div class="kpi-label">WhatsApp</div><div class="kpi-value">${fmt(waTotal)}</div><div class="kpi-delta">Conversations</div></div>
-    <div class="kpi-card gray"><div class="kpi-label">Avg AHT</div><div class="kpi-value">${fmtSec(avgAHT)}</div><div class="kpi-delta">Handle time</div></div>
-    <div class="kpi-card gray"><div class="kpi-label">Avg THT</div><div class="kpi-value">${fmtSec(avgTHT)}</div><div class="kpi-delta">Talk time</div></div>
-    <div class="kpi-card blue"><div class="kpi-label">Inbound</div><div class="kpi-value">${fmt(inbound)}</div><div class="kpi-delta">${total?fmtPct(inbound/total*100):'—'} of total</div></div>
-    <div class="kpi-card gray"><div class="kpi-label">Outbound</div><div class="kpi-value">${fmt(outbound)}</div><div class="kpi-delta">${total?fmtPct(outbound/total*100):'—'} of total</div></div>
+    <div class="kpi-card accent"><div class="kpi-label">${t('cc_total_calls')}</div><div class="kpi-value">${fmt(total)}</div><div class="kpi-delta">${t('cc_all_calls')}</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">${t('cc_whatsapp')}</div><div class="kpi-value">${fmt(waTotal)}</div><div class="kpi-delta">${t('cc_conversations')}</div></div>
+    <div class="kpi-card gray"><div class="kpi-label">${t('cc_avg_aht')}</div><div class="kpi-value">${fmtSec(avgAHT)}</div><div class="kpi-delta">${t('cc_handle_time')}</div></div>
+    <div class="kpi-card gray"><div class="kpi-label">${t('cc_avg_tht')}</div><div class="kpi-value">${fmtSec(avgTHT)}</div><div class="kpi-delta">${t('cc_talk_time')}</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">${t('cc_inbound')}</div><div class="kpi-value">${fmt(inbound)}</div><div class="kpi-delta">${total?fmtPct(inbound/total*100):'—'} ${t('cc_of_total')}</div></div>
+    <div class="kpi-card gray"><div class="kpi-label">${t('cc_outbound')}</div><div class="kpi-value">${fmt(outbound)}</div><div class="kpi-delta">${total?fmtPct(outbound/total*100):'—'} ${t('cc_of_total')}</div></div>
   </div>
 
   <!-- TREND CHARTS -->
   <div class="chart-grid">
     <div class="chart-card">
-      <div class="chart-card-header"><div><div class="chart-card-title">SLA Rate — Monthly</div><div class="chart-card-sub">Within SLA=1 ÷ total · target ${T.SLA}%</div></div></div>
+      <div class="chart-card-header"><div><div class="chart-card-title">${t('cc_sla_rate_monthly')}</div><div class="chart-card-sub">${t('cc_within_sla_formula')} ${T.SLA}%</div></div></div>
       <div class="chart-wrap tall"><canvas id="ch-cc-sla" role="img" aria-label="Monthly SLA rate line chart">SLA rate trend.</canvas></div>
     </div>
     <div class="chart-card">
-      <div class="chart-card-header"><div><div class="chart-card-title">Abandon Rate — Monthly</div><div class="chart-card-sub">Event=ABANDON ÷ total · target ≤ ${T.ABANDON}%</div></div></div>
+      <div class="chart-card-header"><div><div class="chart-card-title">${t('cc_abandon_rate_monthly')}</div><div class="chart-card-sub">${t('cc_abandon_formula')} ${T.ABANDON}%</div></div></div>
       <div class="chart-wrap tall"><canvas id="ch-cc-abn" role="img" aria-label="Monthly abandon rate line chart">Abandon rate trend.</canvas></div>
     </div>
     <div class="chart-card">
-      <div class="chart-card-header"><div><div class="chart-card-title">Call Volume — Inbound vs Outbound</div></div></div>
+      <div class="chart-card-header"><div><div class="chart-card-title">${t('cc_call_volume_monthly')}</div></div></div>
       <div class="chart-wrap"><canvas id="ch-cc-vol" role="img" aria-label="Monthly call volume bar chart">Call volume by month.</canvas></div>
     </div>
     <div class="chart-card">
-      <div class="chart-card-header"><div><div class="chart-card-title">WhatsApp Volume — Monthly</div></div></div>
+      <div class="chart-card-header"><div><div class="chart-card-title">${t('cc_wa_volume_monthly')}</div></div></div>
       <div class="chart-wrap"><canvas id="ch-cc-wa" role="img" aria-label="Monthly WhatsApp volume bar chart">WhatsApp conversations per month.</canvas></div>
     </div>
   </div>
   <div class="chart-grid single">
     <div class="chart-card">
-      <div class="chart-card-header"><div><div class="chart-card-title">Peak Hours — Calls &amp; WhatsApp</div><div class="chart-card-sub">Volume by hour of day (darker = more volume)</div></div></div>
+      <div class="chart-card-header"><div><div class="chart-card-title">${t('cc_peak_hours')}</div><div class="chart-card-sub">${t('cc_peak_hours_sub')}</div></div></div>
       <div class="chart-wrap tall"><canvas id="ch-cc-peak" role="img" aria-label="Peak hours bar chart by hour of day">Peak hours chart.</canvas></div>
     </div>
   </div>
 
   <!-- AGENT EVALUATION CARDS -->
   ${agentSummaries.length>0?`
-  <div class="section-header"><div class="section-title">Agent Evaluation — Overall Scores</div><span class="section-badge">${agentSummaries.length} agents</span></div>
+  <div class="section-header"><div class="section-title">${t('cc_agent_evaluation')}</div><span class="section-badge">${agentSummaries.length} ${t('cc_agents')}</span></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:18px">
     ${agentSummaries.map(a=>{
       const initials=a.agent.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
@@ -629,21 +637,21 @@ async function renderCallCenter() {
           <div style="width:36px;height:36px;border-radius:50%;background:var(--aux-blue-mist);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--aux-blue)">${initials}</div>
           <div>
             <div style="font-weight:600;font-size:13px">${esc(a.agent)}</div>
-            <div style="font-size:10px;color:var(--gray-400)">Call center agent</div>
+            <div style="font-size:10px;color:var(--gray-400)">${t('cc_call_center_agent')}</div>
           </div>
           <div style="margin-left:auto;text-align:right">
             <div style="font-size:24px;font-weight:700;color:${pctClr(a.overallPct||0)};line-height:1">${a.overallPct??'—'}%</div>
             <span class="badge ${grCls(a.overallPct||0)}" style="font-size:10px">${gradeOf(a.overallPct||0)}</span>
           </div>
         </div>
-        ${bars||'<div style="font-size:11px;color:var(--gray-400)">No evaluation data for this period</div>'}
+        ${bars||`<div style="font-size:11px;color:var(--gray-400)">${t('cc_no_eval_data')}</div>`}
       </div>`;
     }).join('')}
   </div>`:''}
 
   <!-- MONTHLY EVAL TABLE -->
   ${monthlyEvals.length>0?`
-  <div class="section-header"><div class="section-title">Monthly Evaluation — All Agents</div></div>
+  <div class="section-header"><div class="section-title">${t('cc_monthly_evaluation')}</div></div>
   <div class="table-card">
     <div class="table-scroll"><table class="data-table">
       <thead><tr>
