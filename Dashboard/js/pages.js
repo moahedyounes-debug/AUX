@@ -99,32 +99,32 @@ function renderOverview(){
     ${fmt(total)} total · ${fmt(pend)} pending (${fmtPct(pRate)}) · ${fmt(comp)} completed
   </div></div>
   <div class="kpi-grid">
-    <div class="kpi-card accent"><div class="kpi-label">Total Tickets</div><div class="kpi-value">${fmt(total)}</div><div class="kpi-delta">All statuses</div></div>
-    <div class="kpi-card ${col(pRate,T.PENDING_RATE,false)}" onclick="setChartFilter('pending','all')" style="cursor:pointer"><div class="kpi-label">Pending Rate</div><div class="kpi-value">${fmtPct(pRate)}</div><div class="kpi-target">Target ≤ ${T.PENDING_RATE}%</div></div>
-    <div class="kpi-card ${col(r48,T.RATE_48H)}"><div class="kpi-label">48h Repair Rate</div><div class="kpi-value">${fmtPct(r48)}</div><div class="kpi-target">Target ≥ ${T.RATE_48H}%</div></div>
-    <div class="kpi-card ${col(r72,T.RATE_72H)}"><div class="kpi-label">72h Repair Rate</div><div class="kpi-value">${fmtPct(r72)}</div><div class="kpi-target">Target ≥ ${T.RATE_72H}%</div></div>
-    <div class="kpi-card blue"><div class="kpi-label">Completed</div><div class="kpi-value">${fmt(comp)}</div><div class="kpi-delta">of ${fmt(total)} total</div></div>
-    <div class="kpi-card amber" onclick="setChartFilter('pending','all')" style="cursor:pointer"><div class="kpi-label">Pending</div><div class="kpi-value">${fmt(pend)}</div><div class="kpi-delta">Completion Result blank</div></div>
-    <div class="kpi-card ${pendNoReason>0?'red':'green'}" onclick="setChartFilter('noReason','yes')" style="cursor:pointer"><div class="kpi-label">Pending No Reason</div><div class="kpi-value">${fmt(pendNoReason)}</div><div class="kpi-delta">No Reason For Rescheduling</div></div>
-    <div class="kpi-card ${noWorker>0?'red':'green'}" onclick="setChartFilter('noWorker','yes')" style="cursor:pointer"><div class="kpi-label">No Worker Assigned</div><div class="kpi-value">${fmt(noWorker)}</div><div class="kpi-delta">Worker Name = blank</div></div>
+    <div class="kpi-card accent"><div class="kpi-label">${t('total_tickets')}</div><div class="kpi-value">${fmt(total)}</div><div class="kpi-delta">${t('all_statuses')}</div></div>
+    <div class="kpi-card ${col(pRate,T.PENDING_RATE,false)}" onclick="setChartFilter('pending','all')" style="cursor:pointer"><div class="kpi-label">${t('pending_rate')}</div><div class="kpi-value">${fmtPct(pRate)}</div><div class="kpi-target">${t('target')} ≤ ${T.PENDING_RATE}%</div></div>
+    <div class="kpi-card ${col(r48,T.RATE_48H)}"><div class="kpi-label">${t('rate_48h')}</div><div class="kpi-value">${fmtPct(r48)}</div><div class="kpi-target">${t('target')} ≥ ${T.RATE_48H}%</div></div>
+    <div class="kpi-card ${col(r72,T.RATE_72H)}"><div class="kpi-label">${t('rate_72h')}</div><div class="kpi-value">${fmtPct(r72)}</div><div class="kpi-target">${t('target')} ≥ ${T.RATE_72H}%</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">${t('completed')}</div><div class="kpi-value">${fmt(comp)}</div><div class="kpi-delta">${t('of')} ${fmt(total)} ${t('page_total')}</div></div>
+    <div class="kpi-card amber" onclick="setChartFilter('pending','all')" style="cursor:pointer"><div class="kpi-label">${t('pending')}</div><div class="kpi-value">${fmt(pend)}</div><div class="kpi-delta">${t('completion_result_blank')}</div></div>
+    <div class="kpi-card ${pendNoReason>0?'red':'green'}" onclick="setChartFilter('noReason','yes')" style="cursor:pointer"><div class="kpi-label">${t('pending_no_reason')}</div><div class="kpi-value">${fmt(pendNoReason)}</div><div class="kpi-delta">${t('no_reason_reschedule')}</div></div>
+    <div class="kpi-card ${noWorker>0?'red':'green'}" onclick="setChartFilter('noWorker','yes')" style="cursor:pointer"><div class="kpi-label">${t('no_worker_assigned')}</div><div class="kpi-value">${fmt(noWorker)}</div><div class="kpi-delta">${t('worker_name_blank')}</div></div>
   </div>
   <div class="chart-grid">
-    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">48h Rate — Monthly</div></div><span class="section-badge">Target ${T.RATE_48H}%</span></div><div class="chart-wrap"><canvas id="ch-ov-48h"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">72h Rate — Monthly</div></div><span class="section-badge">Target ${T.RATE_72H}%</span></div><div class="chart-wrap"><canvas id="ch-ov-72h"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">Rescheduled Tickets — Monthly</div></div></div><div class="chart-wrap"><canvas id="ch-ov-resched"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">Pending by Reschedule Reason</div></div></div><div class="chart-wrap"><canvas id="ch-ov-reason"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">${t('rate_48h_monthly')}</div></div><span class="section-badge">${t('target')} ${T.RATE_48H}%</span></div><div class="chart-wrap"><canvas id="ch-ov-48h"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">${t('rate_72h_monthly')}</div></div><span class="section-badge">${t('target')} ${T.RATE_72H}%</span></div><div class="chart-wrap"><canvas id="ch-ov-72h"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">${t('rescheduled_tickets_monthly')}</div></div></div><div class="chart-wrap"><canvas id="ch-ov-resched"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">${t('pending_by_reason')}</div></div></div><div class="chart-wrap"><canvas id="ch-ov-reason"></canvas></div></div>
   </div>
   <div class="chart-grid">
-    <div class="chart-card"><div class="chart-card-title" style="margin-bottom:10px">KPI Formulas</div>
+    <div class="chart-card"><div class="chart-card-title" style="margin-bottom:10px">${t('kpi_formulas')}</div>
     <div class="formula-box">
-<span class="formula-key">Pending</span> = <span class="formula-val">Affiliated SC ≠ blank AND Completion Result = blank</span>
-<span class="formula-key">48h Rate</span> = <span class="formula-val">Completed(≤48h) ÷ Total Completed × 100</span>
-<span class="formula-key">No Reason</span> = <span class="formula-val">Pending AND Reason For Rescheduling = blank</span>
-<span class="formula-key">No Worker</span> = <span class="formula-val">Pending AND Worker Name = blank</span></div></div>
-    <div class="chart-card"><div class="chart-card-title" style="margin-bottom:10px">Aging Formula</div>
+<span class="formula-key">${t('pending')}</span> = <span class="formula-val">${t('formula_pending')}</span>
+<span class="formula-key">${t('rate_48h')}</span> = <span class="formula-val">${t('formula_48h_rate')}</span>
+<span class="formula-key">${t('no_reason_reschedule')}</span> = <span class="formula-val">${t('formula_no_reason')}</span>
+<span class="formula-key">${t('no_worker_assigned')}</span> = <span class="formula-val">${t('formula_no_worker')}</span></div></div>
+    <div class="chart-card"><div class="chart-card-title" style="margin-bottom:10px">${t('aging_formula')}</div>
     <div class="formula-box">
-<span class="formula-key">Pending Aging</span> = <span class="formula-val">TODAY − Dispatch Point Time</span>
-<span class="formula-key">Completed Aging</span> = <span class="formula-val">Completion Time − Dispatch Point Time</span></div></div>
+<span class="formula-key">${t('pending_aging')}</span> = <span class="formula-val">${t('today_dispatch_time')}</span>
+<span class="formula-key">${t('completed_aging')}</span> = <span class="formula-val">${t('completion_to_dispatch')}</span></div></div>
   </div>`;
 
   lineChart('ch-ov-48h',mLabels,[{label:'48h %',data:monthly.map(m=>m.rate48h?+m.rate48h.toFixed(1):null),borderColor:CONFIG.COLORS.BLUE}],{scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:false}}});
