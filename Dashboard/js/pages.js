@@ -174,13 +174,14 @@ function partsStatusCell(r) {
   const supp   = (r[C.RESCHED_SUPP]  || r._rescheduleRemark  || '').toLowerCase();
   const maint  = (r[C.MAINTENANCE]   || '').toLowerCase();
 
-  // Helper function: Find part request with robust matching
+  // Helper function: Find part request with last-4-digit matching (same as Pending Board)
   function findPartRequest(ticketNo) {
     if (!ticketNo || !PARTS_REQUESTS || !PARTS_REQUESTS.length) return null;
-    const normalized = ticketNo.toString().trim().toUpperCase();
+    // Use last 4 digits for matching (same logic as buildPendingBoard)
+    const ticketLast4 = String(ticketNo).trim().slice(-4);
     return PARTS_REQUESTS.find(p => {
-      const orderNo = (p['Order Number'] || '').toString().trim().toUpperCase();
-      return orderNo === normalized;
+      const orderNo = String(p['Order Number'] || '').trim();
+      return orderNo.slice(-4) === ticketLast4;
     });
   }
 
@@ -226,20 +227,29 @@ function partsStatusCell(r) {
       window._partsDebugLogged = true;
     }
     const finalStatus = partRequest['Final Status'] || 'Pending';
-    const statusColor = finalStatus.toLowerCase().includes('receiv') ? '#059669'    : // Green
-                        finalStatus.toLowerCase().includes('dispatch') ? '#d97706'  : // Amber
-                        finalStatus.toLowerCase().includes('unavailable') ? '#dc2626' : // Red
+
+    // Map raw status to user-friendly display label
+    const statusLower = finalStatus.toLowerCase();
+    const displayStatus = statusLower.includes('receiv') ? 'Available in SVC Stock' :
+                          statusLower.includes('dispatch') ? 'Dispatched' :
+                          statusLower.includes('unavailable') ? 'Part Not Available' :
+                          statusLower.includes('sent') ? 'Dispatched' :
+                          finalStatus;
+
+    const statusColor = statusLower.includes('receiv') ? '#059669'    : // Green
+                        statusLower.includes('dispatch') ? '#d97706'  : // Amber
+                        statusLower.includes('unavailable') ? '#dc2626' : // Red
                         '#6366f1'; // Blue (Pending)
-    const statusIcon = finalStatus.toLowerCase().includes('receiv') ? '✓'        :
-                       finalStatus.toLowerCase().includes('dispatch') ? '📤'     :
-                       finalStatus.toLowerCase().includes('unavailable') ? '✗' : '⏳';
+    const statusIcon = statusLower.includes('receiv') ? '✓'        :
+                       statusLower.includes('dispatch') ? '📤'     :
+                       statusLower.includes('unavailable') ? '✗' : '⏳';
     const partCode = partRequest['Part Number'] || '';
     const partName = partRequest['Part Description'] || '';
     const awb = partRequest['AWB'] || '';
 
     return `<div style="display:flex;flex-direction:column;gap:4px;min-width:140px">
       <span class="badge" style="background:${statusColor};color:white;font-size:10px;padding:4px 8px;border-radius:4px;font-weight:600;text-align:center">
-        ${statusIcon} ${esc(finalStatus)}
+        ${statusIcon} ${esc(displayStatus)}
       </span>
       ${partCode ? `<span style="font-size:9px;color:var(--gray-600);font-family:var(--mono)">${esc(partCode)}</span>` : ''}
       ${awb ? `<span style="font-size:9px;color:var(--gray-400);font-family:var(--mono);cursor:pointer" onclick="showPartsTrackingPopup('${esc(ticketNo)}','${esc(awb)}','${esc(partName)}')" title="Track AWB: ${esc(awb)}">📦 ${esc(awb.substring(0,10))}…</span>` : ''}

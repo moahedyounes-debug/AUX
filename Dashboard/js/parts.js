@@ -1415,27 +1415,89 @@ function partsStatusCell(r) {
   const ticketNo = (r[C.TICKET_NUM]||'').trim();
   const branch   = r._branch||'';
 
-  let trackingAWB = null;
-  if (PARTS_REQUESTS.length) {
-    const m = PARTS_REQUESTS.find(p => (p['Order Number']||'').trim() === ticketNo);
-    if (m) trackingAWB = (m['AWB']||'').trim();
-  }
-  if (!trackingAWB && PARTS_DB.loaded) {
-    const tx = PARTS_DB.transactions.find(p => p._sort===8 && (p[CONFIG.PARTS_COLS.ORDER_NO]||'').trim()===ticketNo);
-    if (tx && tx._awb) trackingAWB = tx._awb;
-  }
-
-  if (trackingAWB) {
-    return `<span class="badge badge-blue" style="cursor:pointer;font-size:10px"
-      onclick="showTrackingFrame('${esc(trackingAWB)}')" title="AWB: ${esc(trackingAWB)}">
-      📦 Track ${esc(trackingAWB.substring(0,10))}…</span>`;
+  // Helper: Find part request with last-4-digit matching
+  function findPartRequest(ticketNo) {
+    if (!ticketNo || !PARTS_REQUESTS || !PARTS_REQUESTS.length) return null;
+    const ticketLast4 = String(ticketNo).trim().slice(-4);
+    return PARTS_REQUESTS.find(p => {
+      const orderNo = String(p['Order Number'] || '').trim();
+      return orderNo.slice(-4) === ticketLast4;
+    });
   }
 
-  const desc = truncate(r[C.MAINTENANCE]||supp||'Part required', 40);
-  return `<button onclick="openPartsRequestFromTicket('${esc(ticketNo)}','${esc(branch)}','${esc(desc)}')"
-    style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;
-           padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;font-family:var(--font)">
-    🔩 Request Part</button>`;
+  // Look up in PARTS_REQUESTS (Final Status from Parts page)
+  const partRequest = findPartRequest(ticketNo);
+
+  // Look up in Parts DB (Tracking info)
+  let trackingInfo = null;
+  if (PARTS_DB.loaded && PARTS_DB.transactions.length) {
+    const P = CONFIG.PARTS_COLS;
+    const match = PARTS_DB.transactions.find(p =>
+      (p[P.ORDER_NO] || '').trim() === ticketNo.trim()
+    );
+    if (match) {
+      const awb = match._awb || match[P.REF] || '';
+      if (awb) {
+        trackingInfo = {
+          awb,
+          partName: match._partName || match[P.PART_NAME] || '',
+          partCode: match._partCode || match[P.CODE] || '',
+        };
+      }
+    }
+  }
+
+  // Determine part status from PARTS_REQUESTS (priority) or tracking info
+  if (partRequest) {
+    const finalStatus = partRequest['Final Status'] || 'Pending';
+
+    // Map raw status to user-friendly display label
+    const statusLower = finalStatus.toLowerCase();
+    const displayStatus = statusLower.includes('receiv') ? 'Available in SVC Stock' :
+                          statusLower.includes('dispatch') ? 'Dispatched' :
+                          statusLower.includes('unavailable') ? 'Part Not Available' :
+                          statusLower.includes('sent') ? 'Dispatched' :
+                          finalStatus;
+
+    const statusColor = statusLower.includes('receiv') ? '#059669'    : // Green
+                        statusLower.includes('dispatch') ? '#d97706'  : // Amber
+                        statusLower.includes('unavailable') ? '#dc2626' : // Red
+                        '#6366f1'; // Blue (Pending)
+    const statusIcon = statusLower.includes('receiv') ? '✓'        :
+                       statusLower.includes('dispatch') ? '📤'     :
+                       statusLower.includes('unavailable') ? '✗' : '⏳';
+    const partCode = partRequest['Part Number'] || '';
+    const partName = partRequest['Part Description'] || '';
+    const awb = partRequest['AWB'] || '';
+
+    return `<div style="display:flex;flex-direction:column;gap:4px;min-width:140px">
+      <span class="badge" style="background:${statusColor};color:white;font-size:10px;padding:4px 8px;border-radius:4px;font-weight:600;text-align:center">
+        ${statusIcon} ${esc(displayStatus)}
+      </span>
+      ${partCode ? `<span style="font-size:9px;color:var(--gray-600);font-family:var(--mono)">${esc(partCode)}</span>` : ''}
+      ${awb ? `<span style="font-size:9px;color:var(--gray-400);font-family:var(--mono);cursor:pointer" onclick="showPartsTrackingPopup('${esc(ticketNo)}','${esc(awb)}','${esc(partName)}')" title="Track AWB: ${esc(awb)}">📦 ${esc(awb.substring(0,10))}…</span>` : ''}
+    </div>`;
+  } else if (trackingInfo) {
+    // Has tracking but no request record → show tracking link
+    return `<div style="display:flex;flex-direction:column;gap:3px;min-width:120px">
+      <span class="badge badge-blue" style="font-size:9px;cursor:pointer"
+        onclick="showPartsTrackingPopup('${esc(ticketNo)}','${esc(trackingInfo.awb)}','${esc(trackingInfo.partName)}')"
+        title="AWB: ${esc(trackingInfo.awb)}">
+        📦 In Transit
+      </span>
+      <span style="font-size:9px;color:var(--gray-400);font-family:var(--mono)">${esc(trackingInfo.awb.substring(0,12))}…</span>
+    </div>`;
+  } else {
+    // No part request → show reminder button
+    const partDesc = (r[C.MAINTENANCE] || supp || 'Part required').substring(0, 40);
+    return `<button onclick="openPartsRequestFromTicket('${esc(ticketNo)}','${esc(branch)}','${esc(partDesc)}')"
+      style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;
+             padding:6px 10px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;
+             font-family:var(--font);transition:.15s"
+      onmouseover="this.style.background='#fca5a5'" onmouseout="this.style.background='#fee2e2'">
+      🔩 Request Part
+    </button>`;
+  }
 }
 
 // ── Open modal from ticket ─────────────────────────────────────
