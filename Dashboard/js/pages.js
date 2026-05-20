@@ -493,16 +493,16 @@ function renderRejected(){
   var byBr=KPI.rejectedByBranch(rows), byWk=KPI.rejectedByWorker(rows);
   document.getElementById('page-rejected').innerHTML=
   '<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">'+
-    '<div class="kpi-card red"><div class="kpi-label">Rejected</div><div class="kpi-value">'+fmt(rej.length)+'</div><div class="kpi-delta">Refusal (worker)</div></div>'+
-    '<div class="kpi-card amber"><div class="kpi-label">Returned</div><div class="kpi-value">'+fmt(ret.length)+'</div><div class="kpi-delta">Rejected upon review</div></div>'+
-    '<div class="kpi-card blue"><div class="kpi-label">OBM Statement</div><div class="kpi-value">'+fmt(obm.length)+'</div><div class="kpi-delta">Cancel + OBM</div></div>'+
-    '<div class="kpi-card gray"><div class="kpi-label">Combined</div><div class="kpi-value">'+fmt(all.length)+'</div><div class="kpi-delta">'+(rows.length?fmtPct(all.length/rows.length*100):'—')+' of total</div></div></div>'+
-  '<div class="chart-grid"><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">Type Breakdown</div></div><div class="chart-wrap"><canvas id="ch-rj-type"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('aging')}</div></div><div id="aging-rj" style="padding-top:8px"></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">By Branch</div></div><div class="chart-wrap"><canvas id="ch-rj-br"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">By Technician</div></div><div class="chart-wrap"><canvas id="ch-rj-wk"></canvas></div></div></div>'+
-  '<div class="table-card"><div class="table-header"><div class="table-title">Rejected / Returned / OBM</div><div class="table-count">'+all.length+' records</div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>${t('ticket_no')}</th><th>${t('branch')}</th><th>${t('worker')}</th><th>Type</th><th>Phase</th><th>Result</th><th>Service Info</th><th>${t('aging')}</th></tr></thead><tbody>'+
+    '<div class="kpi-card red"><div class="kpi-label">${t('rejected')}</div><div class="kpi-value">'+fmt(rej.length)+'</div><div class="kpi-delta">${t('refusal_worker')}</div></div>'+
+    '<div class="kpi-card amber"><div class="kpi-label">${t('returned')}</div><div class="kpi-value">'+fmt(ret.length)+'</div><div class="kpi-delta">${t('rejected_review')}</div></div>'+
+    '<div class="kpi-card blue"><div class="kpi-label">${t('obm_statement')}</div><div class="kpi-value">'+fmt(obm.length)+'</div><div class="kpi-delta">${t('cancel_obm')}</div></div>'+
+    '<div class="kpi-card gray"><div class="kpi-label">${t('combined')}</div><div class="kpi-value">'+fmt(all.length)+'</div><div class="kpi-delta">'+(rows.length?fmtPct(all.length/rows.length*100):'—')+' ${t('of_total')}</div></div></div>'+
+  '<div class="chart-grid"><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('type_breakdown')}</div></div><div class="chart-wrap"><canvas id="ch-rj-type"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('aging')}</div></div><div id="aging-rj" style="padding-top:8px"></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('by_branch')}</div></div><div class="chart-wrap"><canvas id="ch-rj-br"></canvas></div></div><div class="chart-card"><div class="chart-card-header"><div class="chart-card-title">${t('by_technician')}</div></div><div class="chart-wrap"><canvas id="ch-rj-wk"></canvas></div></div></div>'+
+  '<div class="table-card"><div class="table-header"><div class="table-title">${t('rejected_returned_obm')}</div><div class="table-count">'+all.length+' ${t('records')}</div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>${t('ticket_no')}</th><th>${t('branch')}</th><th>${t('worker')}</th><th>${t('type')}</th><th>${t('phase')}</th><th>${t('result')}</th><th>${t('service_info')}</th><th>${t('aging')}</th></tr></thead><tbody>'+
   (all.length===0?'<tr><td colspan="8" class="table-empty">${t('no_data')}</td></tr>':
   all.slice(0,60).map(function(r){return '<tr><td class="ticket-id">'+esc(r[C.TICKET_NUM])+'</td><td>'+esc(r._branch)+'</td><td>'+esc(r[C.WORKER]||'—')+'</td><td>'+statusBadge(r)+'</td><td>'+esc(r[C.PHASE]||'—')+'</td><td>'+esc(r[C.COMPLETION_RESULT]||'—')+'</td><td>'+esc(truncate(r[C.SERVICE_INFO]||r[C.SERVICE_TYPE]||'—',30))+'</td><td>'+agingBadge(r._agingHours)+'</td></tr>';}).join(''))+
   '</tbody></table></div></div>`;
-  donutChart('ch-rj-type',['Rejected','Returned','OBM Statement'],[rej.length,ret.length,obm.length],{plugins:{legend:{position:'right'}}});
+  donutChart('ch-rj-type',[t('rejected'),t('returned'),t('obm_statement')],[rej.length,ret.length,obm.length],{plugins:{legend:{position:'right'}}});
   renderAgingBars('aging-rj',aging,all.length);
   hBarChart('ch-rj-br',byBr.map(function(b){return truncate(b.branch,22);}),byBr.map(function(b){return b.count;}),CONFIG.COLORS.RED);
   hBarChart('ch-rj-wk',byWk.slice(0,10).map(function(w){return truncate(w.worker,22);}),byWk.slice(0,10).map(function(w){return w.count;}),CONFIG.COLORS.GRAY);
@@ -731,25 +731,25 @@ function renderInsights(){
   <div class="insight-card" style="background:linear-gradient(135deg,#001A47,#003D8F);border:none;margin-bottom:22px">
     <div class="insight-icon" style="background:rgba(255,255,255,.15);color:white;font-size:18px">📊</div>
     <div class="insight-text" style="color:white">
-      <div class="insight-title" style="color:white;font-size:16px">Deep Insights — Closed Tickets Analysis (&gt;48h)</div>
+      <div class="insight-title" style="color:white;font-size:16px">${t('deep_insights_title')}</div>
       <span style="color:rgba(255,255,255,.75);font-size:13px">
-        ${fmt(closed48.length)} tickets closed after 48h out of ${fmt(allClosed.length)} total closed
-        (${fmtPct(allClosed.length?closed48.length/allClosed.length*100:null)} exceeded 48h target)
+        ${fmt(closed48.length)} ${t('tickets_exceeded_48h')} ${fmt(allClosed.length)} ${t('total_closed')}
+        (${fmtPct(allClosed.length?closed48.length/allClosed.length*100:null)} ${t('exceeded_48h_target')})
       </span>
     </div>
   </div>
 
   <!-- KPI CARDS -->
   <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:22px">
-    <div class="kpi-card red"><div class="kpi-label">Closed &gt;48h</div><div class="kpi-value">${fmt(closed48.length)}</div><div class="kpi-delta">Exceeded target</div></div>
-    <div class="kpi-card amber"><div class="kpi-label">Troubleshooting</div><div class="kpi-value">${fmt(ts48.length)}</div><div class="kpi-delta">Device fault / parts</div></div>
-    <div class="kpi-card blue"><div class="kpi-label">Value Added</div><div class="kpi-value">${fmt(va48.length)}</div><div class="kpi-delta">Extra service / freon</div></div>
-    <div class="kpi-card ${customerPostponed.length>0?'amber':'green'}"><div class="kpi-label">Customer Delay</div><div class="kpi-value">${fmt(customerPostponed.length)}</div><div class="kpi-delta">Postponed / no answer</div></div>
-    <div class="kpi-card gray"><div class="kpi-label">Avg Service Hours</div><div class="kpi-value">${fmt(avg(closed48,r=>r._serviceHours),1)}</div><div class="kpi-delta">For &gt;48h tickets</div></div>
+    <div class="kpi-card red"><div class="kpi-label">${t('closed_gt_48h')}</div><div class="kpi-value">${fmt(closed48.length)}</div><div class="kpi-delta">${t('exceeded_target')}</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">${t('troubleshooting')}</div><div class="kpi-value">${fmt(ts48.length)}</div><div class="kpi-delta">${t('device_fault_parts')}</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">${t('value_added_service')}</div><div class="kpi-value">${fmt(va48.length)}</div><div class="kpi-delta">${t('extra_service_freon')}</div></div>
+    <div class="kpi-card ${customerPostponed.length>0?'amber':'green'}"><div class="kpi-label">${t('customer_delay')}</div><div class="kpi-value">${fmt(customerPostponed.length)}</div><div class="kpi-delta">${t('postponed_no_answer')}</div></div>
+    <div class="kpi-card gray"><div class="kpi-label">${t('avg_service_hours')}</div><div class="kpi-value">${fmt(avg(closed48,r=>r._serviceHours),1)}</div><div class="kpi-delta">${t('for_gt_48h')}</div></div>
   </div>
 
   <!-- DELAY REASON BREAKDOWN -->
-  <div class="section-header"><div class="section-title">Root Cause Analysis — Why Did It Take >48h?</div><span class="section-badge">${closed48.length} tickets</span></div>
+  <div class="section-header"><div class="section-title">${t('root_cause_analysis')}</div><span class="section-badge">${closed48.length} ${t('tickets_count')}</span></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:22px">
     ${Object.values(delayCats).map(cat=>{
       const pct=closed48.length?Math.round(cat.rows.length/closed48.length*100):0;
@@ -757,8 +757,8 @@ function renderInsights(){
       return`<div style="background:${cat.bg};border:1px solid ${cat.color}20;border-radius:var(--r-lg);padding:16px">
         <div style="font-size:11px;font-weight:700;color:${cat.color};text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">${esc(cat.label)}</div>
         <div style="font-size:28px;font-weight:700;color:var(--gray-900);line-height:1">${cat.rows.length}</div>
-        <div style="font-size:11px;color:var(--gray-500);margin-top:4px">${pct}% of &gt;48h tickets</div>
-        <div style="font-size:11px;color:var(--gray-400);margin-top:2px;font-family:var(--mono)">Avg: ${avgH!==null?fmt(avgH,1)+'h':'—'}</div>
+        <div style="font-size:11px;color:var(--gray-500);margin-top:4px">${pct}% ${t('of_gt_48h_tickets')}</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:2px;font-family:var(--mono)">${t('avg')} ${avgH!==null?fmt(avgH,1)+'h':'—'}</div>
       </div>`;
     }).join('')}
   </div>
@@ -766,37 +766,37 @@ function renderInsights(){
   <!-- CHARTS ROW 1 -->
   <div class="chart-grid">
     <div class="chart-card">
-      <div class="chart-card-header"><div><div class="chart-card-title">Service Hours Distribution (&gt;48h tickets)</div><div class="chart-card-sub">How long beyond 48h did they take?</div></div></div>
+      <div class="chart-card-header"><div><div class="chart-card-title">${t('service_hours_distribution')}</div><div class="chart-card-sub">${t('how_long_beyond_48h')}</div></div></div>
       <div class="chart-wrap"><canvas id="ch-ins-hours"></canvas></div>
     </div>
     <div class="chart-card">
-      <div class="chart-card-header"><div><div class="chart-card-title">Completion Type Breakdown</div><div class="chart-card-sub">Troubleshooting vs Value Added vs Other</div></div></div>
+      <div class="chart-card-header"><div><div class="chart-card-title">${t('completion_type_breakdown')}</div><div class="chart-card-sub">${t('troubleshooting_vs_value')}</div></div></div>
       <div class="chart-wrap"><canvas id="ch-ins-type"></canvas></div>
     </div>
     <div class="chart-card">
-      <div class="chart-card-header"><div><div class="chart-card-title">Delay Cause Distribution</div></div></div>
+      <div class="chart-card-header"><div><div class="chart-card-title">${t('delay_cause_distribution')}</div></div></div>
       <div class="chart-wrap"><canvas id="ch-ins-delay"></canvas></div>
     </div>
     <div class="chart-card">
-      <div class="chart-card-header"><div><div class="chart-card-title">Top Branches — Most >48h Tickets</div></div></div>
+      <div class="chart-card-header"><div><div class="chart-card-title">${t('top_branches_most_48h')}</div></div></div>
       <div class="chart-wrap"><canvas id="ch-ins-branch"></canvas></div>
     </div>
   </div>
 
   <!-- APPOINTMENT VS RESCHEDULING ANALYSIS -->
-  <div class="section-header"><div class="section-title">Appointment & Rescheduling Analysis</div></div>
+  <div class="section-header"><div class="section-title">${t('appointment_reschedule_analysis')}</div></div>
   <div class="chart-grid two-thirds">
     <div class="chart-card">
-      <div class="chart-card-header"><div><div class="chart-card-title">Reschedule Impact on Closure Time</div><div class="chart-card-sub">Tickets rescheduled vs not — avg service hours</div></div></div>
+      <div class="chart-card-header"><div><div class="chart-card-title">${t('reschedule_impact_closure')}</div><div class="chart-card-sub">${t('tickets_rescheduled_vs_not')}</div></div></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:8px 0">
         <div style="text-align:center;padding:20px;background:var(--danger-bg);border-radius:var(--r-md)">
           <div style="font-size:32px;font-weight:700;color:var(--danger)">${fmt(withReschedule.length)}</div>
-          <div style="font-size:12px;color:var(--gray-500);margin-top:4px">Had reschedule reason</div>
-          <div style="font-size:12px;color:var(--gray-400);font-family:var(--mono);margin-top:2px">Avg: ${fmt(avg(withReschedule,r=>r._serviceHours),1)}h</div>
+          <div style="font-size:12px;color:var(--gray-500);margin-top:4px">${t('had_reschedule_reason')}</div>
+          <div style="font-size:12px;color:var(--gray-400);font-family:var(--mono);margin-top:2px">${t('avg')} ${fmt(avg(withReschedule,r=>r._serviceHours),1)}h</div>
         </div>
         <div style="text-align:center;padding:20px;background:var(--success-bg);border-radius:var(--r-md)">
           <div style="font-size:32px;font-weight:700;color:var(--success)">${fmt(closed48.length-withReschedule.length)}</div>
-          <div style="font-size:12px;color:var(--gray-500);margin-top:4px">No reschedule reason</div>
+          <div style="font-size:12px;color:var(--gray-500);margin-top:4px">${t('no_reschedule_reason')}</div>
           <div style="font-size:12px;color:var(--gray-400);font-family:var(--mono);margin-top:2px">Avg: ${fmt(avg(closed48.filter(r=>!r._rescheduleDate||!r._rescheduleReason),r=>r._serviceHours),1)}h</div>
         </div>
       </div>
