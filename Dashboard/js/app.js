@@ -49,7 +49,7 @@ function navigate(pageId, el) {
   }
 }
 
-function renderCurrentPage() {
+async function renderCurrentPage() {
   if (typeof logActivity === 'function') {
     logActivity('View page: ' + currentPage.replace('page-', ''));
   }
@@ -59,17 +59,17 @@ function renderCurrentPage() {
 
   // Safely call page rendering functions defined in pages.js / parts.js / callcenter.js
   try {
-    if (currentPage === 'page-overview' && typeof renderOverview === 'function') renderOverview();
-    else if (currentPage === 'page-trends' && typeof renderTrends === 'function') renderTrends();
-    else if (currentPage === 'page-daily' && typeof renderDaily === 'function') renderDaily();
-    else if (currentPage === 'page-pending' && typeof renderPending === 'function') renderPending();
-    else if (currentPage === 'page-branches' && typeof renderBranches === 'function') renderBranches();
-    else if (currentPage === 'page-rejected' && typeof renderRejected === 'function') renderRejected();
-    else if (currentPage === 'page-export' && typeof renderExport === 'function') renderExport();
-    else if (currentPage === 'page-activity' && typeof renderActivityLog === 'function') renderActivityLog();
-    else if (currentPage === 'page-insights' && typeof renderInsights === 'function') renderInsights();
-    else if (currentPage === 'page-parts' && typeof renderParts === 'function') renderParts();
-    else if (currentPage === 'page-callcenter' && typeof renderCallCenter === 'function') renderCallCenter();
+    if (currentPage === 'page-overview' && typeof renderOverview === 'function') await renderOverview();
+    else if (currentPage === 'page-trends' && typeof renderTrends === 'function') await renderTrends();
+    else if (currentPage === 'page-daily' && typeof renderDaily === 'function') await renderDaily();
+    else if (currentPage === 'page-pending' && typeof renderPending === 'function') await renderPending();
+    else if (currentPage === 'page-branches' && typeof renderBranches === 'function') await renderBranches();
+    else if (currentPage === 'page-rejected' && typeof renderRejected === 'function') await renderRejected();
+    else if (currentPage === 'page-export' && typeof renderExport === 'function') await renderExport();
+    else if (currentPage === 'page-activity' && typeof renderActivityLog === 'function') await renderActivityLog();
+    else if (currentPage === 'page-insights' && typeof renderInsights === 'function') await renderInsights();
+    else if (currentPage === 'page-parts' && typeof renderParts === 'function') await renderParts();
+    else if (currentPage === 'page-callcenter' && typeof renderCallCenter === 'function') await renderCallCenter();
     else {
       console.warn(`Render function for ${currentPage} is missing or pages.js failed to load completely.`);
     }

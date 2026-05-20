@@ -174,6 +174,16 @@ function partsStatusCell(r) {
   const supp   = (r[C.RESCHED_SUPP]  || r._rescheduleRemark  || '').toLowerCase();
   const maint  = (r[C.MAINTENANCE]   || '').toLowerCase();
 
+  // Helper function: Find part request with robust matching
+  function findPartRequest(ticketNo) {
+    if (!ticketNo || !PARTS_REQUESTS || !PARTS_REQUESTS.length) return null;
+    const normalized = ticketNo.toString().trim().toUpperCase();
+    return PARTS_REQUESTS.find(p => {
+      const orderNo = (p['Order Number'] || '').toString().trim().toUpperCase();
+      return orderNo === normalized;
+    });
+  }
+
   // Check if this ticket needs a spare part
   const needsPart = reason.includes('accessor') || reason.includes('spare') ||
                     reason.includes('part') || reason.includes('قطعة') ||
@@ -185,13 +195,8 @@ function partsStatusCell(r) {
   const ticketNo = r[C.TICKET_NUM] || '';
   const branch   = r._branch || '';
 
-  // Look up in PARTS_REQUESTS (Final Status from Parts page)
-  let partRequest = null;
-  if (PARTS_REQUESTS && PARTS_REQUESTS.length) {
-    partRequest = PARTS_REQUESTS.find(p =>
-      (p['Order Number'] || '').trim() === ticketNo.trim()
-    );
-  }
+  // Look up in PARTS_REQUESTS (Final Status from Parts page) - with robust matching
+  const partRequest = findPartRequest(ticketNo);
 
   // Look up in Parts DB (Tracking info)
   let trackingInfo = null;
@@ -215,6 +220,11 @@ function partsStatusCell(r) {
 
   // Determine part status from PARTS_REQUESTS (priority) or tracking info
   if (partRequest) {
+    // Debug: log successful lookup
+    if (!window._partsDebugLogged) {
+      console.log('✓ Part request lookup successful. PARTS_REQUESTS has', PARTS_REQUESTS.length, 'records');
+      window._partsDebugLogged = true;
+    }
     const finalStatus = partRequest['Final Status'] || 'Pending';
     const statusColor = finalStatus.toLowerCase().includes('receiv') ? '#059669'    : // Green
                         finalStatus.toLowerCase().includes('dispatch') ? '#d97706'  : // Amber
@@ -303,7 +313,18 @@ function reschedDateCell(d) {
 }
 
 // ── PAGE 3: DAILY OPERATIONS ──────────────────────────────────
-function renderDaily(){
+async function renderDaily(){
+  // Ensure PARTS_REQUESTS is loaded before rendering parts status
+  if (typeof loadPartsData === 'function' && !PARTS_DB.loaded) {
+    if (PARTS_DB.loading) {
+      await new Promise(r => {
+        const check = setInterval(() => { if (!PARTS_DB.loading) { clearInterval(check); r(); } }, 100);
+      });
+    } else {
+      await loadPartsData();
+    }
+  }
+
   const allRows=DB.filtered, C=CONFIG.COLS;
   const rows=_chartFilter?getFilteredRows():allRows;
   const today=KPI.todaySchedule(allRows), pending=KPI.pending(allRows);
