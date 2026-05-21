@@ -1023,8 +1023,10 @@ function buildInsightCards(closed48,delayCats,branchScored,customerPostponed,ts4
  * Shows KPI metrics for all ASCs in tabbed interface (cards + table)
  */
 function renderASCPerformance() {
-  // Use FULL unfiltered dataset (DB.raw, not DB.filtered)
-  const all_rows=DB.raw;  // All data without any filters
+  // Use FULL unfiltered dataset (DB.allRaw) to show ALL ASCs regardless of user's assigned ASC
+  // DB.allRaw contains data for all ASCs for directors/supervisors
+  // DB.raw is filtered by user's ASC for regular users, so we use allRaw for complete visibility
+  const all_rows=DB.allRaw && DB.allRaw.length > 0 ? DB.allRaw : DB.raw;  // Prefer allRaw, fallback to raw
   const asc_data=KPI.byASC(all_rows);  // Aggregate by ASC
 
   const el=document.getElementById('page-asc');

@@ -567,8 +567,10 @@ async function loadAllData(email, userASC) {
     });
 
   DB.isAdmin = (userASC === CONFIG.ALL_ACCESS);
-  if (DB.isAdmin) { DB.allRaw=[...enriched]; DB.raw=[...enriched]; }
-  else { DB.allRaw=[]; DB.raw=enriched.filter(r=>r._company===userASC); }
+  // Always populate allRaw with ALL data (used by ASC Performance page to show all ASCs to everyone)
+  DB.allRaw=[...enriched];
+  // For non-admin users, DB.raw is filtered to their assigned ASC
+  DB.raw = DB.isAdmin ? [...enriched] : enriched.filter(r=>r._company===userASC);
   DB.userASC=userASC; DB.loadedAt=new Date();
   DB.filtered=[...DB.raw];
   populateDropdowns(DB.raw);
