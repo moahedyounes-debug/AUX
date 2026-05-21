@@ -1212,4 +1212,3 @@ function switchASCTab(tabName) {
   const btn=document.querySelector(`[data-tab="${tabName}"]`);
   if(btn) btn.classList.add('active');
 }
-}
