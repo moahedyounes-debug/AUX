@@ -191,6 +191,52 @@ const KPI = {
       return c;
     }).sort((a,b)=>b.count-a.count);
   },
+
+  // ── By ASC: Aggregate KPIs for each Authorized Service Center ──
+  byASC(rows) {
+    const asc_groups=groupBy(rows, r=>r._asc||r[CONFIG.COLS.AFFILIATED]||'Unknown');
+    return Object.entries(asc_groups)
+      .map(([asc, asc_rows])=>{
+        // Skip invalid/empty ASCs
+        if(!asc || asc==='Unknown' || asc==='') return null;
+
+        // Calculate base metrics
+        const total=asc_rows.length;
+        const pending=asc_rows.filter(r=>r._isPending).length;
+        const completed=asc_rows.filter(r=>!r._isPending&&r._serviceHours!==null).length;
+        const unassigned=asc_rows.filter(r=>!r._hasWorker).length;
+        const rescheduled=asc_rows.filter(r=>r[CONFIG.COLS.RESCHEDULING]).length;
+
+        // Calculate rates
+        const pending_rate=total?(pending/total*100):null;
+        const rate_48h=completed?
+          (asc_rows.filter(r=>!r._isPending&&r._serviceHours!==null&&r._serviceHours<=48).length/completed*100):null;
+        const rate_72h=completed?
+          (asc_rows.filter(r=>!r._isPending&&r._serviceHours!==null&&r._serviceHours<=72).length/completed*100):null;
+
+        // Composite performance score (out of 100)
+        const T=CONFIG.TARGETS;
+        const score48=rate_48h!==null?(rate_48h/T.RATE_48H)*100:0;
+        const score72=rate_72h!==null?(rate_72h/T.RATE_72H)*100:0;
+        const scorePend=pending_rate!==null?((T.PENDING_RATE-pending_rate)/T.PENDING_RATE)*100:0;
+        const composite_score=(score48+score72+scorePend)/3;
+
+        return {
+          asc,
+          total,
+          pending,
+          completed,
+          pending_rate,
+          rate_48h,
+          rate_72h,
+          unassigned,
+          rescheduled,
+          score: composite_score
+        };
+      })
+      .filter(x=>x!==null)
+      .sort((a,b)=>b.score-a.score);  // Sort by performance score descending
+  },
 };
 
 // ── Shared badge helpers ──────────────────────

@@ -1013,3 +1013,203 @@ function buildInsightCards(closed48,delayCats,branchScored,customerPostponed,ts4
     </div>
   `).join('');
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// ASC PERFORMANCE PAGE - Director-level view (no filters)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Main render function for ASC Performance page
+ * Shows KPI metrics for all ASCs in tabbed interface (cards + table)
+ */
+function renderASCPerformance() {
+  // Use FULL unfiltered dataset (DB.raw, not DB.filtered)
+  const all_rows=DB.raw;  // All data without any filters
+  const asc_data=KPI.byASC(all_rows);  // Aggregate by ASC
+
+  const el=document.getElementById('page-asc');
+  if(!el) return;
+
+  // Create tabbed interface
+  const html=`
+    <div class="kpi-section">
+      <h2>${t('asc_performance_title')}</h2>
+      <p class="section-subtitle">${t('asc_performance_subtitle')}</p>
+
+      <!-- Tab Navigation -->
+      <div class="asc-tabs">
+        <button class="asc-tab active" data-tab="cards" onclick="switchASCTab('cards')">
+          📊 ${t('kpi_cards_view')}
+        </button>
+        <button class="asc-tab" data-tab="table" onclick="switchASCTab('table')">
+          📋 ${t('table_view')}
+        </button>
+      </div>
+
+      <!-- KPI Cards View (Tab 1) -->
+      <div id="asc-cards-view" class="asc-tab-content active">
+        ${renderASCCards(asc_data)}
+      </div>
+
+      <!-- Table View (Tab 2) -->
+      <div id="asc-table-view" class="asc-tab-content">
+        ${renderASCTable(asc_data)}
+      </div>
+
+      <!-- Data Note -->
+      <div class="data-note">
+        <p>✓ ${t('showing_all_data')} | ${t('no_filters_applied')}</p>
+      </div>
+    </div>
+  `;
+
+  el.innerHTML=html;
+}
+
+/**
+ * Render KPI cards grid for each ASC
+ * Shows: Total, Pending Rate, 48H Rate, 72H Rate, Completed, Pending, Unassigned, Performance Score
+ */
+function renderASCCards(asc_data) {
+  const T=CONFIG.TARGETS;
+
+  return asc_data.map(asc=>{
+    const cards=[
+      // Total Tickets Card
+      {label:t('total_tickets'), value:asc.total, icon:'📌', color:'#003D8F'},
+
+      // Pending Rate Card
+      {
+        label:t('pending_rate'),
+        value:asc.pending_rate!==null?`${asc.pending_rate.toFixed(1)}%`:'N/A',
+        target:`${T.PENDING_RATE}%`,
+        icon:'⏳',
+        color:asc.pending_rate<=T.PENDING_RATE?'#10B981':'#EF4444'
+      },
+
+      // 48H Repair Rate Card
+      {
+        label:t('rate_48h'),
+        value:asc.rate_48h!==null?`${asc.rate_48h.toFixed(1)}%`:'N/A',
+        target:`${T.RATE_48H}%`,
+        icon:'⚡',
+        color:asc.rate_48h>=T.RATE_48H?'#10B981':'#EF4444'
+      },
+
+      // 72H Repair Rate Card
+      {
+        label:t('rate_72h'),
+        value:asc.rate_72h!==null?`${asc.rate_72h.toFixed(1)}%`:'N/A',
+        target:`${T.RATE_72H}%`,
+        icon:'🎯',
+        color:asc.rate_72h>=T.RATE_72H?'#10B981':'#EF4444'
+      },
+
+      // Completed Card
+      {label:t('completed'), value:asc.completed, icon:'✓', color:'#10B981'},
+
+      // Pending Card
+      {label:t('pending'), value:asc.pending, icon:'📭', color:'#F59E0B'},
+
+      // Unassigned Card
+      {label:t('unassigned'), value:asc.unassigned, icon:'❓', color:'#6B7280'},
+
+      // Performance Score Card
+      {
+        label:t('performance_score'),
+        value:asc.score.toFixed(0),
+        icon:'⭐',
+        color:asc.score>=80?'#10B981':asc.score>=60?'#F59E0B':'#EF4444'
+      }
+    ];
+
+    return `
+      <div class="asc-card-group">
+        <h3 class="asc-title">${esc(asc.asc)}</h3>
+        <div class="kpi-grid-4col">
+          ${cards.map(card=>`
+            <div class="kpi-card" style="border-top: 4px solid ${card.color}">
+              <div class="kpi-card-label">${card.label}</div>
+              <div class="kpi-card-value" style="color: ${card.color}">${card.value}</div>
+              ${card.target?`<div class="kpi-card-target">Target: ${card.target}</div>`:''}
+              <div class="kpi-card-icon">${card.icon}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Render comprehensive table view of all ASC metrics
+ */
+function renderASCTable(asc_data) {
+  return `
+    <div class="table-card">
+      <table class="dashboard-table">
+        <thead>
+          <tr>
+            <th>${t('asc')}</th>
+            <th>${t('total_tickets')}</th>
+            <th>${t('pending')}</th>
+            <th>${t('pending_rate')}</th>
+            <th>${t('rate_48h')}</th>
+            <th>${t('rate_72h')}</th>
+            <th>${t('completed')}</th>
+            <th>${t('unassigned')}</th>
+            <th>${t('rescheduled')}</th>
+            <th>${t('performance_score')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${asc_data.map(asc=>{
+            const badge_48h=asc.rate_48h>=CONFIG.TARGETS.RATE_48H?'badge-success':'badge-warning';
+            const badge_72h=asc.rate_72h>=CONFIG.TARGETS.RATE_72H?'badge-success':'badge-warning';
+            const badge_pending=asc.pending_rate<=CONFIG.TARGETS.PENDING_RATE?'badge-success':'badge-danger';
+            const badge_score=asc.score>=80?'badge-success':asc.score>=60?'badge-warning':'badge-danger';
+
+            return `
+              <tr>
+                <td class="fw-600">${esc(asc.asc)}</td>
+                <td>${asc.total}</td>
+                <td>${asc.pending}</td>
+                <td><span class="badge ${badge_pending}">${(asc.pending_rate||0).toFixed(1)}%</span></td>
+                <td><span class="badge ${badge_48h}">${(asc.rate_48h||0).toFixed(1)}%</span></td>
+                <td><span class="badge ${badge_72h}">${(asc.rate_72h||0).toFixed(1)}%</span></td>
+                <td>${asc.completed}</td>
+                <td>${asc.unassigned}</td>
+                <td>${asc.rescheduled}</td>
+                <td><span class="badge ${badge_score}">${asc.score.toFixed(0)}</span></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+/**
+ * Switch between ASC Performance page tabs
+ */
+function switchASCTab(tabName) {
+  // Hide all tab contents
+  document.querySelectorAll('.asc-tab-content').forEach(el=>{
+    el.classList.remove('active');
+  });
+
+  // Deactivate all tabs
+  document.querySelectorAll('.asc-tab').forEach(el=>{
+    el.classList.remove('active');
+  });
+
+  // Show selected tab
+  const content=document.getElementById(`asc-${tabName}-view`);
+  if(content) content.classList.add('active');
+
+  // Activate selected tab button
+  const btn=document.querySelector(`[data-tab="${tabName}"]`);
+  if(btn) btn.classList.add('active');
+}
+}

@@ -27,6 +27,7 @@ const I18N = {
     nav_parts:      'Spare Parts',
     nav_rejected:   'Rejected / Returned',
     nav_callcenter: 'Call Center',
+    nav_asc:        'ASC Performance',
     nav_export:     'Export Center',
     nav_insights:   'Deep Insights',
     nav_activity:   'Activity Log',
@@ -71,6 +72,7 @@ const I18N = {
     pg_activity:   ['Activity Log',          'Admin Access Log'],
     pg_parts:      ['Spare Parts',           'Inventory & Forecast Management'],
     pg_cc:         ['Call Center',           'Performance & Agent Analytics'],
+    pg_asc:        ['ASC Performance',       'Service Center Dashboard'],
 
     // Daily
     today_visits:      "Today's Visits",
@@ -228,6 +230,16 @@ const I18N = {
     warning:            'Warning',
     please_select:      'Please select',
 
+    // ASC Performance
+    asc_performance_title:      'ASC Performance Dashboard',
+    asc_performance_subtitle:   'Comprehensive performance metrics for all Authorized Service Centers',
+    kpi_cards_view:             '📊 KPI Cards View',
+    table_view:                 '📋 Table View',
+    showing_all_data:           'Showing all data',
+    no_filters_applied:         'No filters applied - Complete dataset',
+    asc:                        'Service Center (ASC)',
+    performance_score:          'Performance Score',
+
     // Call Center
     cc_sla_rate:           'SLA Rate',
     cc_abandon_rate:       'Abandon Rate',
@@ -371,6 +383,7 @@ const I18N = {
     nav_parts:      'قطع الغيار',
     nav_rejected:   'المرفوض / المرتجع',
     nav_callcenter: 'مركز الاتصال',
+    nav_asc:        'أداء المراكز',
     nav_export:     'تصدير البيانات',
     nav_insights:   'تحليلات عميقة',
     nav_activity:   'سجل النشاط',
@@ -415,6 +428,7 @@ const I18N = {
     pg_activity:   ['سجل النشاط',             'سجل وصول المديرين'],
     pg_parts:      ['قطع الغيار',             'إدارة المخزون والتوقعات'],
     pg_cc:         ['الكول سنتر',             'الأداء وتحليلات الوكلاء'],
+    pg_asc:        ['لوحة أداء المراكز',      'لوحة تحكم مراكز الخدمة'],
 
     // Daily
     today_visits:      'زيارات اليوم',
@@ -572,6 +586,16 @@ const I18N = {
     warning:            'تحذير',
     please_select:      'يرجى التحديد',
 
+    // ASC Performance
+    asc_performance_title:      'لوحة أداء المراكز',
+    asc_performance_subtitle:   'مقاييس الأداء الشاملة لجميع مراكز الخدمة المعتمدة',
+    kpi_cards_view:             '📊 عرض بطاقات الأداء الرئيسية',
+    table_view:                 '📋 عرض الجدول',
+    showing_all_data:           'عرض جميع البيانات',
+    no_filters_applied:         'لا توجد عوامل تصفية مطبقة - مجموعة بيانات كاملة',
+    asc:                        'مركز الخدمة',
+    performance_score:          'درجة الأداء',
+
     // Call Center
     cc_sla_rate:           'معدل الخدمة SLA',
     cc_abandon_rate:       'معدل الإهمال',
@@ -715,6 +739,7 @@ const I18N = {
     nav_parts:      '备件管理',
     nav_rejected:   '已拒绝/已退回',
     nav_callcenter: '呼叫中心',
+    nav_asc:        '服务中心性能',
     nav_export:     '导出中心',
     nav_insights:   '深度洞察',
     nav_activity:   '活动日志',
@@ -759,6 +784,7 @@ const I18N = {
     pg_activity:   ['活动日志',        '管理员访问日志'],
     pg_parts:      ['备件管理',        '库存与预测管理'],
     pg_cc:         ['呼叫中心',        '绩效与坐席分析'],
+    pg_asc:        ['服务中心性能',    '服务中心控制台'],
 
     // Daily
     today_visits:      '今日访问',
@@ -915,6 +941,16 @@ const I18N = {
     success:            '成功',
     warning:            '警告',
     please_select:      '请选择',
+
+    // ASC Performance
+    asc_performance_title:      '服务中心性能仪表板',
+    asc_performance_subtitle:   '所有授权服务中心的综合性能指标',
+    kpi_cards_view:             '📊 KPI卡片视图',
+    table_view:                 '📋 表格视图',
+    showing_all_data:           '显示所有数据',
+    no_filters_applied:         '未应用任何筛选器 - 完整数据集',
+    asc:                        '服务中心',
+    performance_score:          '性能得分',
 
     // Call Center
     cc_sla_rate:           '服务水平率',

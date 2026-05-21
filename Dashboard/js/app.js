@@ -27,6 +27,7 @@ function navigate(pageId, el) {
     'page-insights': 'pg_insights',
     'page-parts': 'pg_parts',
     'page-callcenter': 'pg_cc',
+    'page-asc': 'pg_asc',
   };
 
   const key = pgKeys[pageId];
@@ -70,6 +71,7 @@ async function renderCurrentPage() {
     else if (currentPage === 'page-insights' && typeof renderInsights === 'function') await renderInsights();
     else if (currentPage === 'page-parts' && typeof renderParts === 'function') await renderParts();
     else if (currentPage === 'page-callcenter' && typeof renderCallCenter === 'function') await renderCallCenter();
+    else if (currentPage === 'page-asc' && typeof renderASCPerformance === 'function') await renderASCPerformance();
     else {
       console.warn(`Render function for ${currentPage} is missing or pages.js failed to load completely.`);
     }
