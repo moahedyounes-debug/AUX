@@ -194,7 +194,7 @@ const KPI = {
 
   // ── By ASC: Aggregate KPIs for each Authorized Service Center ──
   byASC(rows) {
-    const asc_groups=groupBy(rows, r=>r._asc||r[CONFIG.COLS.AFFILIATED]||'Unknown');
+    const asc_groups=groupBy(rows, r=>r._company||'Unknown');
     return Object.entries(asc_groups)
       .map(([asc, asc_rows])=>{
         // Skip invalid/empty ASCs
